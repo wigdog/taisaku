@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>♨️ SQLパズル・ビルダー AI【ハイブリッド版】</title>
+<title>♨️ SQLパズル・ビルダー AI【完全版】</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Share+Tech+Mono&display=swap');
 
@@ -94,14 +94,37 @@
   .diff-badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; color: #fff; font-weight: bold; }
   .quiz-text { font-size: 14px; font-weight: 700; color: #2c1a0e; line-height: 1.5; }
 
-  /* キーボード入力エリア */
-  .sql-input-wrapper { background: #010409; border-radius: 12px; border: 1.5px dashed rgba(255,255,255,0.2); padding: 12px; }
-  .sql-input {
-    width: 100%; height: 100px; background: transparent; color: #7fb3d3;
-    border: none; font-family: 'Share Tech Mono', monospace; font-size: 16px; 
-    resize: none; outline: none; line-height: 1.5; word-break: break-all;
+  .build-area { background: #010409; border-radius: 12px; border: 1.5px dashed rgba(255,255,255,0.2); display: flex; flex-direction: column; overflow: hidden; }
+  .build-slots-wrapper { padding: 12px; min-height: 80px; }
+  .build-label { font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .build-slots { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; align-content: flex-start; }
+  
+  .code-preview {
+    background: #1e1e1e; border-top: 1px solid rgba(255,255,255,0.1); 
+    padding: 12px; font-family: 'Share Tech Mono', monospace; font-size: 14px; 
+    color: #d4d4d4; white-space: pre-wrap; word-break: break-all; min-height: 48px;
   }
-  .sql-input:focus { color: #fff; }
+  .preview-placeholder { color: rgba(255,255,255,0.3); font-size: 12px; }
+  .sql-keyword { color: #569cd6; font-weight: bold; }
+  
+  .slot-block {
+    display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 6px;
+    font-family: 'Share Tech Mono', monospace; font-size: 13px; font-weight: 700;
+    cursor: pointer; animation: pop-in 0.15s cubic-bezier(0.34,1.56,0.64,1); user-select: none; box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+  @keyframes pop-in { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .block-syntax    { background: #3b1d5e; color: #c39bd3; border: 1px solid #8e44ad; }
+  .block-column    { background: #1a3a5c; color: #85c1e9; border: 1px solid #2471a3; }
+  .block-table     { background: #1a3d2b; color: #82e0aa; border: 1px solid #1a7f45; }
+  .block-operator  { background: #4a2f00; color: #f8c471; border: 1px solid #b7770d; }
+  .block-value     { background: #4a1c1c; color: #f1948a; border: 1px solid #c0392b; }
+  .block-keyword   { background: #2d0f4e; color: #bb8fce; border: 1px solid #6c3483; }
+  .block-symbol    { background: #222; color: #fff; border: 1px solid #555; }
+  .block-newline   { background: #30363d; color: #8b949e; padding: 2px 8px; border-radius: 4px; font-size: 12px; border: 1px dashed #555; }
+  .flex-break      { flex-basis: 100%; height: 0; margin: 0; padding: 0; border: none; }
+
+  .empty-hint { font-size: 12px; color: rgba(255,255,255,0.3); width: 100%; text-align: center; }
 
   .action-row { display: flex; gap: 8px; }
   .btn-run { flex: 2; padding: 14px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--noren-red), #922b21); color: #fff; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 4px 14px rgba(192,57,43,0.4); }
@@ -141,13 +164,6 @@
   .parts-grid { display: flex; flex-wrap: wrap; gap: 6px; }
   .part-btn { padding: 8px 12px; border-radius: 6px; border: none; font-family: 'Share Tech Mono', monospace; font-size: 13px; font-weight: 700; cursor: pointer; transition: transform 0.1s; user-select: none; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
   .part-btn:active { transform: scale(0.85); box-shadow: none; }
-
-  .block-syntax    { background: #3b1d5e; color: #c39bd3; border: 1px solid #8e44ad; }
-  .block-column    { background: #1a3a5c; color: #85c1e9; border: 1px solid #2471a3; }
-  .block-table     { background: #1a3d2b; color: #82e0aa; border: 1px solid #1a7f45; }
-  .block-operator  { background: #4a2f00; color: #f8c471; border: 1px solid #b7770d; }
-  .block-value     { background: #4a1c1c; color: #f1948a; border: 1px solid #c0392b; }
-  .block-keyword   { background: #2d0f4e; color: #bb8fce; border: 1px solid #6c3483; }
   
 </style>
 </head>
@@ -172,7 +188,7 @@
 <div id="titleScreen">
   <div class="title-logo">♨</div>
   <h1 style="font-size: 20px; margin-bottom: 8px;">SQLパズル・ビルダー AI</h1>
-  <p class="title-desc">EDA関数フル搭載 ＋ ハイブリッド入力。<br>実務のデータクレンジング・分析要件をクリアせよ！</p>
+  <p class="title-desc">EDA関数フル搭載 ＋ スマートパーサー内蔵。<br>実務のデータクレンジング・分析要件をクリアせよ！</p>
   
   <div class="diff-buttons">
     <button class="btn-diff btn-easy" onclick="startGame('easy')">
@@ -207,13 +223,22 @@
         <div class="quiz-text" id="quizText">生成中...</div>
       </div>
 
-      <div class="sql-input-wrapper">
-        <textarea class="sql-input" id="sqlInput" placeholder="キーボード入力 or 下のパーツをタップして組み立て" autocomplete="off" spellcheck="false"></textarea>
+      <div class="build-area">
+        <div class="build-slots-wrapper">
+          <div class="build-label">
+            <span>▶ タップしてSQLを組み立てよう</span>
+          </div>
+          <div class="build-slots" id="buildSlots"></div>
+        </div>
+        
+        <div class="code-preview" id="codePreview">
+          <span class="preview-placeholder">ここにSQLコードがリアルタイムで表示されます...</span>
+        </div>
       </div>
 
       <div class="action-row">
         <button class="btn-run" onclick="checkAnswer()">🔍 実行・答え合わせ</button>
-        <button class="btn-clear" onclick="clearInput()">↩ リセット</button>
+        <button class="btn-clear" onclick="clearBuild()">↩ リセット</button>
       </div>
 
       <div class="result-panel" id="resultPanel">
@@ -239,12 +264,12 @@
         </div>
         
         <div class="quick-bar" id="quickBar">
-          <button class="quick-btn" onclick="insertText('.', true)">.</button>
-          <button class="quick-btn" onclick="insertText(',', true)">,</button>
-          <button class="quick-btn" onclick="insertText('(', true)">(</button>
-          <button class="quick-btn" onclick="insertText(')', true)">)</button>
-          <button class="quick-btn" onclick="insertText('=', true)">=</button>
-          <button class="quick-btn btn-newline" onclick="insertText('↵', true)">↵</button>
+          <button class="quick-btn" onclick="addPart('.', 'symbol')">.</button>
+          <button class="quick-btn" onclick="addPart(',', 'symbol')">,</button>
+          <button class="quick-btn" onclick="addPart('(', 'symbol')">(</button>
+          <button class="quick-btn" onclick="addPart(')', 'symbol')">)</button>
+          <button class="quick-btn" onclick="addPart('=', 'operator')">=</button>
+          <button class="quick-btn btn-newline" onclick="addPart('↵', 'newline')">↵</button>
         </div>
 
         <div class="warehouse-tabs">
@@ -264,9 +289,9 @@
 // ===================== 状態管理・マスターデータ =====================
 var currentMode = '';
 var currentQuiz = null;
+var built = []; 
 var score = 0; 
 var totalSolved = 0;
-var sqlInput = document.getElementById('sqlInput');
 
 var masterParts = {
   syntax: [
@@ -278,21 +303,23 @@ var masterParts = {
     {l:'UNION', t:'syntax'}, {l:'ALL', t:'keyword'}, {l:'IN', t:'keyword'}, {l:'EXISTS', t:'keyword'}, {l:'NOT', t:'keyword'},
     {l:'DISTINCT', t:'keyword'}, {l:'OVER', t:'keyword'}, 
     {l:'INSERT', t:'syntax'}, {l:'INTO', t:'syntax'}, {l:'VALUES', t:'syntax'},
-    {l:'UPDATE', t:'syntax'}, {l:'SET', t:'syntax'}, {l:'DELETE', t:'syntax'}
+    {l:'UPDATE', t:'syntax'}, {l:'SET', t:'syntax'}, {l:'DELETE', t:'syntax'},
+    {l:'START', t:'keyword'}, {l:'TRANSACTION', t:'keyword'}, {l:'COMMIT', t:'keyword'}, {l:'ROLLBACK', t:'keyword'}
   ],
   tablecol: [
     {l:'facilities', t:'table'}, {l:'visitor_logs', t:'table'}, {l:'areas', t:'table'}, {l:'ranks', t:'table'},
     {l:'f', t:'table'}, {l:'v', t:'table'}, {l:'f1', t:'table'}, {l:'f2', t:'table'}, {l:'a', t:'table'}, {l:'r', t:'table'},
     {l:'*', t:'column'}, {l:'facility_id', t:'column'}, {l:'name', t:'column'}, {l:'manga_volumes', t:'column'},
     {l:'area_id', t:'column'}, {l:'log_id', t:'column'}, {l:'spent_amount', t:'column'}, {l:'visit_date', t:'column'},
-    {l:'area_name', t:'column'}, {l:'rank_id', t:'column'}
+    {l:'area_name', t:'column'}, {l:'rank_id', t:'column'}, {l:'min_amount', t:'column'}, {l:'max_amount', t:'column'}
   ],
   funcop: [
     {l:'SUM', t:'column'}, {l:'AVG', t:'column'}, {l:'COUNT', t:'column'}, {l:'MAX', t:'column'}, {l:'MIN', t:'column'},
     {l:'ROUND', t:'column'}, {l:'COALESCE', t:'column'}, {l:'MONTH', t:'column'}, {l:'RANK', t:'column'},
-    {l:'>', t:'operator'}, {l:'<', t:'operator'}, {l:'BETWEEN', t:'keyword'}, {l:'AND', t:'operator'}, {l:'OR', t:'operator'}, {l:'IS', t:'operator'}
+    {l:'=', t:'operator'}, {l:'>', t:'operator'}, {l:'<', t:'operator'}, {l:'BETWEEN', t:'keyword'}, {l:'AND', t:'operator'}, {l:'OR', t:'operator'}, {l:'IS', t:'operator'}
   ],
   symval: [
+    {l:'(', t:'symbol'}, {l:')', t:'symbol'}, {l:',', t:'symbol'}, {l:'.', t:'symbol'}, {l:';', t:'symbol'},
     {l:'0', t:'value'}, {l:'1', t:'value'}, {l:'2', t:'value'}, {l:'3', t:'value'}, {l:'4', t:'value'},
     {l:'5', t:'value'}, {l:'6', t:'value'}, {l:'7', t:'value'}, {l:'8', t:'value'}, {l:'9', t:'value'},
     {l:'3000', t:'value'}, {l:'5000', t:'value'}, {l:'10000', t:'value'}, {l:'99', t:'value'},
@@ -316,7 +343,7 @@ function initBg() {
       p.style.animationDuration = (6 + Math.random() * 10) + 's'; p.style.animationDelay = (Math.random() * 10) + 's';
       bg.appendChild(p);
     }
-  } catch(e) {}
+  } catch(e) { console.log('Bg animation skipped'); }
 }
 
 function initTabs() {
@@ -334,10 +361,9 @@ function initTabs() {
     
     masterParts[key].forEach(function(p) {
       var btn = document.createElement('button');
-      btn.className = 'part-btn block-' + p.t;
+      btn.className = 'part-btn part-' + p.t;
       btn.textContent = p.l;
-      var isSymbol = (p.t === 'symbol' || p.t === 'operator' || p.l === '*');
-      btn.onclick = function() { insertText(p.l, isSymbol); };
+      btn.onclick = function() { addPart(p.l, p.t); };
       grid.appendChild(btn);
     });
     pane.appendChild(grid);
@@ -354,40 +380,13 @@ function switchTab(tabKey) {
   document.getElementById('pane-' + tabKey).classList.add('active');
 }
 
-// ===================== ハイブリッド入力処理 =====================
-function insertText(text, isSymbol = false) {
-  var start = sqlInput.selectionStart;
-  var end = sqlInput.selectionEnd;
-  var val = sqlInput.value;
-  var insertStr = text;
-  
-  // 記号以外は後ろに自動で半角スペースを入れる
-  if (!isSymbol && text !== '↵') {
-      insertStr += ' ';
-  }
-  // 改行記号の処理
-  if (text === '↵') {
-      insertStr = '\n';
-  }
-
-  sqlInput.value = val.slice(0, start) + insertStr + val.slice(end);
-  sqlInput.selectionStart = sqlInput.selectionEnd = start + insertStr.length;
-  sqlInput.focus();
-  
-  checkAnswer(true); // リアルタイム判定を回す
+function addPart(label, type) {
+  built.push({label: label, type: type}); 
+  renderBuild(); 
+  var area = document.getElementById('topPane');
+  area.scrollTop = area.scrollHeight;
 }
 
-function clearInput() {
-  sqlInput.value = '';
-  sqlInput.focus();
-  document.getElementById('resultPanel').style.display = 'none';
-}
-
-sqlInput.addEventListener('input', function() {
-    checkAnswer(true);
-});
-
-// ===================== ゲーム進行制御 =====================
 function startGame(mode) {
   currentMode = mode;
   document.getElementById('titleScreen').style.display = 'none';
@@ -422,19 +421,21 @@ function generateQuizLogic(mode) {
       var c = pick(["*", t.col]);
       var jc = (c === "*" ? "すべての項目" : t.jcol);
       text = "現在登録されている「" + t.j + "」のリストが欲しいんだけど、" + jc + "を抽出して出してくれるかな？";
-      answers = ["SELECT " + c + " FROM " + t.tbl];
+      answers = [["SELECT", c, "FROM", t.tbl]];
     } 
     else if (type === 'where') {
       var cond = pick([{ col: "manga_volumes", op: ">=", val: pick(["3000", "5000"]), jcol: "マンガの蔵書数" }, { col: "spent_amount", op: "<", val: pick(["5000", "10000"]), jcol: "利用額" }]);
       var tbl = cond.col === "manga_volumes" ? "facilities" : "visitor_logs";
       var tname = tbl === "facilities" ? "施設" : "入館履歴";
       text = "データの絞り込みをお願い。「" + tname + "」の中で、" + cond.jcol + "が" + cond.val + (cond.op===">="?"以上のデータだけピックアップして。":"未満のデータをすべて拾ってくれる？");
-      if (cond.op === ">=") answers = ["SELECT * FROM " + tbl + " WHERE " + cond.col + " >= " + cond.val];
-      else answers = ["SELECT * FROM " + tbl + " WHERE " + cond.col + " " + cond.op + " " + cond.val];
+      if (cond.op === ">=") answers = [["SELECT", "*", "FROM", tbl, "WHERE", cond.col, ">", "=", cond.val]];
+      else answers = [["SELECT", "*", "FROM", tbl, "WHERE", cond.col, cond.op, cond.val]];
     } 
     else {
       text = "「施設」の一覧をレポートにしたいんだけど、マンガの蔵書数が多い順（ランキング形式）で並べて、施設名だけを抽出して。";
-      answers = ["SELECT name FROM facilities ORDER BY manga_volumes DESC"];
+      answers = [
+        ["SELECT", "name", "FROM", "facilities", "ORDER", "BY", "manga_volumes", "DESC"]
+      ];
     }
   } 
   else if (mode === 'normal') {
@@ -443,32 +444,24 @@ function generateQuizLogic(mode) {
     if (type === 'group') {
       var agg = pick([{f:"SUM", j:"合計"}, {f:"AVG", j:"平均"}]);
       text = "各施設ごとの売上状況を知りたいな。「入館履歴」を使って、施設IDごとに利用額の" + agg.j + "を集計して出して。";
-      answers = ["SELECT facility_id, " + agg.f + "(spent_amount) FROM visitor_logs GROUP BY facility_id"];
+      answers = [["SELECT", "facility_id", ",", agg.f, "(", "spent_amount", ")", "FROM", "visitor_logs", "GROUP", "BY", "facility_id"]];
     } 
     else if (type === 'having') {
       var val = pick(["5", "10"]);
       text = "リピーターが多い施設を特定したいんだ。「入館履歴」で、利用件数が" + val + "件以上ある施設IDと、その件数を一覧にして。";
-      answers = ["SELECT facility_id, COUNT(*) FROM visitor_logs GROUP BY facility_id HAVING COUNT(*) >= " + val];
+      answers = [["SELECT", "facility_id", ",", "COUNT", "(", "*", ")", "FROM", "visitor_logs", "GROUP", "BY", "facility_id", "HAVING", "COUNT", "(", "*", ")", ">", "=", val]];
     } 
     else if (type === 'join') {
       text = "売上データに施設名をくっつけて見やすくしたい。「施設」と「入館履歴」を紐づけて(等価結合)、施設名と利用額を出して。";
-      answers = [
-        "SELECT f.name, v.spent_amount FROM facilities f JOIN visitor_logs v ON f.facility_id = v.facility_id",
-        "SELECT f.name, v.spent_amount FROM facilities f JOIN visitor_logs v ON v.facility_id = f.facility_id",
-        "SELECT f.name, v.spent_amount FROM facilities f INNER JOIN visitor_logs v ON f.facility_id = v.facility_id"
-      ];
+      answers = [["SELECT", "f", ".", "name", ",", "v", ".", "spent_amount", "FROM", "facilities", "f", "INNER", "JOIN", "visitor_logs", "v", "ON", "f", ".", "facility_id", "=", "v", ".", "facility_id"]];
     }
     else if (type === 'null_check') {
       text = "【データクレンジング】データの不備を調査して。「施設」の中に、所属エリア（area_id）が未設定（NULL）になっている異常な施設の全データを抽出してくれる？";
-      answers = ["SELECT * FROM facilities WHERE area_id IS NULL"];
+      answers = [["SELECT", "*", "FROM", "facilities", "WHERE", "area_id", "IS", "NULL"]];
     }
     else if (type === 'stats') {
       text = "【基本統計量】利用額の全体的なバラつきを把握したいんだ。入館履歴から、利用額の『最大値』『最小値』『平均値』を同時に並べて出して。";
-      answers = [
-        "SELECT MAX(spent_amount), MIN(spent_amount), AVG(spent_amount) FROM visitor_logs",
-        "SELECT MIN(spent_amount), MAX(spent_amount), AVG(spent_amount) FROM visitor_logs",
-        "SELECT AVG(spent_amount), MAX(spent_amount), MIN(spent_amount) FROM visitor_logs"
-      ];
+      answers = [["SELECT", "MAX", "(", "spent_amount", ")", ",", "MIN", "(", "spent_amount", ")", ",", "AVG", "(", "spent_amount", ")", "FROM", "visitor_logs"]];
     }
   } 
   else if (mode === 'hard') {
@@ -476,47 +469,41 @@ function generateQuizLogic(mode) {
     
     if (type === 'leftjoin') {
       text = "施設の稼働状況を見たい。「施設」をベース（すべて残す）にして「入館履歴」と外部結合し、施設名と入館日の一覧を作って。";
-      answers = [
-        "SELECT f.name, v.visit_date FROM facilities f LEFT JOIN visitor_logs v ON f.facility_id = v.facility_id",
-        "SELECT f.name, v.visit_date FROM facilities f LEFT JOIN visitor_logs v ON v.facility_id = f.facility_id"
-      ];
+      answers = [["SELECT", "f", ".", "name", ",", "v", ".", "visit_date", "FROM", "facilities", "f", "LEFT", "JOIN", "visitor_logs", "v", "ON", "f", ".", "facility_id", "=", "v", ".", "facility_id"]];
     } 
     else if (type === 'subquery') {
       var val = pick(["5000", "10000"]);
       text = "優良施設を特定して。1回の利用額が" + val + "円以上の「入館履歴」が存在する施設に絞って、施設名を抽出して。(※サブクエリを使用)";
-      answers = ["SELECT name FROM facilities WHERE facility_id IN (SELECT facility_id FROM visitor_logs WHERE spent_amount >= " + val + ")"];
+      answers = [["SELECT", "name", "FROM", "facilities", "WHERE", "facility_id", "IN", "(", "SELECT", "facility_id", "FROM", "visitor_logs", "WHERE", "spent_amount", ">", "=", val, ")"]];
     } 
     else if (type === 'union') {
       text = "マスタとトランザクションの両方に存在するIDを網羅したい。「施設」のIDと「入館履歴」の施設IDを、重複を省いて(UNION)縦に繋げて出して。";
-      answers = ["SELECT facility_id FROM facilities UNION SELECT facility_id FROM visitor_logs"];
+      answers = [["SELECT", "facility_id", "FROM", "facilities", "UNION", "SELECT", "facility_id", "FROM", "visitor_logs"]];
     }
     else if (type === 'self_join') {
       text = "競合調査をしたい。「施設」テーブル同士を紐づけ(自己結合)て、同じエリアにある別の施設の名前をペアで抽出して。";
-      answers = [
-        "SELECT f1.name, f2.name FROM facilities f1 JOIN facilities f2 ON f1.area_id = f2.area_id",
-        "SELECT f1.name, f2.name FROM facilities f1 INNER JOIN facilities f2 ON f1.area_id = f2.area_id",
-        "SELECT f1.name, f2.name FROM facilities f1 JOIN facilities f2 ON f2.area_id = f1.area_id"
-      ];
+      answers = [["SELECT", "f1", ".", "name", ",", "f2", ".", "name", "FROM", "facilities", "f1", "INNER", "JOIN", "facilities", "f2", "ON", "f1", ".", "area_id", "=", "f2", ".", "area_id"]];
     }
     else if (type === 'case_select') {
+      // ⚠️ 前回の SyntaxError 修正箇所 ⚠️
       text = "レポート用にカテゴリ分けが必要だ。蔵書数が5000冊以上なら'大型'、それ以外なら'小型'という判定結果を、施設名と一緒に取得して。(※CASE式を使用)";
-      answers = ["SELECT name, CASE WHEN manga_volumes >= 5000 THEN '大型' ELSE '小型' END FROM facilities"];
+      answers = [["SELECT", "name", ",", "CASE", "WHEN", "manga_volumes", ">", "=", "5000", "THEN", "'大型'", "ELSE", "'小型'", "END", "FROM", "facilities"]];
     }
     else if (type === 'dup_check') {
       text = "【重複エラー調査】「入館履歴」の中で、全く同じ施設(ID)に同じ日に入館している『重複エラー』が疑われるデータを特定して。該当する施設IDと入館日を取得すること。";
-      answers = ["SELECT facility_id, visit_date FROM visitor_logs GROUP BY facility_id, visit_date HAVING COUNT(*) > 1"];
+      answers = [["SELECT", "facility_id", ",", "visit_date", "FROM", "visitor_logs", "GROUP", "BY", "facility_id", ",", "visit_date", "HAVING", "COUNT", "(", "*", ")", ">", "1"]];
     }
     else if (type === 'adv_having') {
       text = "【条件付き集計】超優良施設を見つけたい。1回の利用額が10000円以上の『優良入館』が、合計3回以上ある施設IDと、その回数を出して。";
-      answers = ["SELECT facility_id, COUNT(*) FROM visitor_logs WHERE spent_amount >= 10000 GROUP BY facility_id HAVING COUNT(*) >= 3"];
+      answers = [["SELECT", "facility_id", ",", "COUNT", "(", "*", ")", "FROM", "visitor_logs", "WHERE", "spent_amount", ">", "=", "10000", "GROUP", "BY", "facility_id", "HAVING", "COUNT", "(", "*", ")", ">", "=", "3"]];
     }
     else if (type === 'distinct') { 
       text = "純粋な集客力を測りたい。入館履歴から、重複を省いた『ユニークな施設IDの数』(UU数)を集計して。";
-      answers = ["SELECT COUNT(DISTINCT facility_id) FROM visitor_logs"];
+      answers = [["SELECT", "COUNT", "(", "DISTINCT", "facility_id", ")", "FROM", "visitor_logs"]];
     }
     else if (type === 'round') { 
       text = "施設ごとの平均利用額を出したいんだけど、端数が出ると見づらいから、施設IDと平均額を四捨五入(ROUND)して出して。";
-      answers = ["SELECT facility_id, ROUND(AVG(spent_amount)) FROM visitor_logs GROUP BY facility_id"];
+      answers = [["SELECT", "facility_id", ",", "ROUND", "(", "AVG", "(", "spent_amount", ")", ")", "FROM", "visitor_logs", "GROUP", "BY", "facility_id"]];
     }
   }
   else if (mode === 'kusatsu') {
@@ -524,125 +511,229 @@ function generateQuizLogic(mode) {
     
     if (type === 'window') {
       text = "全データのランキングを見たい。すべての「入館履歴」について、施設IDと、利用額が多い順の順位（ランキング）を出して。(※WINDOW関数を使用)";
-      answers = ["SELECT facility_id, RANK() OVER (ORDER BY spent_amount DESC) FROM visitor_logs"];
+      answers = [["SELECT", "facility_id", ",", "RANK", "(", ")", "OVER", "(", "ORDER", "BY", "spent_amount", "DESC", ")", "FROM", "visitor_logs"]];
     }
     else if (type === 'dml') {
       var dmlType = pick(['insert', 'update', 'delete']);
       if (dmlType === 'insert') {
         text = "新規オープンだ。「施設」に、IDが99、名前が'草津'のデータを新しく登録して。";
-        answers = ["INSERT INTO facilities (facility_id, name) VALUES (99, '草津')"];
+        answers = [["INSERT", "INTO", "facilities", "(", "facility_id", ",", "name", ")", "VALUES", "(", "99", ",", "'草津'", ")"]];
       } else if (dmlType === 'update') {
         text = "名称変更のお知らせ。「施設」のIDが99のデータを、名前を'草津温泉'に変更(UPDATE)して。";
-        answers = ["UPDATE facilities SET name = '草津温泉' WHERE facility_id = 99"];
+        answers = [["UPDATE", "facilities", "SET", "name", "=", "'草津温泉'", "WHERE", "facility_id", "=", "99"]];
       } else {
         text = "閉館処理を行う。「施設」から、IDが99のデータを削除(DELETE)して。";
-        answers = ["DELETE FROM facilities WHERE facility_id = 99"];
+        answers = [["DELETE", "FROM", "facilities", "WHERE", "facility_id", "=", "99"]];
       }
     }
     else if (type === 'case_groupby') {
       text = "価格帯別の分析レポートを作りたい。利用額が5000円以上なら'高額'、それ以外を'少額'と分類し、その分類ごとに利用件数を集計して。(※SELECTとGROUP BYの両方にCASEを書く)";
-      answers = ["SELECT CASE WHEN spent_amount >= 5000 THEN '高額' ELSE '少額' END, COUNT(*) FROM visitor_logs GROUP BY CASE WHEN spent_amount >= 5000 THEN '高額' ELSE '少額' END"];
+      answers = [["SELECT", "CASE", "WHEN", "spent_amount", ">", "=", "5000", "THEN", "'高額'", "ELSE", "'少額'", "END", ",", "COUNT", "(", "*", ")", "FROM", "visitor_logs", "GROUP", "BY", "CASE", "WHEN", "spent_amount", ">", "=", "5000", "THEN", "'高額'", "ELSE", "'少額'", "END"]];
     }
     else if (type === 'not_exists') {
       text = "【集客ゼロ調査】深刻な問題だ。「施設」として登録されているのに、入館履歴が『1件も存在しない』集客ゼロの施設名を取得して。(※NOT EXISTSを活用)";
-      answers = ["SELECT name FROM facilities f WHERE NOT EXISTS (SELECT * FROM visitor_logs v WHERE f.facility_id = v.facility_id)"];
+      answers = [["SELECT", "name", "FROM", "facilities", "f", "WHERE", "NOT", "EXISTS", "(", "SELECT", "*", "FROM", "visitor_logs", "v", "WHERE", "f", ".", "facility_id", "=", "v", ".", "facility_id", ")"]];
     }
     else if (type === 'correlated') {
       text = "相関サブクエリの特訓だ。利用額が10000円以上の入館履歴が存在する施設名を取得して。(※EXISTSを使用)";
-      answers = ["SELECT name FROM facilities f WHERE EXISTS (SELECT * FROM visitor_logs v WHERE f.facility_id = v.facility_id AND spent_amount >= 10000)"];
+      answers = [["SELECT", "name", "FROM", "facilities", "f", "WHERE", "EXISTS", "(", "SELECT", "*", "FROM", "visitor_logs", "v", "WHERE", "f", ".", "facility_id", "=", "v", ".", "facility_id", "AND", "spent_amount", ">", "=", "10000", ")"]];
     }
     else if (type === 'coalesce') {
       text = "【欠損値処理】施設の一覧を出す際、エリアIDが未設定（NULL）のものは空欄ではなく『未分類』という文字に置き換えて(COALESCE)施設名とともに取得して。";
-      answers = ["SELECT name, COALESCE(area_id, '未分類') FROM facilities"];
+      answers = [["SELECT", "name", ",", "COALESCE", "(", "area_id", ",", "'未分類'", ")", "FROM", "facilities"]];
     }
     else if (type === 'month') {
       text = "【時系列集計】月別の売上推移グラフを作りたい。「入館履歴」の入館日から『月』(MONTH)だけを抽出し、その月ごとに利用額の合計を集計して。";
-      answers = ["SELECT MONTH(visit_date), SUM(spent_amount) FROM visitor_logs GROUP BY MONTH(visit_date)"];
+      answers = [["SELECT", "MONTH", "(", "visit_date", ")", ",", "SUM", "(", "spent_amount", ")", "FROM", "visitor_logs", "GROUP", "BY", "MONTH", "(", "visit_date", ")"]];
     }
   }
 
-  return { text: text, answers: answers, solved: false };
+  return { text: text, answers: answers };
 }
 
 function generateNewQuiz() {
   currentQuiz = generateQuizLogic(currentMode);
+  built = [];
   document.getElementById('quizText').textContent = currentQuiz.text;
   var panel = document.getElementById('resultPanel');
   panel.style.display = 'none'; 
   panel.className = 'result-panel'; 
-  clearInput();
+  renderBuild();
   updateScoreUI();
 }
 
-// ===================== スマート判定ロジック =====================
-function canonicalize(sql) {
-  let s = sql.toUpperCase();
-  s = s.replace(/;/g, "");
+function renderBuild() {
+  var slots = document.getElementById('buildSlots');
+  var preview = document.getElementById('codePreview');
   
-  // INNER JOINの表記ゆれを吸収
-  s = s.replace(/INNER JOIN/g, "JOIN");
-  
-  // 記号周りのスペース揺れを吸収
-  s = s.replace(/\s+/g, " "); 
-  s = s.replace(/\s*,\s*/g, ",");
-  s = s.replace(/\s*\(\s*/g, "(");
-  s = s.replace(/\s*\)\s*/g, ")");
-  s = s.replace(/\s*=\s*/g, "=");
-  s = s.replace(/\s*>\s*=\s*/g, ">=");
-  s = s.replace(/\s*<\s*=\s*/g, "<=");
-  
-  // A=B と B=A の揺れを簡易吸収（WHEREやONなどで役立つ）
-  const parts = s.split("=");
-  if(parts.length === 2) {
-    const p1 = parts[0].trim();
-    const p2 = parts[1].trim();
-    if(p1 > p2) {
-      s = p2 + "=" + p1;
-    }
+  if (built.length === 0) {
+    slots.innerHTML = '<span class="empty-hint">↓ 下のタブや記号からパーツを選んで組み立てよう</span>';
+    preview.innerHTML = '<span class="preview-placeholder">ここにSQLコードがリアルタイムで表示されます...</span>';
+    return;
   }
   
-  return s.trim();
+  slots.innerHTML = '';
+  built.forEach(function(item, i) {
+    var b = document.createElement('div');
+    if (item.label === "↵") {
+      b.className = 'slot-block block-newline'; b.textContent = "↵";
+    } else {
+      b.className = 'slot-block block-' + item.type; b.textContent = item.label;
+    }
+    b.onclick = function() { removeBlock(i); };
+    slots.appendChild(b);
+    if (item.label === "↵") {
+      var br = document.createElement('div');
+      br.className = 'flex-break';
+      slots.appendChild(br);
+    }
+  });
+  
+  var sqlText = built.map(function(b) { return b.label; }).join(' ');
+  // 余分な空白を詰めてプレビューを綺麗にする
+  sqlText = sqlText.replace(/ \. /g, '.').replace(/ , /g, ', ').replace(/ \( /g, '(').replace(/ ↵ /g, '\n').replace(/↵/g, '\n');
+  sqlText = sqlText.replace(/(\d)\s+(\d)/g, '$1$2'); // 数字の結合表示
+
+  var highlighted = sqlText.replace(/\b(SELECT|FROM|WHERE|INNER|LEFT|RIGHT|JOIN|ON|GROUP|BY|HAVING|ORDER|ASC|DESC|CASE|WHEN|THEN|ELSE|END|UNION|ALL|IN|EXISTS|NOT|DISTINCT|OVER|INSERT|INTO|VALUES|UPDATE|SET|DELETE|START|TRANSACTION|COMMIT|ROLLBACK|IS|NULL|MAX|MIN|ROUND|COALESCE|MONTH)\b/g, '<span class="sql-keyword">$1</span>');
+  
+  preview.innerHTML = highlighted;
 }
 
-function checkAnswer(isAuto = false) {
-  var userInput = sqlInput.value.trim();
-  if (!userInput) return;
+function removeBlock(index) { built.splice(index, 1); renderBuild(); }
+function clearBuild() { built = []; renderBuild(); document.getElementById('resultPanel').style.display = 'none'; }
 
-  var userCanon = canonicalize(userInput);
+// 👑 【復活】高度な柔軟判定AIパーサー（正規化処理）
+// バラバラの数字パーツ(例: "1", "0")を "10" に結合する前処理
+function preprocessTokens(tokens) {
+  let result = [];
+  let currentNumber = "";
+  for (let i = 0; i < tokens.length; i++) {
+    let t = tokens[i];
+    if (/^\d+$/.test(t)) {
+      currentNumber += t;
+    } else {
+      if (currentNumber !== "") { result.push(currentNumber); currentNumber = ""; }
+      result.push(t);
+    }
+  }
+  if (currentNumber !== "") result.push(currentNumber);
+  return result;
+}
+
+function canonicalize(rawTokens) {
+  // 1. 数字の結合
+  let tokens = preprocessTokens(rawTokens);
+  let arr = tokens.filter(t => t !== "↵" && t !== "");
+  
+  // 2. 同義語の標準化 (大文字化、INNER JOIN -> JOIN統⼀、ASCの消去)
+  let cleaned = [];
+  for (let i = 0; i < arr.length; i++) {
+    let current = arr[i].toUpperCase();
+    let next = arr[i+1] ? arr[i+1].toUpperCase() : "";
+    if (current === "INNER" && next === "JOIN") {
+      cleaned.push("JOIN");
+      i++;
+    } else {
+      cleaned.push(arr[i]);
+    }
+  }
+  arr = cleaned.filter(t => t.toUpperCase() !== "ASC");
+
+  // 3. 等号演算子「=」の左右反転を許容するロジック
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] === "=") {
+      let leftStart = i - 1;
+      if (i - 3 >= 0 && arr[i-2] === ".") leftStart = i - 3;
+      let rightEnd = i + 1;
+      if (i + 3 < arr.length && arr[i+2] === ".") rightEnd = i + 3;
+      
+      if (leftStart >= 0 && rightEnd < arr.length) {
+        let leftStr = arr.slice(leftStart, i).join("").toUpperCase();
+        let rightStr = arr.slice(i + 1, rightEnd + 1).join("").toUpperCase();
+        if (leftStr > rightStr) {
+          let leftPiece = arr.slice(leftStart, i);
+          let rightPiece = arr.slice(i + 1, rightEnd + 1);
+          arr.splice(leftStart, (rightEnd - leftStart + 1), ...rightPiece, "=", ...leftPiece);
+        }
+      }
+    }
+  }
+
+  // 4. SELECT句等のカンマ区切りソート
+  let selectIdx = -1; let fromIdx = -1;
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i].toUpperCase() === "SELECT") selectIdx = i;
+    if (arr[i].toUpperCase() === "FROM") { fromIdx = i; break; }
+  }
+  if (selectIdx !== -1 && fromIdx !== -1 && fromIdx > selectIdx) {
+    let colTokens = arr.slice(selectIdx + 1, fromIdx);
+    let chunks = []; let currentChunk = [];
+    for (let t of colTokens) {
+      if (t === ",") {
+        if (currentChunk.length > 0) chunks.push(currentChunk);
+        currentChunk = [];
+      } else {
+        currentChunk.push(t);
+      }
+    }
+    if (currentChunk.length > 0) chunks.push(currentChunk);
+    
+    // カラム群を文字列表現でソート
+    chunks.sort((a, b) => a.join("").toUpperCase().localeCompare(b.join("").toUpperCase()));
+    
+    // カラムをカンマで再結合
+    let sortedCols = [];
+    for (let i = 0; i < chunks.length; i++) {
+      sortedCols = sortedCols.concat(chunks[i]);
+      if (i < chunks.length - 1) sortedCols.push(",");
+    }
+    arr.splice(selectIdx + 1, fromIdx - selectIdx - 1, ...sortedCols);
+  }
+
+  // 比較のために不要なスペースを詰めて文字列化
+  return arr.map(t => t.toUpperCase()).join(" ").replace(/\s+\.\s+/g, ".").replace(/\s+,\s+/g, ",").replace(/\s+\(\s+/g, "(").replace(/\s+\)\s+/g, ")").trim();
+}
+
+function checkAnswer() {
+  var currentAnswer = built.filter(function(b) { return b.label !== "↵"; }).map(function(b) { return b.label; });
+  if (currentAnswer.length === 0) return;
+
+  // ユーザーの入力と模範解答を「スマート正規化」して比較する
+  var userCanon = canonicalize(currentAnswer);
+
   var isCorrect = currentQuiz.answers.some(function(ans) {
     return userCanon === canonicalize(ans);
   });
 
   var panel = document.getElementById('resultPanel');
+  panel.style.display = 'block';
+  panel.className = 'result-panel ' + (isCorrect ? 'correct' : 'wrong');
+
+  document.getElementById('resultTitle').textContent = isCorrect ? '🎉 正解！要件を満たしました♨' : '💦 不正解！構文を見直そう';
 
   if (isCorrect) {
-    panel.style.display = 'block';
-    panel.className = 'result-panel correct';
-    document.getElementById('resultTitle').textContent = '🎉 正解！要件を満たしました♨';
+    var pts = currentMode === 'easy' ? 100 : currentMode === 'normal' ? 300 : (currentMode === 'hard' ? 1000 : 3000);
+    score += pts; totalSolved++;
+    document.getElementById('resultMsg').textContent = '素晴らしい！パーサーにより別解も完璧に検知しました。 +' + pts + 'ポイント獲得！';
     
-    // 重複加算を防止
-    if (!currentQuiz.solved) {
-        var pts = currentMode === 'easy' ? 100 : currentMode === 'normal' ? 300 : (currentMode === 'hard' ? 1000 : 3000);
-        score += pts; totalSolved++;
-        currentQuiz.solved = true;
-    }
-    
-    document.getElementById('resultMsg').textContent = '素晴らしい！ スコア獲得です！';
-    document.getElementById('resultSql').textContent = 'あなたの解答:\n' + userInput;
+    var userDisplaySql = built.map(function(b) { return b.label; }).join(' ')
+      .replace(/ \. /g, '.').replace(/ , /g, ', ').replace(/ \( /g, '(').replace(/ ↵ /g, '\n').replace(/↵/g, '\n');
+    userDisplaySql = userDisplaySql.replace(/(\d)\s+(\d)/g, '$1$2'); // 数字の結合表示
+    document.getElementById('resultSql').textContent = 'あなたの解答:\n' + userDisplaySql;
     panel.querySelector('.btn-next').style.display = 'block';
-    updateScoreUI();
-    document.getElementById('topPane').scrollTop = document.getElementById('topPane').scrollHeight;
   } else {
-    if (isAuto) return; // リアルタイム判定では間違っていてもエラーを出さない
+    var wrongStr = built.map(function(b) { return b.label; }).join(' ')
+      .replace(/ \. /g, '.').replace(/ , /g, ', ').replace(/ \( /g, '(').replace(/ ↵ /g, '\n').replace(/↵/g, '\n');
+    wrongStr = wrongStr.replace(/(\d)\s+(\d)/g, '$1$2');
+    document.getElementById('resultMsg').textContent = 'あなたの回答:\n' + (wrongStr || '（未入力）') + '\n\nカンマ(,)やドット(.)の押し忘れがないか、順番を見直してください。';
     
-    panel.style.display = 'block';
-    panel.className = 'result-panel wrong';
-    document.getElementById('resultTitle').textContent = '💦 不正解！構文を見直そう';
-    document.getElementById('resultMsg').textContent = 'あなたの回答:\n' + userInput + '\n\nカンマ(,)やドット(.)の押し忘れがないか、順番を見直してください。';
-    document.getElementById('resultSql').textContent = '模範解答の例:\n' + currentQuiz.answers[0];
+    var correctAns = currentQuiz.answers[0].join(' ').replace(/ \. /g, '.').replace(/ , /g, ', ').replace(/ \( /g, '(');
+    document.getElementById('resultSql').textContent = '模範解答の例:\n' + correctAns;
     panel.querySelector('.btn-next').style.display = 'none';
-    document.getElementById('topPane').scrollTop = document.getElementById('topPane').scrollHeight;
   }
+
+  updateScoreUI();
+  document.getElementById('topPane').scrollTop = document.getElementById('topPane').scrollHeight;
 }
 
 function updateScoreUI() {
