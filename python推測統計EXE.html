@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🐍 Pythonデータ分析パズル【完全バラバラ・無限パーツ版】</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --bg-dark: #0f141c;
+    --panel-bg: #1a2333;
+    --python-blue: #3776ab;
+    --python-yellow: #ffd343;
+    --pandas-purple: #130754;
+    --correct: #2e7d32;
+    --wrong: #c62828;
+    --algo-load: #2980b9;
+    --algo-clean: #d35400;
+    --algo-calc: #27ae60;
+    --algo-out: #8e44ad;
+    --code-bg: #111722;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body { height: 100%; overflow: hidden; background: var(--bg-dark); color: #e2e8f0; font-family: 'Zen Kaku Gothic New', sans-serif; }
+
+  .app-container { display: flex; flex-direction: column; height: 100%; max-width: 800px; margin: 0 auto; position: relative; }
+
+  header { background: var(--panel-bg); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2d3d5a; }
+  .logo { font-weight: 900; font-size: 1.1rem; display: flex; align-items: center; gap: 6px; }
+  .status-badge { background: #2d3d5a; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; }
+
+  .main-content { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; padding-bottom: 140px; }
+
+  .info-card { background: var(--panel-bg); border-radius: 12px; padding: 16px; border-left: 5px solid var(--python-blue); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .stage-title { font-size: 1.2rem; font-weight: 900; margin-bottom: 6px; color: #fff; display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+  .scaffold-indicator { font-size: 0.8rem; background: #e74c3c; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 900; }
+  .problem-text { font-size: 0.95rem; line-height: 1.6; color: #cbd5e1; }
+  
+  .data-preview { margin-top: 10px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; border: 1px dashed #475569; }
+
+  .phase-bar { display: flex; border-radius: 8px; overflow: hidden; font-weight: 900; font-size: 0.9rem; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+  .phase-tab { flex: 1; padding: 10px; background: #2d3d5a; color: #64748b; transition: all 0.3s; }
+  .phase-tab.active { background: var(--python-blue); color: white; }
+
+  .workspace-section { display: flex; flex-direction: column; gap: 8px; }
+  .section-label { font-size: 0.85rem; font-weight: 700; color: #94a3b8; display: flex; justify-content: space-between; }
+  
+  .assembly-zone { background: var(--code-bg); min-height: 120px; border-radius: 12px; padding: 12px; border: 2px solid #334155; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px; box-shadow: inset 0 4px 8px rgba(0,0,0,0.5); }
+  .assembly-zone.code-mode { font-family: 'Share Tech Mono', monospace; flex-direction: column; align-items: flex-start; justify-content: flex-start; }
+  
+  .code-line { display: flex; flex-wrap: wrap; gap: 4px; min-height: 32px; width: 100%; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px; }
+  .code-line::before { content: attr(data-line); color: #475569; font-size: 0.8rem; margin-right: 8px; width: 15px; text-align: right; display: inline-block; }
+
+  .palette-section { display: flex; flex-direction: column; gap: 8px; }
+  .palette-zone { background: var(--panel-bg); border-radius: 12px; padding: 12px; border: 1px solid #2d3d5a; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 85px; }
+
+  .tile { padding: 8px 14px; border-radius: 6px; font-weight: 700; font-size: 0.9rem; cursor: pointer; user-select: none; transition: transform 0.1s, box-shadow 0.1s; box-shadow: 0 3px 6px rgba(0,0,0,0.3); display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); }
+  .tile:active { transform: scale(0.95); }
+  
+  .tile.p1-load { background: var(--algo-load); color: white; }
+  .tile.p1-clean { background: var(--algo-clean); color: white; }
+  .tile.p1-calc { background: var(--algo-calc); color: white; }
+  .tile.p1-out { background: var(--algo-out); color: white; }
+  
+  .tile.p2-code { background: #2d3748; color: #f7fafc; font-family: 'Share Tech Mono', monospace; border-left: 3px solid var(--python-yellow); padding: 6px 10px; }
+  .tile.p2-newline { background: #4a5568; color: #63b3ed; font-family: 'Share Tech Mono', monospace; font-weight: 900; border: 1px solid #63b3ed; }
+
+  .action-bar { position: absolute; bottom: 0; left: 0; right: 0; background: var(--panel-bg); padding: 16px; border-top: 2px solid #2d3d5a; display: flex; gap: 12px; box-shadow: 0 -4px 15px rgba(0,0,0,0.5); }
+  .btn { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 900; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-clear { background: #475569; color: white; max-width: 100px; }
+  .btn-newline-action { background: #2d3d5a; color: #63b3ed; border: 1px solid #63b3ed; max-width: 130px; display: none; }
+  .btn-submit { background: var(--python-blue); color: white; box-shadow: 0 4px 10px rgba(55,118,171,0.4); }
+
+  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,20,28,0.85); display: none; justify-content: center; align-items: center; padding: 20px; z-index: 1000; backdrop-filter: blur(4px); }
+  .modal-content { background: var(--panel-bg); width: 100%; max-width: 550px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; border: 2px solid #2d3d5a; animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-height: 90%; overflow-y: auto; }
+  @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  
+  .modal-title { font-size: 1.8rem; font-weight: 900; margin-bottom: 12px; }
+  .modal-title.success { color: #4caf50; }
+  .modal-title.danger { color: #f44336; }
+  .modal-desc { color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-bottom: 16px; text-align: left; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; }
+  
+  /* 答え合わせ表示用エリア */
+  .comparison-box { background: #111722; border: 1px solid #2d3d5a; border-radius: 8px; padding: 12px; margin-bottom: 16px; text-align: left; font-family: 'Share Tech Mono', monospace; font-size: 0.9rem; }
+  .comparison-item { margin-bottom: 8px; }
+  .comparison-item:last-child { margin-bottom: 0; }
+  .comparison-label { font-size: 0.75rem; font-weight: 700; color: #94a3b8; font-family: 'Zen Kaku Gothic New', sans-serif; margin-bottom: 4px; }
+  .comparison-text { padding: 6px 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
+  .comparison-text.user { background: rgba(198, 40, 40, 0.2); color: #ff8a80; border-left: 3px solid var(--wrong); }
+  .comparison-text.correct { background: rgba(46, 125, 50, 0.2); color: #b9f6ca; border-left: 3px solid var(--correct); }
+
+  .modal-explanation { font-size: 0.9rem; color: #94a3b8; text-align: left; margin-bottom: 24px; border-top: 1px solid #2d3d5a; padding-top: 12px; line-height: 1.5; }
+  .btn-modal-next { background: var(--python-blue); color: white; width: 100%; padding: 12px; border-radius: 8px; font-weight: 900; border: none; cursor: pointer; font-size: 1rem; }
+
+  .empty-msg { color: #475569; font-size: 0.9rem; margin: auto; pointer-events: none; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <header>
+    <div class="logo">🐍 Pythonデータ分析パズル</div>
+    <div class="status-badge" id="stageIndicator">STAGE 1/8</div>
+  </header>
+
+  <div class="main-content">
+    <div class="info-card">
+      <div class="stage-title">
+        <span id="problemTitle">問題タイトル</span>
+        <span class="scaffold-indicator" id="scaffoldLevel">全解体モード</span>
+      </div>
+      <div class="problem-text" id="problemDesc">問題文がここに入ります。</div>
+      <div class="data-preview" id="dataPreview">データ構造</div>
+    </div>
+
+    <div class="phase-bar">
+      <div class="phase-tab active" id="tabPhase1">フェーズ1: プロセス設計</div>
+      <div class="phase-tab" id="tabPhase2">フェーズ2: コード構築</div>
+    </div>
+
+    <div class="workspace-section">
+      <div class="section-label">
+        <span id="workspaceLabel">ここにブロックを並べて処理の流れを作ろう</span>
+        <span id="blockCount">0 / 0</span>
+      </div>
+      <div class="assembly-zone" id="assemblyZone"></div>
+    </div>
+
+    <div class="palette-section">
+      <div class="section-label">利用可能なパーツ（タップしても減りません。何度でも使えます）</div>
+      <div class="palette-zone" id="paletteZone"></div>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-clear" id="btnClear">全クリア</button>
+    <button class="btn btn-newline-action" id="btnNewlineAction">↵ 改行追加</button>
+    <button class="btn btn-submit" id="btnSubmit">チェックする ▶</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resultModal">
+  <div class="modal-content">
+    <div class="modal-title" id="modalTitle">🎉 正解！</div>
+    <div class="modal-desc" id="modalDesc">メッセージ</div>
+    
+    <div class="comparison-box" id="comparisonBox" style="display: none;">
+      <div class="comparison-item" id="userCodeRow">
+        <div class="comparison-label">あなたの入力:</div>
+        <div class="comparison-text user" id="userCodeText"></div>
+      </div>
+      <div class="comparison-item">
+        <div class="comparison-label" id="correctLabel">模範解答 / 正しい順序:</div>
+        <div class="comparison-text correct" id="correctCodeText"></div>
+      </div>
+    </div>
+
+    <div class="modal-explanation" id="modalExplanation">解説</div>
+    <button class="btn-modal-next" id="btnModalNext">次へ ▶</button>
+  </div>
+</div>
+
+<script>
+// =========================================================================
+// データバンク（フェーズ2は全ステージ最初から完全バラバラのトークン単位に改修）
+// =========================================================================
+const quizDataSet = [
+  {
+    stage: 1,
+    title: "データフレームの概要確認",
+    scaffold: "完全解体・実戦モード",
+    desc: "データフレーム `df` の先頭5行を表示し、データが正しく取り込めているか概要を確認するコードを完成させてください。",
+    preview: "Target Object: df (DataFrame)",
+    phase1: {
+      hint: "処理の流れを設計しましょう。",
+      correctOrder: ["p1_target", "p1_action"],
+      correctText: "1. 対象データフレーム(df)を指定 ➔ 2. 先頭行を抽出して出力する",
+      blocks: [
+        { id: "p1_target", text: "対象データフレーム(df)を指定", type: "p1-load" },
+        { id: "p1_action", text: "先頭行を抽出して出力する", type: "p1-out" },
+        { id: "p1_dummy", text: "データを標準入力から読み込む", type: "p1-clean" }
+      ]
+    },
+    phase2: {
+      hint: "必要なパーツをパレットから何度でも選んで、正しいPython構文を組み立ててください。",
+      correctCode: "df.head()",
+      blocks: [
+        { id: "c_df", text: "df" }, { id: "c_dot", text: "." }, 
+        { id: "c_head", text: "head" }, { id: "c_lpar", text: "(" }, 
+        { id: "c_rpar", text: ")" }, { id: "c_tail", text: "tail" }
+      ]
+    },
+    explanation: "`.head()` メソッドを呼び出すことで、データフレームの最初の5行を素早く確認できます。"
+  },
+  {
+    stage: 2,
+    title: "特定カラムの平均値計算",
+    scaffold: "完全解体・実戦モード",
+    desc: "データフレーム `df` の『高評価数』カラムの平均値を計算するコードを完成させてください。",
+    preview: "Columns: ['タイトル', '再生数', '高評価数']",
+    phase1: {
+      hint: "特定の列を取り出してから集計関数を呼び出します。",
+      correctOrder: ["p2_select", "p2_calc"],
+      correctText: "1. 『高評価数』カラムを抽出する ➔ 2. 抽出した列の算術平均を計算",
+      blocks: [
+        { id: "p2_select", text: "『高評価数』カラムを抽出する", type: "p1-load" },
+        { id: "p2_calc", text: "抽出した列の算術平均を計算", type: "p1-calc" },
+        { id: "p2_dummy", text: "文字列に変換して結合する", type: "p1-clean" }
+      ]
+    },
+    phase2: {
+      hint: "ブラケット[]やクォーテーションの使い方を思い出しましょう。",
+      correctCode: "df['高評価数'].mean()",
+      blocks: [
+        { id: "c_df", text: "df" }, { id: "c_lsq", text: "[" }, { id: "c_rsq", text: "]" },
+        { id: "c_col", text: "'高評価数'" }, { id: "c_dot", text: "." }, 
+        { id: "c_mean", text: "mean" }, { id: "c_lpar", text: "(" }, { id: "c_rpar", text: ")" },
+        { id: "c_sum", text: "sum" }
+      ]
+    },
+    explanation: "特定のカラムを `[]` で指定し、`.mean()` メソッドで算術平均を求めます。"
+  },
+  {
+    stage: 3,
+    title: "特定カラムの中央値算出",
+    scaffold: "完全解体・実戦モード",
+    desc: "データフレーム `df` の『再生数』カラムの中央値（メディアン）を計算するコードを完成させてください。",
+    preview: "Columns: ['タイトル', '再生数', '高評価数']",
+    phase1: {
+      hint: "カラムを選択して、中央値のアルゴリズムを適用します。",
+      correctOrder: ["p3_select", "p3_calc"],
+      correctText: "1. 『再生数』カラムを抽出する ➔ 2. データの中央値を算出する",
+      blocks: [
+        { id: "p3_select", text: "『再生数』カラムを抽出する", type: "p1-load" },
+        { id: "p3_calc", text: "データの中央値を算出する", type: "p1-calc" }
+      ]
+    },
+    phase2: {
+      hint: "記号の順番に注意して正確に構築してください。",
+      correctCode: "df['再生数'].median()",
+      blocks: [
+        { id: "c_df", text: "df" }, { id: "c_lsq", text: "[" }, { id: "c_rsq", text: "]" },
+        { id: "c_col", text: "'再生数'" }, { id: "c_dot", text: "." }, 
+        { id: "c_med", text: "median" }, { id: "c_lpar", text: "(" }, { id: "c_rpar", text: ")" },
+        { id: "c_mean", text: "mean" }
+      ]
+    },
+    explanation: "中央値を求めるには `.median()` メソッドを使用します。"
+  },
+  {
+    stage: 4,
+    title: "Seabornによる1次元散布図",
+    scaffold: "完全解体・実戦モード",
+    desc: "Seaborn（`sns`）を用いて、データフレーム `df` の1次元散布図を描画するコードを完成させてください。",
+    preview: "Library: seaborn as sns",
+    phase1: {
+      hint: "可視化ライブラリの呼び出しフローです。",
+      correctOrder: ["p4_call", "p4_param"],
+      correctText: "1. Seabornの散布図関数を選択 ➔ 2. 引数にデータフレームを渡す",
+      blocks: [
+        { id: "p4_call", text: "Seabornの散布図関数を選択", type: "p1-calc" },
+        { id: "p4_param", text: "引数にデータフレームを渡す", type: "p1-load" }
+      ]
+    },
+    phase2: {
+      hint: "関数の引数として「何に」「何を代入するか」を意識しましょう。",
+      correctCode: "sns.stripplot(data=df)",
+      blocks: [
+        { id: "c_sns", text: "sns" }, { id: "c_dot", text: "." }, 
+        { id: "c_func", text: "stripplot" }, { id: "c_lpar", text: "(" }, { id: "c_rpar", text: ")" },
+        { id: "c_arg", text: "data" }, { id: "c_eq", text: "=" }, { id: "c_df", text: "df" }
+      ]
+    },
+    explanation: "`sns.stripplot()` の引数に `data=df` を指定して全体の分布を確認します。"
+  },
+  {
+    stage: 5,
+    title: "エラーバー付き棒グラフ描画",
+    scaffold: "完全解体・実戦モード",
+    desc: "Seaborn（`sns`）を用いて、データフレーム `df` を対象に、信頼区間をエラーバー（'ci'）として描画した棒グラフを表示させてください。",
+    preview: "Seaborn Advance Plotting",
+    phase1: {
+      hint: "描画関数に複数の指定パラメータを流し込むプロセスです。",
+      correctOrder: ["p5_func", "p5_data", "p5_opt"],
+      correctText: "1. 棒グラフ描画関数を宣言 ➔ 2. 対象データとしてdfを設定 ➔ 3. エラーバーの種類に指定",
+      blocks: [
+        { id: "p5_func", text: "棒グラフ描画関数を宣言", type: "p1-calc" },
+        { id: "p5_data", text: "対象データとしてdfを設定", type: "p1-load" },
+        { id: "p5_opt", text: "エラーバーの種類に信頼区間を指定", type: "p1-clean" }
+      ]
+    },
+    phase2: {
+      hint: "複数の引数を区切る「,」を忘れずに！",
+      correctCode: "sns.barplot(data=df,errorbar='ci')",
+      blocks: [
+        { id: "c_sns", text: "sns" }, { id: "c_dot", text: "." }, 
+        { id: "c_func", text: "barplot" }, { id: "c_lpar", text: "(" }, { id: "c_rpar", text: ")" },
+        { id: "c_data", text: "data" }, { id: "c_eq", text: "=" }, { id: "c_df", text: "df" },
+        { id: "c_comma", text: "," }, { id: "c_err", text: "errorbar" }, { id: "c_ci", text: "'ci'" }
+      ]
+    },
+    explanation: "`barplot` 関数に `errorbar='ci'` を指定することで、信頼区間を表現するひげを描画できます。"
+  },
+  {
+    stage: 6,
+    title: "カスタム関数の一括適用",
+    scaffold: "完全解体・実戦モード",
+    desc: "Pandas のデータフレーム `df` の各行に対して、特定の関数 `my_func` を一括で適用するコードを完成させてください。",
+    preview: "High-level functional programming in Pandas",
+    phase1: {
+      hint: "データフレーム全体に処理をマッピングします。",
+      correctOrder: ["p6_df", "p6_method", "p6_arg"],
+      correctText: "1. 基盤となるデータフレーム ➔ 2. 関数適用メソッドを結合 ➔ 3. 引数にカスタム関数を指定",
+      blocks: [
+        { id: "p6_df", text: "基盤となるデータフレーム", type: "p1-load" },
+        { id: "p6_method", text: "関数適用メソッドを結合", type: "p1-calc" },
+        { id: "p6_arg", text: "引数に対象となるカスタム関数を指定", type: "p1-clean" }
+      ]
+    },
+    phase2: {
+      hint: "一括適用メソッドの名前を思い出しましょう。",
+      correctCode: "df.apply(my_func)",
+      blocks: [
+        { id: "c_df", text: "df" }, { id: "c_dot", text: "." }, 
+        { id: "c_app", text: "apply" }, { id: "c_lpar", text: "(" }, { id: "c_rpar", text: ")" },
+        { id: "c_myf", text: "my_func" }, { id: "c_map", text: "map" }
+      ]
+    },
+    explanation: "データフレームに関数を一括適用したい場合は `.apply()` メソッドを使用します。"
+  },
+  {
+    stage: 7,
+    title: "回帰直線の可視化プロット",
+    scaffold: "完全解体・実戦モード",
+    desc: "Matplotlib（`plt`）を用いて、テストデータ `X_test` と予測値 `y_pred` を表す線グラフを赤色（'red'）、線の太さ2（linewidth=2）でプロットしてください。",
+    preview: "Library: matplotlib.pyplot as plt",
+    phase1: {
+      hint: "横軸データ、縦軸データ、そしてオプションの順に指定します。",
+      correctOrder: ["p7_func", "p7_data", "p7_color", "p7_width"],
+      correctText: "1. Matplotlibの線描画関数を呼び出す ➔ 2. 引数にX_testとy_predを渡す ➔ 3. カラー引数に赤を設定 ➔ 4. 線の太さを設定",
+      blocks: [
+        { id: "p7_func", text: "Matplotlibの線描画関数を呼び出す", type: "p1-calc" },
+        { id: "p7_data", text: "引数にX_testとy_predのセットを渡す", type: "p1-load" },
+        { id: "p7_color", text: "カラー引数に赤を設定", type: "p1-clean" },
+        { id: "p7_width", text: "線の太さ引数に2を設定", type: "p1-clean" }
+      ]
+    },
+    phase2: {
+      hint: "引数が多いのでカンマ「,」とイコール「=」の対応に気をつけてください。",
+      correctCode: "plt.plot(X_test,y_pred,color='red',linewidth=2)",
+      blocks: [
+        { id: "c_plt", text: "plt" }, { id: "c_dot", text: "." }, 
+        { id: "c_plot", text: "plot" }, { id: "c_lpar", text: "(" }, { id: "c_rpar", text: ")" },
+        { id: "c_comma", text: "," }, { id: "c_eq", text: "=" }, 
+        { id: "c_x", text: "X_test" }, { id: "c_y", text: "y_pred" },
+        { id: "c_col", text: "color" }, { id: "c_red", text: "'red'" },
+        { id: "c_lw", text: "linewidth" }, { id: "c_2", text: "2" }
+      ]
+    },
+    explanation: "`plt.plot()` で線グラフを描画します。`color` で色、`linewidth` で線の太さを制御できます。"
+  },
+  {
+    stage: 8,
+    title: "散布図プロットと凡例の表示",
+    scaffold: "完全解体・実戦モード",
+    desc: "Matplotlib（`plt`）を用いて、`X_test` と `y_test` の散布図をグレー（'gray'）、透明度0.6（alpha=0.6）で描き、次の行で凡例（レジェンド）を表示させる複数行コードを完成させてください。※改行ボタンを活用してください！",
+    preview: "Multi-line plotting code challenge",
+    phase1: {
+      hint: "1行目で散布図をプロットし、2行目で凡例追加関数を実行するプロセスです。",
+      correctOrder: ["p8_scatter", "p8_decor"],
+      correctText: "1. 透明度とカラーを指定して散布図をプロット ➔ 2. グラフ上に凡例(Legend)を描画",
+      blocks: [
+        { id: "p8_scatter", text: "透明度とカラーを指定して散布図をプロット", type: "p1-calc" },
+        { id: "p8_decor", text: "グラフ上に凡例(Legend)を描画する命令を追加", type: "p1-out" }
+      ]
+    },
+    phase2: {
+      hint: "無限パーツ機能の真骨頂です！`plt` や `.` や `()` など、複数回使う記号をパレットから何度も引っ張ってきてください！",
+      correctCode: "plt.scatter(X_test,y_test,color='gray',alpha=0.6)\nplt.legend()",
+      blocks: [
+        { id: "c_plt", text: "plt" }, { id: "c_dot", text: "." }, 
+        { id: "c_sca", text: "scatter" }, { id: "c_leg", text: "legend" },
+        { id: "c_lpar", text: "(" }, { id: "c_rpar", text: ")" }, { id: "c_comma", text: "," }, { id: "c_eq", text: "=" },
+        { id: "c_x", text: "X_test" }, { id: "c_y", text: "y_test" },
+        { id: "c_col", text: "color" }, { id: "c_gry", text: "'gray'" },
+        { id: "c_alp", text: "alpha" }, { id: "c_06", text: "0.6" }
+      ]
+    },
+    explanation: "グラフ描画処理を重ねたあと、`plt.legend()` を呼び出すことで凡例ボックスをレンダリングできます。"
+  }
+];
+
+// ==========================================
+// アプリケーションの状態管理
+// ==========================================
+let currentStageIndex = 0; 
+let currentPhase = 1;      
+let assembledBlocks = [];  
+
+const stageIndicator = document.getElementById('stageIndicator');
+const problemTitle = document.getElementById('problemTitle');
+const scaffoldLevel = document.getElementById('scaffoldLevel');
+const problemDesc = document.getElementById('problemDesc');
+const dataPreview = document.getElementById('dataPreview');
+const tabPhase1 = document.getElementById('tabPhase1');
+const tabPhase2 = document.getElementById('tabPhase2');
+const workspaceLabel = document.getElementById('workspaceLabel');
+const blockCount = document.getElementById('blockCount');
+const assemblyZone = document.getElementById('assemblyZone');
+const paletteZone = document.getElementById('paletteZone');
+const btnClear = document.getElementById('btnClear');
+const btnNewlineAction = document.getElementById('btnNewlineAction');
+const btnSubmit = document.getElementById('btnSubmit');
+
+const resultModal = document.getElementById('resultModal');
+const modalTitle = document.getElementById('modalTitle');
+const modalDesc = document.getElementById('modalDesc');
+const comparisonBox = document.getElementById('comparisonBox');
+const userCodeRow = document.getElementById('userCodeRow');
+const userCodeText = document.getElementById('userCodeText');
+const correctLabel = document.getElementById('correctLabel');
+const correctCodeText = document.getElementById('correctCodeText');
+const modalExplanation = document.getElementById('modalExplanation');
+const btnModalNext = document.getElementById('btnModalNext');
+
+function initApp() {
+  loadStageAndPhase();
+  
+  btnClear.addEventListener('click', resetWorkspace);
+  btnNewlineAction.addEventListener('click', addNewlineBlock);
+  btnSubmit.addEventListener('click', checkAnswer);
+  btnModalNext.addEventListener('click', handleModalNext);
+}
+
+function loadStageAndPhase() {
+  const quiz = quizDataSet[currentStageIndex];
+  
+  stageIndicator.textContent = `STAGE ${quiz.stage} / ${quizDataSet.length}`;
+  problemTitle.textContent = quiz.title;
+  scaffoldLevel.textContent = quiz.scaffold;
+  problemDesc.textContent = quiz.desc;
+  dataPreview.textContent = quiz.preview;
+  
+  assembledBlocks = [];
+  
+  if (currentPhase === 1) {
+    tabPhase1.classList.add('active');
+    tabPhase2.classList.remove('active');
+    workspaceLabel.textContent = "【設計】処理の論理的なプロセス順にパーツを並べてください";
+    btnNewlineAction.style.display = 'none'; 
+    assemblyZone.classList.remove('code-mode');
+    
+    // フェーズ1のパーツ描画
+    renderPalette(shuffleArray([...quiz.phase1.blocks]));
+  } else {
+    tabPhase1.classList.remove('active');
+    tabPhase2.classList.add('active');
+    workspaceLabel.textContent = "【実装】パレットからパーツを自由に選び、Pythonコードを構築してください";
+    btnNewlineAction.style.display = 'flex'; 
+    assemblyZone.classList.add('code-mode');
+    
+    // フェーズ2のパーツ描画
+    renderPalette(shuffleArray([...quiz.phase2.blocks]));
+  }
+  
+  renderAssemblyZone();
+}
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+// 【改修点】パレットは減らさず常に全選択肢を表示し続ける
+function renderPalette(blocks) {
+  paletteZone.innerHTML = '';
+  
+  blocks.forEach(block => {
+    const tile = document.createElement('div');
+    tile.className = `tile ${block.type || 'p2-code'}`;
+    tile.textContent = block.text;
+    tile.dataset.id = block.id;
+    
+    tile.addEventListener('click', () => {
+      // クリックされたら組み立てエリアの配列に「追加」するだけ。パレットの再描画はしない。
+      assembledBlocks.push({ id: block.id, text: block.text, type: block.type || 'p2-code' });
+      renderAssemblyZone();
+    });
+    
+    paletteZone.appendChild(tile);
+  });
+}
+
+function renderAssemblyZone() {
+  assemblyZone.innerHTML = '';
+  const realBlockCount = assembledBlocks.filter(b => b.type !== 'p2-newline').length;
+  blockCount.textContent = `配置済み: ${realBlockCount} 個`;
+
+  if (assembledBlocks.length === 0) {
+    assemblyZone.innerHTML = '<div class="empty-msg">下のパーツをタップして配置してください</div>';
+    return;
+  }
+
+  if (currentPhase === 1) {
+    assembledBlocks.forEach((block, index) => {
+      const tile = document.createElement('div');
+      tile.className = `tile ${block.type}`;
+      tile.textContent = block.text;
+      tile.addEventListener('click', () => {
+        // 組み立てエリアのパーツをクリックしたら消す
+        assembledBlocks.splice(index, 1);
+        renderAssemblyZone();
+      });
+      assemblyZone.appendChild(tile);
+    });
+  } else {
+    let lineCount = 1;
+    let currentLineDiv = createCodeLineElement(lineCount);
+    assemblyZone.appendChild(currentLineDiv);
+
+    assembledBlocks.forEach((block, index) => {
+      if (block.type === 'p2-newline') {
+        lineCount++;
+        currentLineDiv = createCodeLineElement(lineCount);
+        assemblyZone.appendChild(currentLineDiv);
+      } else {
+        const tile = document.createElement('div');
+        tile.className = `tile p2-code`;
+        tile.textContent = block.text;
+        tile.addEventListener('click', () => {
+          // 組み立てエリアのパーツをクリックしたら消す
+          assembledBlocks.splice(index, 1);
+          renderAssemblyZone();
+        });
+        currentLineDiv.appendChild(tile);
+      }
+    });
+  }
+}
+
+function createCodeLineElement(lineNum) {
+  const div = document.createElement('div');
+  div.className = 'code-line';
+  div.setAttribute('data-line', lineNum);
+  return div;
+}
+
+function addNewlineBlock() {
+  if (currentPhase !== 2) return;
+  assembledBlocks.push({ id: 'nl_' + Date.now(), text: '↵', type: 'p2-newline' });
+  renderAssemblyZone();
+}
+
+function resetWorkspace() {
+  assembledBlocks = [];
+  renderAssemblyZone();
+}
+
+// ==========================================
+// 判定・答え表示の改良ロジック
+// ==========================================
+function checkAnswer() {
+  if (assembledBlocks.length === 0) return;
+  
+  const quiz = quizDataSet[currentStageIndex];
+  
+  if (currentPhase === 1) {
+    const userOrder = assembledBlocks.map(b => b.id);
+    const correctOrder = quiz.phase1.correctOrder;
+    
+    // プロセスの無限パーツ化対応。長さとIDの完全一致をチェック
+    const isCorrect = userOrder.length === correctOrder.length && 
+                      userOrder.every((id, idx) => id === correctOrder[idx]);
+                      
+    const userTextSummary = assembledBlocks.map((b, i) => `${i+1}. ${b.text}`).join(' ➔ ');
+    
+    if (isCorrect) {
+      showModal(true, "🎉 アルゴリズム設計成功！", "処理プロセスが論理的に正しく設計されました！", quiz.explanation, null, quiz.phase1.correctText, "プロセス設計");
+    } else {
+      showModal(false, "💦 プロセス順に誤りがあります", "データ分析のパイプラインに不整合があります。正しい順序を確認してみましょう。", "", userTextSummary, quiz.phase1.correctText, "プロセス設計");
+    }
+  } else {
+    let userCode = "";
+    assembledBlocks.forEach(b => {
+      if (b.type === 'p2-newline') {
+        userCode += "\n"; // 改行は保持する
+      } else {
+        userCode += b.text;
+      }
+    });
+    
+    // 【改修点】空白とタブは消すが、改行(\n)は判定のために残す
+    const cleanStr = (str) => str.replace(/[ \t\r]+/g, '').trim();
+    const isCorrect = cleanStr(userCode) === cleanStr(quiz.phase2.correctCode);
+    
+    if (isCorrect) {
+      let titleStr = currentStageIndex === quizDataSet.length - 1 ? "🎉 全8ステージ完全制覇！" : "🎉 コード構築成功！";
+      let descStr = currentStageIndex === quizDataSet.length - 1 ? 
+                    "素晴らしい！最終問題の複数行コーディングも見事にクリアしました！" : 
+                    "完全バラバラの状態から見事に構文を組み立てました！";
+      showModal(true, titleStr, descStr, quiz.explanation, null, quiz.phase2.correctCode, "コード構築");
+    } else {
+      showModal(false, "💦 コード構文エラー", "模範解答のスクリプトと構造が異なります。見比べて間違いを見つけましょう。", "", userCode || "（空欄）", quiz.phase2.correctCode, "コード構築");
+    }
+  }
+}
+
+function showModal(isSuccess, title, desc, exp, userAns = null, correctAns = "", mode = "コード構築") {
+  modalTitle.textContent = title;
+  modalTitle.className = `modal-title ${isSuccess ? 'success' : 'danger'}`;
+  modalDesc.innerHTML = desc;
+  
+  if (!isSuccess && userAns !== null) {
+    comparisonBox.style.display = 'block';
+    userCodeRow.style.display = 'block';
+    correctLabel.textContent = mode === "プロセス設計" ? "正しいプロセス順序:" : "模範解答コード:";
+    userCodeText.textContent = userAns;
+    correctCodeText.textContent = correctAns;
+  } else if (isSuccess) {
+    comparisonBox.style.display = 'block';
+    userCodeRow.style.display = 'none'; 
+    correctLabel.textContent = mode === "プロセス設計" ? "確定したプロセス:" : "完成したコード:";
+    correctCodeText.textContent = correctAns;
+  } else {
+    comparisonBox.style.display = 'none';
+  }
+  
+  if (exp && isSuccess) {
+    modalExplanation.innerHTML = exp;
+    modalExplanation.style.display = 'block';
+  } else {
+    modalExplanation.style.display = 'none';
+  }
+  
+  if (isSuccess) {
+    if (currentPhase === 1) {
+      btnModalNext.textContent = "Pythonコード構築フェーズへ ▶";
+    } else if (currentStageIndex < quizDataSet.length - 1) {
+      btnModalNext.textContent = "次のステージへ ▶";
+    } else {
+      btnModalNext.textContent = "最初から再挑戦する 🔄";
+    }
+  } else {
+    btnModalNext.textContent = "答えを確認して再挑戦する ↩";
+  }
+  
+  btnModalNext.dataset.success = isSuccess;
+  resultModal.style.display = 'flex';
+}
+
+function handleModalNext() {
+  const isSuccess = btnModalNext.dataset.success === "true";
+  resultModal.style.display = 'none';
+  
+  if (!isSuccess) return; 
+  
+  if (currentPhase === 1) {
+    currentPhase = 2;
+  } else {
+    if (currentStageIndex < quizDataSet.length - 1) {
+      currentStageIndex++;
+      currentPhase = 1; 
+    } else {
+      currentStageIndex = 0;
+      currentPhase = 1;
+    }
+  }
+  loadStageAndPhase();
+}
+
+window.onload = initApp;
+</script>
+</body>
+</html>

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>♨️ スクレイピング道場【データ収集・職人特訓版】</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --deep-indigo: #0b0f19;
+    --noren-red: #7f1d1d;
+    --hot-orange: #ea580c;
+    --correct: #15803d;
+    --wrong: #b91c1c;
+    --terminal-green: #0ea5e9;
+    --code-bg: #141b24;
+    --panel-bg: #1e293b;
+    --border-color: #334155;
+    
+    /* 仕込み図（アルゴリズム）用カラー */
+    --algo-term: #475569; 
+    --algo-proc: #1d4ed8; 
+    --algo-dec: #c2410c;  
+    --algo-io: #047857;   
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    background: var(--deep-indigo); color: #f8fafc;
+    display: flex; flex-direction: column;
+  }
+
+  /* 職人のれんヘッダー */
+  .noren-header {
+    flex: 0 0 auto; text-align: center; padding: 12px 10px;
+    background: linear-gradient(180deg, #020617 0%, #0b0f19 100%);
+    border-bottom: 4px solid var(--noren-red); position: relative; z-index: 10;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4);
+  }
+  .noren-strips { display: flex; justify-content: center; gap: 14px; margin-bottom: 6px; }
+  .noren-strip { width: 45px; height: 14px; border-radius: 0 0 6px 6px; background: var(--noren-red); }
+  .noren-strip:nth-child(2) { background: #f8fafc; }
+  .app-title { font-size: 15px; font-weight: 900; letter-spacing: 2px; color: #f8fafc; text-shadow: 1px 1px 3px rgba(0,0,0,0.6); }
+
+  /* 初期画面 */
+  .screen { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 24px; text-align: center; }
+  .active { display: flex; }
+
+  .title-logo { font-size: 75px; margin-bottom: 12px; animation: steam 2.5s ease-in-out infinite; }
+  @keyframes steam {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.9; }
+    50% { transform: translateY(-8px) scale(1.02); opacity: 1; }
+  }
+
+  .course-container { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
+  .btn-course {
+    padding: 20px; border-radius: 16px; border: 1px solid var(--border-color); font-weight: 900; font-size: 16px;
+    cursor: pointer; color: #fff; text-align: left; transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+  .btn-course:active { transform: scale(0.97); }
+  .btn-linux { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
+  .btn-python { background: linear-gradient(135deg, #78350f, #d97706); }
+  .btn-course .sub { font-size: 11px; font-weight: 400; opacity: 0.85; margin-top: 5px; display: block; line-height: 1.4; }
+
+  /* メインアプリ構造 */
+  #appShell { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  
+  /* 上部パネル（現場と仕込みエリア） */
+  #topPane { flex: 1; display: flex; flex-direction: column; padding: 12px; gap: 10px; overflow-y: auto; min-height: 180px; }
+  
+  .quiz-card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+  .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .quiz-title { font-size: 14px; font-weight: 900; color: #38bdf8; }
+  .quiz-progress { font-size: 11px; background: #0f172a; padding: 2px 10px; border-radius: 20px; color: #94a3b8; font-weight: 700; }
+  .quiz-text { font-size: 12px; line-height: 1.6; color: #cbd5e1; }
+
+  .phase-container { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+  .phase-badge { display: inline-block; padding: 4px 10px; background: var(--algo-dec); color: #fff; border-radius: 6px; font-size: 11px; font-weight: 900; letter-spacing: 0.5px; }
+  .phase-code { background: #2563eb; }
+  .phase-hint { font-size: 11px; color: #94a3b8; font-weight: 700; }
+
+  /* ビルド作業場 */
+  .build-area { 
+    flex: 1; min-height: 130px; background: #020617; border: 2px dashed var(--border-color); border-radius: 12px; padding: 12px; 
+    display: flex; align-content: flex-start; overflow-y: auto;
+  }
+  .build-area.phase-algo { flex-direction: column; align-items: center; gap: 8px; }
+  .build-area.phase-code { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; justify-content: flex-start; }
+  .flex-break { flex-basis: 100%; height: 0; margin: 0; padding: 0; }
+
+  /* 共通ブロック */
+  .block { cursor: pointer; user-select: none; transition: transform 0.1s, opacity 0.1s; font-size: 13px; font-weight: 700; flex-shrink: 0; box-shadow: 0 3px 5px rgba(0,0,0,0.3); }
+  .block:active { transform: scale(0.94); opacity: 0.85; }
+
+  /* 仕込み図記号（JISベース） */
+  .algo-block { width: 100%; max-width: 310px; padding: 10px 14px; text-align: center; color: #fff; position: relative; }
+  .algo-term { background: var(--algo-term); border-radius: 20px; border: 1px solid #64748b; }
+  .algo-proc { background: var(--algo-proc); border-radius: 4px; border: 1px solid #3b82f6; }
+  .algo-dec  { background: var(--algo-dec); border: 1px solid #f59e0b; clip-path: polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%); padding: 10px 22px; }
+  .algo-io   { background: var(--algo-io); border: 1px solid #10b981; clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%); }
+
+  /* 縦矢印 */
+  .build-area.phase-algo .algo-block:not(:last-child)::after {
+    content: "↓"; position: absolute; bottom: -19px; left: 50%; transform: translateX(-50%); color: #475569; font-size: 13px; font-weight: 900; z-index: 5;
+  }
+  .build-area.phase-algo .algo-block:not(:last-child) { margin-bottom: 10px; }
+
+  /* コード部品（職人の道具） */
+  .code-block { 
+    background: var(--code-bg); color: #e2e8f0; font-family: 'Share Tech Mono', monospace; 
+    border: 1px solid #475569; border-radius: 5px; padding: 5px 9px; font-size: 13px; letter-spacing: 0.3px;
+  }
+  .code-block.fine { padding: 4px 6px; border-color: #64748b; background: #1e293b; color: #38bdf8; }
+  
+  /* 特殊コントロール */
+  .code-br-btn { background: #0284c7; color: #fff; font-weight: 900; padding: 10px 22px; border-radius: 8px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); cursor: pointer; font-size: 13px; }
+  .code-br-btn:active { transform: scale(0.95); }
+  .code-br-display { background: #334155; color: #94a3b8; border: 1px dashed #64748b; border-radius: 5px; padding: 4px 8px; font-family: 'Share Tech Mono', monospace; font-size: 12px; font-weight: 900; }
+
+  /* 下部パネル（操作と道具箱） */
+  #bottomPane { flex: 1.3; background: #111827; border-top: 2px solid var(--border-color); padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 250px; }
+  
+  .action-row { display: flex; gap: 10px; }
+  .btn-run { flex: 2; padding: 14px; background: var(--correct); color: #fff; border: none; border-radius: 8px; font-weight: 900; font-size: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+  .btn-clear { flex: 1; padding: 14px; background: #4b5563; color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; }
+
+  #editorTools { display: none; justify-content: center; align-items: center; padding: 2px 0; }
+
+  /* 道具箱（パーツ倉庫） */
+  .warehouse-title { font-size: 11px; color: #94a3b8; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+  .warehouse { flex: 1; overflow-y: auto; padding: 8px; background: #020617; border: 1px solid var(--border-color); border-radius: 8px; display: flex; gap: 6px; align-content: flex-start; }
+  .warehouse.wh-algo { flex-direction: column; align-items: center; }
+  .warehouse.wh-code { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+
+  /* 収穫結果モーダル */
+  .result-modal { display: none; position: fixed; inset: 0; background: rgba(2,6,23,0.85); z-index: 100; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(3px); }
+  .modal-content { background: var(--panel-bg); padding: 26px; border-radius: 16px; border: 3px solid var(--correct); text-align: center; max-width: 390px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); }
+  .modal-content.wrong-border { border-color: var(--wrong); }
+  .modal-icon { font-size: 52px; margin-bottom: 8px; }
+  .modal-title { font-size: 20px; font-weight: 900; margin-bottom: 12px; }
+  .modal-desc { font-size: 13px; color: #cbd5e1; margin-bottom: 18px; line-height: 1.6; text-align: left; background: #020617; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); white-space: pre-wrap; font-family: 'Share Tech Mono', 'Zen Kaku Gothic New', monospace; max-height: 250px; overflow-y: auto; }
+  .modal-btn { width: 100%; padding: 14px; border-radius: 8px; border: none; font-weight: 900; font-size: 15px; cursor: pointer; background: #2563eb; color: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+
+  .empty-hint { color: #475569; font-size: 12px; margin: auto; text-align: center; pointer-events: none; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="noren-header">
+  <div class="noren-strips">
+    <div class="noren-strip"></div><div class="noren-strip"></div><div class="noren-strip"></div>
+  </div>
+  <div class="app-title">♨️ スクレイピング道場【データ収集・職人特訓編】</div>
+</div>
+
+<div id="courseScreen" class="screen active">
+  <div class="title-logo">♨️</div>
+  <h1 style="font-size: 24px; margin-bottom: 8px; font-weight: 900; letter-spacing: 1px;">スクレイピング道場</h1>
+  <p style="font-size: 13px; color: #94a3b8; margin-bottom: 32px; line-height: 1.6; max-width: 340px;">
+    受動的なデータ処理はここまでだ。<br>自らWebの海に潜り、標的の構造を解析して目的のデータを引き抜く「収集職人」の技を体得せよ！
+  </p>
+  <div class="course-container">
+    <button class="btn-course btn-linux" onclick="selectCourse('linux')">
+      🐧 Linux 隠密コマンドルート
+      <span class="sub">難易度：★☆☆ 〜 ★★☆<br>curlのパイプ連結集計、wgetのオプション一括収集の技</span>
+    </button>
+    <button class="btn-course btn-python" onclick="selectCourse('python')">
+      🐍 Python 構造解析職人ルート
+      <span class="sub">難易度：★★☆ 〜 ★★★<br>requestsバイナリ保存、BeautifulSoup細分化パズル</span>
+    </button>
+  </div>
+</div>
+
+<div id="appShell">
+  <div id="topPane">
+    <div class="quiz-card">
+      <div class="quiz-header">
+        <div class="quiz-title" id="quizTitle">任務</div>
+        <div class="quiz-progress" id="quizProgress">1 / 2</div>
+      </div>
+      <div class="quiz-text" id="quizText">ターゲットと抽出要件がここに表示されます。</div>
+    </div>
+    
+    <div class="phase-container">
+      <div class="phase-badge" id="phaseBadge">段階1：仕込み（設計図）</div>
+      <div class="phase-hint" id="phaseHint">処理の論理フローを正しい順に縦に並べよ</div>
+    </div>
+    
+    <div class="build-area phase-algo" id="buildArea"></div>
+  </div>
+
+  <div id="bottomPane">
+    <div class="action-row">
+      <button class="btn-run" onclick="checkAnswer()">🔍 湯加減を確かめる（スクリプト実行）</button>
+      <button class="btn-clear" onclick="clearBuild()">↩ 道具箱に戻す</button>
+    </div>
+    
+    <div id="editorTools">
+      <button class="code-br-btn" onclick="addNewline()">↵ 行を改める（改行パーツ挿入）</button>
+    </div>
+    
+    <div class="warehouse-title" id="warehouseTitle">道具箱（パーツ）</div>
+    <div class="warehouse wh-algo" id="warehouse"></div>
+  </div>
+</div>
+
+<div class="result-modal" id="resultModal">
+  <div class="modal-content" id="modalContent">
+    <div class="modal-icon" id="modalIcon">🎉</div>
+    <div class="modal-title" id="modalTitle">見事、整いました！</div>
+    <div class="modal-desc" id="modalDesc">収穫ログや解説がここに表示されます。</div>
+    <button class="modal-btn" id="modalBtn" onclick="modalAction()">次の任務へ ♨️</button>
+  </div>
+</div>
+
+<script>
+  // クイズデータ
+  const quizzes = {
+    linux: [
+      {
+        title: "任務1：特定キーワード行の引き抜きと計数",
+        desc: "ターゲットURLからHTMLソースをサイレントモードで引き抜き、そこから「恋」という文字が含まれる行だけを抽出し、その総行数をカウントして出力せよ。（中粒パーツ構成）",
+        algo: [
+          {l:"開始", t:"term"},
+          {l:"標的URLからサイレントモードでソースを引き抜く", t:"io"},
+          {l:"「恋」を含む行だけをフィルタリング抽出", t:"proc"},
+          {l:"抽出したデータの行数を数え上げる", t:"proc"},
+          {l:"終了", t:"term"}
+        ],
+        code: ["curl -s", "https://adeac.jp/...html", "|", "grep", "'恋'", "|", "wc -l"],
+        isFine: false
+      },
+      {
+        title: "任務2：画像リソースの一括自動隠密収集",
+        desc: "wgetを用いて、対象サイト内のリンクを1階層だけ追跡し、jpgファイルのみを対象に、階層ディレクトリを作らずにカレントに保存せよ。ただしサーバーに負荷をかけぬよう3秒の間隔を空けること。（細粒パーツ構成）",
+        algo: [
+          {l:"開始", t:"term"},
+          {l:"wgetを起動し、再帰追跡と階層制限(1)を指定", t:"proc"},
+          {l:"ディレクトリ作成の拒否とjpg拡張子制限を指定", t:"proc"},
+          {l:"負荷軽減のウェイト(3秒)と標的URLを指定", t:"io"},
+          {l:"終了", t:"term"}
+        ],
+        code: ["wget", "-r", "-l", "1", "-nd", "-A", "jpg", "-w", "3", "https://catmocha.jp/.../"],
+        isFine: true
+      }
+    ],
+    python: [
+      {
+        title: "任務1：要求リソースのバイナリ収穫と保存",
+        desc: "requestsで対象の画像URLからレスポンスを取得し、そのバイナリデータ(content)を取り出し、'cat.jpg' という名前で書き込みバイナリモード('wb')で安全に保存せよ。（中粒パーツ構成）",
+        algo: [
+          {l:"開始", t:"term"},
+          {l:"標的URLへリクエストを投げレスポンスを取得", t:"io"},
+          {l:"取得データからバイナリ(content)を抽出", t:"proc"},
+          {l:"'cat.jpg'を安全な書き込みバイナリモードで開く", t:"proc"},
+          {l:"開いたファイルにバイナリデータを流し込む", t:"io"},
+          {l:"終了", t:"term"}
+        ],
+        code: ["res", "=", "requests.get(url)", "↵", "img", "=", "res.content", "↵", "with open(", "'cat.jpg'", ",", "'wb'", ") as f:", "↵", "    f.write(img)"],
+        isFine: false
+      },
+      {
+        title: "任務2：BeautifulSoupによる超細粒テキスト抽出",
+        desc: "解析済みのsoupオブジェクトからすべての 'td' 要素を引き抜き、リスト内包表記を用いて、各要素から前後の無駄な空白を削ぎ落としたテキスト(strip=True)を一括抽出するコードを構築せよ。（極小粒パーツ構成）",
+        algo: [
+          {l:"開始", t:"term"},
+          {l:"soupオブジェクトから全てのtd要素を探し出して確保", t:"io"},
+          {l:"リスト内包表記を展開し各要素をループで走査", t:"proc"},
+          {l:"各要素のテキストを前後の空白を削って抽出", t:"proc"},
+          {l:"抽出結果のテキスト群をリストにまとめて代入", t:"io"},
+          {l:"終了", t:"term"}
+        ],
+        code: ["tds", "=", "soup", ".", "find_all", "(", "'td'", ")", "↵", "txts", "=", "[", "i", ".", "get_text", "(", "strip=True", ")", "for i in", "tds", "]"],
+        isFine: true
+      }
+    ]
+  };
+
+  let currentCourse = '';
+  let currentStage = 0;
+  let currentPhase = 1; 
+  let built = [];
+  let warehouseParts = [];
+
+  function selectCourse(course) {
+    currentCourse = course;
+    currentStage = 0;
+    document.getElementById('courseScreen').classList.remove('active');
+    document.getElementById('appShell').style.display = 'flex';
+    loadQuiz();
+  }
+
+  function loadQuiz() {
+    const quiz = quizzes[currentCourse][currentStage];
+    document.getElementById('quizTitle').textContent = `任務 ${currentStage + 1}：${quiz.isFine ? '【極細の技】' : '【基本の技】'}`;
+    document.getElementById('quizText').textContent = quiz.desc;
+    document.getElementById('quizProgress').textContent = `${currentStage + 1} / ${quizzes[currentCourse].length}`;
+    currentPhase = 1;
+    startPhase();
+  }
+
+  function startPhase() {
+    built = [];
+    const quiz = quizzes[currentCourse][currentStage];
+    const bArea = document.getElementById('buildArea');
+    const whArea = document.getElementById('warehouse');
+    const badge = document.getElementById('phaseBadge');
+    const hint = document.getElementById('phaseHint');
+    const tools = document.getElementById('editorTools');
+
+    if (currentPhase === 1) {
+      badge.textContent = "段階1：仕込み（設計図）";
+      badge.className = "phase-badge";
+      hint.textContent = "処理の論理フローを正しい順に【縦に】並べよ";
+      bArea.className = "build-area phase-algo";
+      whArea.className = "warehouse wh-algo";
+      tools.style.display = "none";
+      warehouseParts = quiz.algo.map(p => ({...p, id: Math.random()}));
+    } else {
+      badge.textContent = "段階2：組み上げ（実装）";
+      badge.className = "phase-badge phase-code";
+      hint.textContent = "「行を改める」ボタンを使い、エディタ形式で【横書き】で組め";
+      bArea.className = "build-area phase-code";
+      whArea.className = "warehouse wh-code";
+      tools.style.display = "flex";
+      
+      warehouseParts = quiz.code
+        .filter(c => c !== "↵")
+        .map(c => ({l: c, t: "code", isFine: quiz.isFine, id: Math.random()}));
+    }
+    
+    warehouseParts.sort(() => Math.random() - 0.5);
+    renderBuild();
+    renderWarehouse();
+  }
+
+  function renderBuild() {
+    const area = document.getElementById('buildArea');
+    area.innerHTML = '';
+    if (built.length === 0) {
+      area.innerHTML = '<div class="empty-hint">パーツをここに配置して構造を作れ（タップで回収）</div>';
+      return;
+    }
+
+    built.forEach((p, idx) => {
+      const el = document.createElement('div');
+      if (p.l === "↵") {
+        el.className = "block code-br-display";
+        el.textContent = "↵ (改行)";
+      } else {
+        if (currentPhase === 1) {
+          el.className = `block algo-block algo-${p.t}`;
+        } else {
+          const isIndent = p.l.startsWith("    ");
+          el.className = `block code-block ${p.isFine ? 'fine' : ''}`;
+          if (isIndent) {
+            el.style.borderLeft = "4px solid #eab308";
+            el.style.paddingLeft = "16px";
+          }
+        }
+        el.textContent = p.l;
+      }
+      el.onclick = () => removePart(idx);
+      area.appendChild(el);
+
+      if (currentPhase === 2 && p.l === "↵") {
+        const br = document.createElement('div');
+        br.className = "flex-break";
+        area.appendChild(br);
+      }
+    });
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function renderWarehouse() {
+    const wh = document.getElementById('warehouse');
+    wh.innerHTML = '';
+    if (warehouseParts.length === 0) {
+      wh.innerHTML = '<div class="empty-hint" style="color: #4b5563;">すべての道具を配置した</div>';
+      return;
+    }
+
+    warehouseParts.forEach((p, idx) => {
+      const el = document.createElement('div');
+      if (currentPhase === 1) {
+        el.className = `block algo-block algo-${p.t}`;
+      } else {
+        const isIndent = p.l.startsWith("    ");
+        el.className = `block code-block ${p.isFine ? 'fine' : ''}`;
+        if (isIndent) {
+          el.style.borderLeft = "4px solid #eab308";
+          el.style.paddingLeft = "14px";
+        }
+      }
+      el.textContent = p.l;
+      el.onclick = () => addPart(idx);
+      wh.appendChild(el);
+    });
+  }
+
+  function addPart(idx) {
+    built.push(warehouseParts[idx]);
+    warehouseParts.splice(idx, 1);
+    renderBuild();
+    renderWarehouse();
+  }
+
+  function removePart(idx) {
+    const removed = built.splice(idx, 1)[0];
+    if (removed.l !== "↵") {
+      warehouseParts.push(removed);
+      renderWarehouse();
+    }
+    renderBuild();
+  }
+
+  function addNewline() {
+    if (currentPhase !== 2) return;
+    built.push({l: "↵", t: "br", id: Math.random()});
+    renderBuild();
+  }
+
+  function clearBuild() {
+    built.forEach(p => {
+      if (p.l !== "↵") warehouseParts.push(p);
+    });
+    built = [];
+    renderWarehouse();
+    renderBuild();
+  }
+
+  function checkAnswer() {
+    if (built.length === 0) return;
+    const quiz = quizzes[currentCourse][currentStage];
+    
+    const target = currentPhase === 1 ? quiz.algo.map(a => a.l) : quiz.code;
+    const current = built.map(b => b.l);
+    
+    const isCorrect = JSON.stringify(target) === JSON.stringify(current);
+    
+    const modal = document.getElementById('resultModal');
+    const content = document.getElementById('modalContent');
+    const icon = document.getElementById('modalIcon');
+    const title = document.getElementById('modalTitle');
+    const desc = document.getElementById('modalDesc');
+    const btn = document.getElementById('modalBtn');
+
+    modal.style.display = 'flex';
+    
+    if (isCorrect) {
+      content.className = "modal-content";
+      icon.textContent = "♨️";
+      title.textContent = "収穫成功！見事、整いました。";
+      title.style.color = "var(--correct)";
+      
+      if (currentPhase === 1) {
+        desc.textContent = "[仕込み完了報告]\n論理フローの設計に狂いはありません。\nこの見事な仕込み図をベースに、実コードを組み上げる「段階2（実装）」へ移行します。";
+        btn.textContent = "実装の組み上げに移行する ▶";
+      } else {
+        let codeStr = quiz.code.map(c => c === "↵" ? "\n" : c).join(" ");
+        if(quiz.isFine && currentCourse === 'python') {
+          codeStr = quiz.code.map(c => c === "↵" ? "\n" : c).join("")
+            .replace(/=/g, " = ").replace(/\[/g, " [ ").replace(/\]/g, " ]");
+        } else if (quiz.isFine && currentCourse === 'linux') {
+          codeStr = quiz.code.join(" ");
+        }
+        desc.textContent = `[実装完了報告]\nインデントと改行の構造を含め、寸分の狂いもない芸術的なコードが組み上がりました。サーバーは沈黙したままデータだけを収穫できます。\n\n完成スクリプト:\n${codeStr}`;
+        btn.textContent = (currentStage < quizzes[currentCourse].length - 1) ? "次のターゲットの仕込みへ ▶" : "全任務完了！最初の画面へ戻る";
+      }
+    } else {
+      content.className = "modal-content wrong-border";
+      icon.textContent = "💦";
+      title.textContent = "不覚！湯冷めしました";
+      title.style.color = "var(--wrong)";
+      
+      // 不正解時の模範解答生成処理
+      let correctStr = "";
+      if (currentPhase === 1) {
+        correctStr = quiz.algo.map(a => a.l).join("\n↓\n");
+      } else {
+        correctStr = quiz.code.map(c => c === "↵" ? "\n" : c).join(" ");
+        if(quiz.isFine && currentCourse === 'python') {
+          correctStr = quiz.code.map(c => c === "↵" ? "\n" : c).join("")
+            .replace(/=/g, " = ").replace(/\[/g, " [ ").replace(/\]/g, " ]");
+        } else if (quiz.isFine && currentCourse === 'linux') {
+          correctStr = quiz.code.join(" ");
+        }
+      }
+
+      if (currentPhase === 1) {
+        desc.textContent = "処理の順序、あるいはデータの依存関係が職人のロジックに反しています。標的からデータを「抜く」→「絞る」→「納める」という流れを意識し直してください。\n\n【職人の模範仕込み図】\n" + correctStr;
+      } else {
+        if(quiz.isFine) {
+          desc.textContent = "パーツが細分化されたことで、構文記号や改行の位置に狂いが生じています。\n\n【職人の模範コード】\n" + correctStr;
+        } else {
+          desc.textContent = "コードの順序、改行やインデントの深さが正しくありません。\n\n【職人の模範コード】\n" + correctStr;
+        }
+      }
+      btn.textContent = "もう一度組み直す";
+    }
+  }
+
+  function modalAction() {
+    const modal = document.getElementById('resultModal');
+    const titleText = document.getElementById('modalTitle').textContent;
+    
+    modal.style.display = 'none';
+    
+    if (titleText.includes("湯冷め")) {
+      return;
+    }
+    
+    if (currentPhase === 1) {
+      currentPhase = 2;
+      startPhase();
+    } else {
+      if (currentStage < quizzes[currentCourse].length - 1) {
+        currentStage++;
+        loadQuiz();
+      } else {
+        document.getElementById('appShell').style.display = 'none';
+        document.getElementById('courseScreen').classList.add('active');
+      }
+    }
+  }
+</script>
+</body>
+</html>

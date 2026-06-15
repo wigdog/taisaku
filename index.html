@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Learning Portal</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --primary-color: #3b82f6;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.4rem;
+            color: var(--primary-color);
+        }
+        .card p {
+            margin: 0 0 20px 0;
+            font-size: 0.95rem;
+            color: #666;
+            line-height: 1.5;
+        }
+        .badge {
+            align-self: flex-start;
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>My Learning Portal</h1>
+        <p>自作の学習用WEBアプリケーション集</p>
+    </header>
+
+    <main class="grid">
+        <!-- 統計検定アプリへのリンク -->
+        <a href="./apps/statistics-app/" class="card">
+            <div>
+                <h2>統計検定2級 対策アプリ</h2>
+                <p>統計検定2級の出題傾向に合わせた、クイズ形式の学習対策ツールです。</p>
+            </div>
+            <span class="badge">統計学</span>
+        </a>
+
+        <!-- SQLパズルへのリンク -->
+        <a href="./apps/sql-puzzle/" class="card">
+            <div>
+                <h2>SQLパズル・ビルダー AI</h2>
+                <p>AIが生成した問題に答えて、実践的なSQLの組み立てを学べるパズルです。</p>
+            </div>
+            <span class="badge">データベース</span>
+        </a>
+    </main>
+</div>
+
+</body>
+</html>

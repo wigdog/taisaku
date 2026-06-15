@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>♨️ 総合アルゴリズム・ビルダー フルシラバス版</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --deep-indigo: #1a1a2e; --noren-red: #c0392b; --hot-orange: #e67e22; --warm-yellow: #f39c12;
+    --correct: #27ae60; --wrong: #e74c3c; --fc-bg: #0f111a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body { height: 100%; width: 100%; overflow: hidden; }
+  body { font-family: 'Zen Kaku Gothic New', sans-serif; background: var(--deep-indigo); color: #fff; display: flex; flex-direction: column; position: relative; }
+
+  /* 共通の背景（湯気） */
+  .steam-bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .steam-particle { position: absolute; bottom: -20px; width: 6px; border-radius: 50%; background: rgba(232,244,248,0.08); animation: rise linear infinite; }
+  @keyframes rise { 0% { transform: translateY(0) scale(1); opacity: 0.6; } 100% { transform: translateY(-110vh) scale(3); opacity: 0; } }
+
+  /* のれんヘッダー */
+  .noren-header { position: relative; z-index: 30; flex-shrink: 0; text-align: center; padding: 12px 16px 8px; background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%); border-bottom: 3px solid var(--noren-red); box-shadow: 0 4px 20px rgba(192,57,43,0.3); }
+  .noren-strips { display: flex; justify-content: center; gap: 8px; margin-bottom: 8px; }
+  .noren-strip { width: 32px; height: 8px; border-radius: 0 0 4px 4px; background: var(--noren-red); }
+  .noren-strip:nth-child(2) { background: #fff; }
+  .noren-strip:nth-child(3) { background: var(--noren-red); }
+  .app-title { font-size: 14px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 10px rgba(230,126,34,0.5); }
+  .header-actions { position: absolute; top: 12px; left: 12px; }
+  .btn-back-title { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 6px; padding: 4px 8px; font-size: 10px; cursor: pointer; display: none; }
+
+  /* SCORE & PROGRESS UI */
+  .progress-bar-container { width: 100%; height: 4px; background: rgba(255,255,255,0.1); position: absolute; bottom: -3px; left: 0; }
+  .progress-bar-fill { height: 100%; width: 0%; background: var(--warm-yellow); transition: width 0.3s ease; }
+  .score-badge { float: right; font-size: 11px; background: rgba(255, 243, 224, 0.15); padding: 2px 8px; border-radius: 20px; font-weight: bold; }
+
+  /* 画面1：タイトル＆章選択 */
+  #titleScreen { position: relative; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; flex: 1; padding: 20px; text-align: center; overflow-y: auto; }
+  .title-logo { font-size: 48px; margin-top: 10px; margin-bottom: 5px; animation: float 3s ease-in-out infinite; }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  .title-desc { font-size: 12px; color: rgba(255,255,255,0.8); margin-bottom: 20px; line-height: 1.5; }
+  
+  .diff-buttons { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 360px; padding-bottom: 30px; }
+  .btn-diff { padding: 12px 14px; border-radius: 12px; border: none; font-weight: 900; font-size: 14px; font-family: 'Zen Kaku Gothic New', sans-serif; cursor: pointer; position: relative; overflow: hidden; text-align: left; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: transform 0.1s ease; border-left: 6px solid rgba(255,255,255,0.5); }
+  .btn-diff:active { transform: scale(0.97); }
+  .btn-diff span.sub { font-size: 11px; font-weight: 400; opacity: 0.9; margin-top: 4px; line-height: 1.4; pointer-events: none; }
+  
+  .btn-level1 { background: linear-gradient(135deg, #27ae60, #1e8449); color: #fff; }
+  .btn-level2 { background: linear-gradient(135deg, #f39c12, #d68910); color: #fff; }
+  .btn-level3 { background: linear-gradient(135deg, #d35400, #a04000); color: #fff; }
+  .btn-level4 { background: linear-gradient(135deg, #c0392b, #7b241c); color: #fff; }
+
+  /* 画面2：メインアプリ */
+  #appShell { display: none; flex-direction: column; flex: 1; overflow: hidden; position: relative; z-index: 20; }
+  #topPane { flex: 1 1 auto; overflow-y: auto; padding-bottom: 20px; }
+  #bottomPane { flex: 0 0 40%; min-height: 220px; display: flex; flex-direction: column; border-top: 3px solid rgba(255,255,255,0.12); background: linear-gradient(180deg, #12172a, #0d1117); }
+
+  .main-area { padding: 12px; display: flex; flex-direction: column; gap: 10px; max-width: 680px; margin: 0 auto; width: 100%; }
+
+  .quiz-card { background: linear-gradient(135deg, #fff9f0 0%, #fef5e7 100%); border-radius: 12px; padding: 12px 16px; border: 2px solid var(--warm-yellow); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  .quiz-label { font-size: 11px; font-weight: 900; color: var(--noren-red); letter-spacing: 1px; margin-bottom: 4px; }
+  .diff-badge { float: right; padding: 2px 6px; border-radius: 4px; font-size: 10px; color: #fff; font-weight: bold; }
+  .quiz-text { font-size: 14px; font-weight: 700; color: #2c1a0e; line-height: 1.5; }
+
+  /* ビジュアル描画エリア（フローチャート＆図解） */
+  .fc-visual-box { background-color: var(--fc-bg); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px; margin-top: 8px; font-family: 'Share Tech Mono', monospace; font-size: 12px; line-height: 1.3; color: #5dade2; white-space: pre; overflow-x: auto; box-shadow: inset 0 2px 8px rgba(0,0,0,0.8); }
+
+  .build-area { background: #0d1117; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.1); padding: 12px; min-height: 75px; }
+  .build-label { font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
+  .build-slots { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; align-items: center; }
+  
+  .slot-block { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 6px; font-family: 'Share Tech Mono', 'Zen Kaku Gothic New', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; user-select: none; animation: pop 0.2s ease; }
+  @keyframes pop { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+
+  /* パーツの色分け */
+  .block-logic { background: #117a65; color: #a3e4d7; border: 1px solid #0e6251; }
+  .block-math { background: #2471a3; color: #a9cce3; border: 1px solid #1a5276; }
+  .block-complexity { background: #b9770e; color: #f9e79f; border: 1px solid #9c640c; }
+  .block-keyword { background: #5b2c6f; color: #d7bde2; border: 1px solid #4a235a; }
+  .block-value { background: #641e16; color: #f5b7b1; border: 1px solid #7b241c; }
+  .block-symbol { background: #2e4053; color: #eaecee; border: 1px solid #212f3d; }
+
+  .empty-hint { font-size: 12px; color: rgba(255,255,255,0.25); font-style: italic; }
+
+  .action-row { display: flex; gap: 8px; }
+  .btn-run { flex: 2; padding: 12px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--noren-red), #922b21); color: #fff; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+  .btn-clear { flex: 1; padding: 12px; border-radius: 10px; font-weight: 700; background: rgba(255,255,255,0.1); color: #fff; border: none; cursor: pointer; }
+
+  .result-panel { border-radius: 12px; padding: 14px; display: none; margin-top: 5px; }
+  .result-panel.wrong { display: block; background: #3d0d0d; border: 2px solid var(--wrong); }
+  .result-panel.correct { display: block; background: #0d3320; border: 2px solid var(--correct); }
+  .result-title { font-size: 15px; font-weight: 900; margin-bottom: 4px; }
+  .result-msg { font-size: 12px; color: rgba(255,255,255,0.85); line-height: 1.5; white-space: pre-wrap; }
+  .result-ans { margin-top: 8px; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; color: #7fb3d3; background: rgba(0,0,0,0.6); padding: 8px; border-radius: 6px; white-space: pre-wrap; border-left: 3px solid var(--warm-yellow); }
+  .btn-next { margin-top: 10px; width: 100%; padding: 12px; border-radius: 8px; border: none; background: #fff; color: #000; font-weight: 900; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+
+  .warehouse { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+  .warehouse-header { padding: 6px 12px 2px; text-align: center; }
+  .warehouse-scroll { flex: 1; overflow-y: auto; padding: 4px 12px 24px; }
+  .parts-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .part-btn { padding: 8px 12px; border-radius: 6px; border: none; font-family: 'Share Tech Mono', 'Zen Kaku Gothic New', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: transform 0.05s ease; }
+  .part-btn:active { transform: scale(0.9); }
+
+</style>
+</head>
+<body>
+
+<div class="steam-bg" id="steamBg"></div>
+
+<div class="noren-header">
+  <div class="header-actions">
+    <button class="btn-back-title" id="btnBackTitle" onclick="showTitle()">◀ 湯を換える</button>
+  </div>
+  <div class="noren-strips">
+    <div class="noren-strip"></div><div class="noren-strip"></div><div class="noren-strip"></div><div class="noren-strip"></div><div class="noren-strip"></div>
+  </div>
+  <div class="app-title">♨️ 総合アルゴリズム・ビルダー <span id="uiScore" class="score-badge">0 答</span></div>
+  <div class="progress-bar-container"><div class="progress-bar-fill" id="progressBar"></div></div>
+</div>
+
+<div id="titleScreen">
+  <div class="title-logo">♨️</div>
+  <h1 style="font-size: 18px; margin-bottom: 6px;">シラバス全網羅グラデーション</h1>
+  <p class="title-desc">フローチャートの基礎からDP・機械学習のロジックまで。<br>湯加減を選んでアルゴリズムの思考力を鍛えよう！</p>
+  
+  <div class="diff-buttons">
+    <button class="btn-diff btn-level1" onclick="startGame('level1')">
+      <span>🟢 【ぬるま湯】フローチャートと基礎</span>
+      <span class="sub">JIS記号読解・順次/分岐/反復の基本構造化</span>
+    </button>
+    <button class="btn-diff btn-level2" onclick="startGame('level2')">
+      <span>🟡 【適 温】データ推移と基本アルゴリズム</span>
+      <span class="sub">探索・ソートの配列変化・基数変換・ビット演算</span>
+    </button>
+    <button class="btn-diff btn-level3" onclick="startGame('level3')">
+      <span>🟠 【熱 湯】高度なロジックと計算量</span>
+      <span class="sub">O記法ガチ判定・Python特有（内包表記・高階関数）</span>
+    </button>
+    <button class="btn-diff btn-level4" onclick="startGame('level4')">
+      <span>🔴 【極 熱】応用分野の真髄（数式コード）</span>
+      <span class="sub">ダイクストラ最短経路・DPテーブル遷移式・機械学習</span>
+    </button>
+  </div>
+</div>
+
+<div id="appShell">
+  <div id="topPane">
+    <div class="main-area">
+      <div class="quiz-card">
+        <div class="diff-badge" id="diffBadge"></div>
+        <div class="quiz-label">📋 問題</div>
+        <div class="quiz-text" id="quizText"></div>
+        <div class="fc-visual-box" id="fcVisualArea" style="display: none;"></div>
+      </div>
+      <div class="build-area">
+        <div class="build-label">▶ タップしてブロックを連結（順序も厳密に判定されます）</div>
+        <div class="build-slots" id="buildSlots"></div>
+      </div>
+      <div class="action-row">
+        <button class="btn-run" onclick="checkAnswer()">🔍 解答を確認する</button>
+        <button class="btn-clear" onclick="clearBuild()">↩ リセット</button>
+      </div>
+      <div class="result-panel" id="resultPanel">
+        <div class="result-title" id="resultTitle"></div>
+        <div class="result-msg" id="resultMsg"></div>
+        <div class="result-ans" id="resultSql"></div>
+        <button class="btn-next" onclick="generateNewQuiz()">次の実習問題へ ▶</button>
+      </div>
+    </div>
+  </div>
+  <div id="bottomPane">
+    <div class="warehouse">
+      <div class="warehouse-header"><div style="font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 2px;">🛁 パーツ倉庫</div></div>
+      <div class="warehouse-scroll"><div class="parts-grid" id="partsContainer"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var currentMode = ''; var currentQuiz = null; var built = []; var solvedCount = 0;
+
+function initBg() {
+  var bg = document.getElementById('steamBg'); if (!bg) return;
+  for (var i = 0; i < 20; i++) {
+    var p = document.createElement('div'); p.className = 'steam-particle';
+    p.style.left = Math.random() * 100 + '%'; p.style.width = (4 + Math.random() * 8) + 'px';
+    p.style.animationDuration = (6 + Math.random() * 10) + 's'; p.style.animationDelay = (Math.random() * 10) + 's';
+    bg.appendChild(p);
+  }
+}
+initBg();
+
+// === 問題プール（全20問） ===
+var quizPool = {
+  level1: [ // ぬるま湯（フローチャート）
+    { text: "JIS規格において、プログラムの『条件分岐』を表す図形記号の名称を選択してください。", visual: "   ◇   ", answers: [["判断"]], parts: [{text: "判断", type: "logic"}, {text: "処理", type: "value"}, {text: "ループ端", type: "logic"}, {text: "端子", type: "keyword"}] },
+    { text: "流れ図の『????』の六角形記号に入るべき、ループを継続する正しいPythonコードを選んでください。", visual: "[開始]\n   │\n[ total = 0, n = 1 ]\n   │\n┌─►/ ???? \\\n│  │      │\n│ [ total += n ]\n│  │      │\n│ [ n += 1 ]\n│  │      │\n└──\\______/──► [終了]", answers: [["while n <= 100:"]], parts: [{text: "while n <= 100:", type: "logic"}, {text: "if n <= 100:", type: "logic"}, {text: "for total in n:", type: "logic"}] },
+    { text: "BMIによる肥満度判定の分岐流れ図です。適合するPython多方向分岐コードを完成させてください。", visual: "[bmi = weight / (height ** 2)]\n   │\n   《 判断: bmi < 18.5 》──(Yes)──► [print('低体重')]\n   │(No)\n   《 判断: bmi < 25.0 》──(Yes)──► [print('普通体重')]\n   │(No)\n   [print('肥満')]", answers: [["if bmi < 18.5:", "print(\"低体重\")", "elif bmi < 25.0:", "print(\"普通体重\")", "else:", "print(\"肥満\")"]], parts: [{text: "if bmi < 18.5:", type: "logic"}, {text: "print(\"低体重\")", type: "keyword"}, {text: "elif bmi < 25.0:", type: "logic"}, {text: "print(\"普通体重\")", type: "keyword"}, {text: "else:", type: "logic"}, {text: "print(\"肥満\")", type: "keyword"}] },
+    { text: "配列Nから最大値を探索するロジックです。空欄となる判断処理のコードを構築してください。", visual: "[ max_val = N[0] ]\n   │\n┌─►《 配列 N の各要素 x をループ 》\n│  │\n│  《 判断: ?????????? 》──(No)──┐\n│  │                             │\n│  │(Yes)                        │\n│ [ max_val = x ]                │\n│  │                             │\n└──┴─────────────────────────────┘", answers: [["if max_val < x:"]], parts: [{text: "if max_val < x:", type: "logic"}, {text: "if max_val > x:", type: "logic"}, {text: "while max_val != x:", type: "logic"}] },
+    { text: "2のべき乗計算ループの流れ図です。対応するコードを完成させてください。", visual: "[ n = 1 ]\n   │\n┌─►《 n <= 32768 》───(No)──► [終了]\n│  │\n│  │(Yes)\n│ [ n = n * 2 ]\n│  │\n└──┘", answers: [["n = 1", "while n <= 32768:", "n = n * 2"]], parts: [{text: "n = 1", type: "value"}, {text: "while n <= 32768:", type: "logic"}, {text: "n = n * 2", type: "math"}, {text: "for n in range(32768):", type: "logic"}] }
+  ],
+  level2: [ // 適温（データ推移・基礎アルゴリズム）
+    { text: "【バブルソート】配列の1回目のループが終了した時点の状態です。このソートの内側ループ（隣接要素の比較）の正しい条件式を組み立ててください。", visual: "初期状態: [4, 2, 5, 1, 3]\n1周目後 : [2, 4, 1, 3 | 5] (5が確定)", answers: [["if array[j] > array[j+1]:"]], parts: [{text: "if array[j] > array[j+1]:", type: "logic"}, {text: "if array[j] < array[j+1]:", type: "logic"}, {text: "if array[i] > array[j]:", type: "logic"}] },
+    { text: "【二分探索】ソート済みの配列から探索を行う際、探索範囲の中央のインデックス `mid` を求める正しい計算式を組み立ててください。", visual: "left = 0, right = len(array) - 1\n[ 1, 3, 5, 7, 9, 11 ]\n  ^                 ^\n left             right", answers: [["mid", "=", "(left + right) // 2"]], parts: [{text: "mid", type: "value"}, {text: "=", type: "math"}, {text: "(left + right) // 2", type: "math"}, {text: "(left + right) / 2", type: "math"}, {text: "left + right // 2", type: "math"}] },
+    { text: "【基数変換】10進数の整数 `N` を2進数に変換する際、余りを求めてリストに追加していくループ内の処理を完成させてください。", visual: "N = 13\n13 ÷ 2 = 6 ... 余り 1\n 6 ÷ 2 = 3 ... 余り 0\n 3 ÷ 2 = 1 ... 余り 1\n 1 ÷ 2 = 0 ... 余り 1\n\n結果: 1101", answers: [["rem = N % 2", "N = N // 2"]], parts: [{text: "rem = N % 2", type: "math"}, {text: "N = N // 2", type: "math"}, {text: "N = N / 2", type: "math"}, {text: "rem = N // 2", type: "math"}] },
+    { text: "【ビット演算】変数 n の値をビットシフトによって『高速に2倍』にするための正しい記述を組み立ててください。", visual: "n = 5  (0101)\n         ↓\n結果 = 10 (1010)", answers: [["n << 1"]], parts: [{text: "n", type: "value"}, {text: "<<", type: "math"}, {text: "1", type: "value"}, {text: ">>", type: "math"}, {text: "2", type: "value"}] },
+    { text: "【変数交換】一時変数(temp)を使わずに、Pythonのタプルアンパック機能を利用して変数 a と b の値をスワップ(交換)するコードを構築してください。", visual: "a = 10\nb = 20\n\n[ コード実行 ]\n\na = 20\nb = 10", answers: [["a, b", "=", "b, a"]], parts: [{text: "a, b", type: "value"}, {text: "=", type: "math"}, {text: "b, a", type: "value"}, {text: "a = b", type: "logic"}, {text: "b = a", type: "logic"}] }
+  ],
+  level3: [ // 熱湯（計算量・Python特有）
+    { text: "【計算量】以下の2重ループ構造を持つ処理の『最悪時間計算量』を表すO記法を組み立ててください。", visual: "for i in range(N):\n    for j in range(N):\n        print(i, j)", answers: [["O(N^2)"]], parts: [{text: "O(N^2)", type: "complexity"}, {text: "O(N)", type: "complexity"}, {text: "O(log N)", type: "complexity"}, {text: "O(N log N)", type: "complexity"}] },
+    { text: "【計算量】データ数がNのとき、探索範囲を毎回半分にしていく『二分探索』の時間計算量を選択してください。", visual: "N = 1024 → 512 → 256 → ... → 1\n分割回数が計算量に直結する。", answers: [["O(log N)"]], parts: [{text: "O(log N)", type: "complexity"}, {text: "O(N)", type: "complexity"}, {text: "O(N^2)", type: "complexity"}, {text: "O(1)", type: "complexity"}] },
+    { text: "【内包表記】1から10までの数値のうち、『偶数の値だけを2乗』したリストを生成するPythonの内包表記を完成させてください。", visual: "元のデータ: [1, 2, 3, 4, 5, ... 10]\n↓\n生成データ: [4, 16, ... 100]", answers: [["[", "x**2", "for x in range(1, 11)", "if x % 2 == 0", "]"]], parts: [{text: "[", type: "symbol"}, {text: "x**2", type: "math"}, {text: "for x in range(1, 11)", type: "logic"}, {text: "if x % 2 == 0", type: "logic"}, {text: "]", type: "symbol"}] },
+    { text: "【高階関数】リスト `data` の全要素を文字列に変換する処理を、`map` 関数を用いて構築してください。", visual: "data = [10, 20, 30]\n↓\n結果 = ['10', '20', '30']", answers: [["list(", "map(", "str,", "data", ")", ")"]], parts: [{text: "list(", type: "symbol"}, {text: "map(", type: "keyword"}, {text: "str,", type: "keyword"}, {text: "data", type: "value"}, {text: ")", type: "symbol"}, {text: "filter(", type: "keyword"}] },
+    { text: "【素数判定】エラトステネスの篩において、素数 `p` の倍数をブール配列 `is_prime` から一気に False にする（削る）ためのスライス構文を組み立ててください。", visual: "p = 3\nインデックス 6, 9, 12... を False にする。", answers: [["is_prime[p*2::p]", "=", "False"]], parts: [{text: "is_prime[p*2::p]", type: "value"}, {text: "=", type: "math"}, {text: "False", type: "keyword"}, {text: "is_prime[p::2]", type: "value"}, {text: "True", type: "keyword"}] }
+  ],
+  level4: [ // 極熱（応用：グラフ・DP・機械学習）
+    { text: "【最短経路/グラフ】ダイクストラ法において、ノード `u` から `v` への経路(コスト: `cost`)が、現在記録されている `v` への最短距離 `dist[v]` を下回った場合に更新する条件式を構築してください。", visual: "  (S) ─── 5 ───► (v)   [現在 dist[v] = 5]\n   │              ▲\n   2              │\n   ▼              1\n  (u) ───────(cost)─┘   [dist[u] = 2]", answers: [["if dist[u] + cost < dist[v]:"]], parts: [{text: "if dist[u] + cost < dist[v]:", type: "logic"}, {text: "if dist[u] + cost > dist[v]:", type: "logic"}, {text: "if dist[v] + cost < dist[u]:", type: "logic"}] },
+    { text: "【動的計画法/DP】右と下にしか進めないグリッドでの経路数探索。マス `(i, j)` に到達するパターンの総数を求めるためのDP遷移式を構築してください。", visual: "[1][1][ 1 ]\n[1][2][ 3 ]\n[1][3][ dp[i][j] ] <-- 上のマスと左のマスの和", answers: [["dp[i][j]", "=", "dp[i-1][j] + dp[i][j-1]"]], parts: [{text: "dp[i][j]", type: "value"}, {text: "=", type: "math"}, {text: "dp[i-1][j] + dp[i][j-1]", type: "math"}, {text: "dp[i-1][j-1] + 1", type: "math"}] },
+    { text: "【動的計画法/ナップサック】重さ `w` の品物を追加するかどうかを判断する際、価値が最大となる方を選ぶためのDP遷移のコアとなる式(max関数)を構築してください。", visual: "dp[i][w] = ?\n( 品物を入れない場合の価値 vs 入れた場合の価値 )", answers: [["max(", "dp[i-1][w],", "dp[i-1][w-weight] + value", ")"]], parts: [{text: "max(", type: "keyword"}, {text: "dp[i-1][w],", type: "value"}, {text: "dp[i-1][w-weight] + value", type: "math"}, {text: ")", type: "symbol"}, {text: "min(", type: "keyword"}] },
+    { text: "【機械学習基礎】勾配降下法において、現在の重み `w` を、学習率 `lr` と勾配 `grad` を用いて更新する数式コードを構築してください。", visual: "w_new = w_old - (学習率 × 勾配)", answers: [["w", "-=", "lr * grad"]], parts: [{text: "w", type: "value"}, {text: "-=", type: "math"}, {text: "lr * grad", type: "math"}, {text: "+=", type: "math"}, {text: "lr / grad", type: "math"}] },
+    { text: "【ユークリッドの互除法】2つの変数 a, b の最大公約数を求めるため、b が 0 になるまで「a を b で割った余り」で更新していく一行のコードを構築してください。", visual: "a = 24, b = 9\n24 % 9 = 6  (a=9, b=6)\n 9 % 6 = 3  (a=6, b=3)\n 6 % 3 = 0  (a=3, b=0) -> GCDは3", answers: [["a, b", "=", "b, a % b"]], parts: [{text: "a, b", type: "value"}, {text: "=", type: "math"}, {text: "b, a % b", type: "math"}, {text: "a % b, b", type: "math"}] }
+  ]
+};
+
+function startGame(mode) {
+  currentMode = mode;
+  document.getElementById('titleScreen').style.display = 'none'; document.getElementById('appShell').style.display = 'flex';
+  document.getElementById('btnBackTitle').style.display = 'block';
+  
+  var badge = document.getElementById('diffBadge');
+  if(mode === 'level1') { badge.textContent = '🟢 ぬるま湯'; badge.style.backgroundColor = '#27ae60'; }
+  if(mode === 'level2') { badge.textContent = '🟡 適温'; badge.style.backgroundColor = '#d35400'; }
+  if(mode === 'level3') { badge.textContent = '🟠 熱湯'; badge.style.backgroundColor = '#c0392b'; }
+  if(mode === 'level4') { badge.textContent = '🔴 極熱'; badge.style.backgroundColor = '#7b241c'; }
+  
+  solvedCount = 0; updateProgressUI(); generateNewQuiz();
+}
+
+function showTitle() {
+  document.getElementById('titleScreen').style.display = 'flex'; document.getElementById('appShell').style.display = 'none';
+  document.getElementById('btnBackTitle').style.display = 'none';
+}
+
+function shuffle(array) {
+  var a = array.slice();
+  for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+
+function generateNewQuiz() {
+  built = []; document.getElementById('resultPanel').style.display = 'none';
+  document.getElementById('buildSlots').innerHTML = '<span class="empty-hint">倉庫からパーツをタップして配置してください</span>';
+  
+  var pool = quizPool[currentMode];
+  if(solvedCount >= pool.length) {
+    alert("この湯加減の全問題を制覇しました！素晴らしい！"); showTitle(); return;
+  }
+  currentQuiz = pool[solvedCount];
+
+  document.getElementById('quizText').textContent = currentQuiz.text;
+  var fcArea = document.getElementById('fcVisualArea');
+  if (currentQuiz.visual) { fcArea.textContent = currentQuiz.visual; fcArea.style.display = 'block'; } else { fcArea.style.display = 'none'; }
+
+  var shuffledParts = shuffle(currentQuiz.parts);
+  var container = document.getElementById('partsContainer'); container.innerHTML = '';
+  shuffledParts.forEach(function(p) {
+    var btn = document.createElement('button'); btn.className = 'part-btn block-' + p.type; btn.textContent = p.text;
+    btn.onclick = function() { pushBlock(p.text, p.type); }; container.appendChild(btn);
+  });
+}
+
+function pushBlock(text, type) { built.push({text: text, type: type}); renderSlots(); }
+
+function renderSlots() {
+  var slots = document.getElementById('buildSlots');
+  if (built.length === 0) { slots.innerHTML = '<span class="empty-hint">倉庫からパーツをタップして配置してください</span>'; return; }
+  slots.innerHTML = '';
+  built.forEach(function(b, idx) {
+    var span = document.createElement('span'); span.className = 'slot-block block-' + b.type; span.textContent = b.text;
+    span.onclick = function() { removeBlock(idx); }; slots.appendChild(span);
+  });
+}
+
+function removeBlock(index) { built.splice(index, 1); renderSlots(); }
+function clearBuild() { built = []; renderSlots(); }
+
+function checkAnswer() {
+  var userAnsStr = built.map(function(b) { return b.text; });
+  var isCorrect = currentQuiz.answers.some(function(ansPattern) {
+    if (ansPattern.length !== userAnsStr.length) return false;
+    for (var i = 0; i < ansPattern.length; i++) { if (ansPattern[i] !== userAnsStr[i]) return false; }
+    return true;
+  });
+
+  var panel = document.getElementById('resultPanel'); panel.style.display = 'block';
+  panel.className = 'result-panel ' + (isCorrect ? 'correct' : 'wrong');
+  var title = document.getElementById('resultTitle'); var msg = document.getElementById('resultMsg'); var ansBox = document.getElementById('resultSql');
+
+  if (isCorrect) {
+    title.textContent = '🎉 正解！お見事、整いました♨️'; msg.textContent = 'アルゴリズムのロジックが完璧に構築されています。';
+    ansBox.textContent = 'あなたのコード:\n' + userAnsStr.join(' ');
+    panel.querySelector('.btn-next').style.display = 'block'; solvedCount++; updateProgressUI();
+  } else {
+    title.textContent = '💦 不正解！ロジックを見直そう'; msg.textContent = '処理の順序、分岐条件、数式などを再確認してください。';
+    ansBox.textContent = '解答例:\n' + currentQuiz.answers[0].join(' ');
+    panel.querySelector('.btn-next').style.display = 'none';
+  }
+}
+
+function updateProgressUI() {
+  var total = quizPool[currentMode].length; var progressPercent = Math.min((solvedCount / total) * 100, 100);
+  document.getElementById('progressBar').style.width = progressPercent + '%';
+  document.getElementById('uiScore').textContent = solvedCount + ' / ' + total + ' 答';
+}
+</script>
+</body>
+</html>
