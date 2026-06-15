@@ -3,73 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Learning Portal</title>
+    <title>CODE & DATA SCIENCE PORTAL</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap');
+
         :root {
-            --bg-color: #f4f7f6;
-            --card-bg: #ffffff;
-            --text-color: #333333;
-            --primary-color: #3b82f6;
+            --bg-dark: #0b0f17;
+            --panel-bg: #141b2d;
+            --panel-hover: #1f2a45;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #223254;
+            
+            /* 各アプリのサイバーアクセントカラー */
+            --c-stat: #38bdf8;      /* スカイブルー */
+            --c-sql: #fbbf24;       /* ゴールドアンバー */
+            --c-python: #34d399;    /* エメラルドグリーン */
+            --c-algo: #f43f5e;      /* ローズレッド */
+            --c-scraping: #a855f7;  /* パープル */
         }
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+
+        * {
+            box-sizing: border-box;
             margin: 0;
-            padding: 40px 20px;
+            padding: 0;
         }
+
+        body {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 60px 20px;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.03) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.03) 0%, transparent 40%);
+        }
+
         .container {
-            max-width: 800px;
+            max-width: 1100px;
             margin: 0 auto;
         }
+
         header {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 60px;
+            position: relative;
         }
+
+        header::before {
+            content: 'SYSTEM PORTAL';
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--c-stat);
+            letter-spacing: 4px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
         h1 {
-            font-size: 2rem;
-            margin-bottom: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
         }
+
+        .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        /* グリッドレイアウト */
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
         }
+
+        /* カードデザイン */
         .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            transition: transform 0.2s, box-shadow 0.2s;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 28px;
             text-decoration: none;
             color: inherit;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         }
+
+        /* カードのホバーエフェクト */
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+            transform: translateY(-6px);
+            background-color: var(--panel-hover);
+            border-color: var(--theme-color);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 15px rgba(var(--theme-color-rgb), 0.2);
         }
-        .card h2 {
-            margin: 0 0 10px 0;
-            font-size: 1.4rem;
-            color: var(--primary-color);
+
+        /* 左端の縦ライン */
+        .card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: var(--theme-color);
+            transition: width 0.2s;
         }
-        .card p {
-            margin: 0 0 20px 0;
-            font-size: 0.95rem;
-            color: #666;
-            line-height: 1.5;
+
+        .card:hover::before {
+            width: 6px;
         }
-        .badge {
-            align-self: flex-start;
-            background: #e0f2fe;
-            color: #0369a1;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
+
+        /* カード内の文字要素 */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .card-tag {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
             font-weight: bold;
+            color: var(--theme-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid rgba(var(--theme-color-rgb), 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(var(--theme-color-rgb), 0.05);
+        }
+
+        .card h2 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.4;
+            margin-bottom: 12px;
+        }
+
+        .card p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        /* アクションエリア（矢印） */
+        .card-action {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--theme-color);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: bold;
+            transition: gap 0.2s;
+        }
+
+        .card:hover .card-action {
+            gap: 12px;
+        }
+
+        /* 各カードのテーマカラー定義 */
+        .card.stat { --theme-color: var(--c-stat); --theme-color-rgb: 56, 189, 248; }
+        .card.sql { --theme-color: var(--c-sql); --theme-color-rgb: 251, 191, 36; }
+        .card.python { --theme-color: var(--c-python); --theme-color-rgb: 52, 211, 153; }
+        .card.algo { --theme-color: var(--c-algo); --theme-color-rgb: 244, 63, 94; }
+        .card.scraping { --theme-color: var(--c-scraping); --theme-color-rgb: 168, 85, 247; }
+
+        @media (max-width: 640px) {
+            body { padding: 40px 16px; }
+            h1 { font-size: 2rem; }
+            .grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -77,27 +198,64 @@
 
 <div class="container">
     <header>
-        <h1>My Learning Portal</h1>
-        <p>自作の学習用WEBアプリケーション集</p>
+        <h1>Learning Dashboard</h1>
+        <p class="subtitle">インタラクティブに学ぶデータサイエンス & 開発エンジニアリング</p>
     </header>
 
     <main class="grid">
-        <!-- 統計検定アプリへのリンク -->
-        <a href="./apps/statistics-app/" class="card">
+        <a href="./apps/statistics-app/" class="card stat">
             <div>
+                <div class="card-header">
+                    <span class="card-tag">STATISTICS</span>
+                </div>
                 <h2>統計検定2級 対策アプリ</h2>
-                <p>統計検定2級の出題傾向に合わせた、クイズ形式の学習対策ツールです。</p>
+                <p>記述統計から推測統計の基礎まで、出題傾向を網羅したクイズ形式の学習シミュレーター。</p>
             </div>
-            <span class="badge">統計学</span>
+            <div class="card-action">LAUNCH APP // <span>▶</span></div>
         </a>
 
-        <!-- SQLパズルへのリンク -->
-        <a href="./apps/sql-puzzle/" class="card">
+        <a href="./apps/sql-puzzle/" class="card sql">
             <div>
+                <div class="card-header">
+                    <span class="card-tag">DATABASE</span>
+                </div>
                 <h2>SQLパズル・ビルダー AI</h2>
-                <p>AIが生成した問題に答えて、実践的なSQLの組み立てを学べるパズルです。</p>
+                <p>温泉の湯気を感じる遊び心と、AIが生成する実践的な問題でSQLの構築力を鍛えるパズルエディタ。</p>
             </div>
-            <span class="badge">データベース</span>
+            <div class="card-action">LAUNCH APP // <span>▶</span></div>
+        </a>
+
+        <a href="./apps/python-stats/" class="card python">
+            <div>
+                <div class="card-header">
+                    <span class="card-tag">PYTHON / MATH</span>
+                </div>
+                <h2>Python推測統計パズル</h2>
+                <p>バラバラになったコードパーツを論理的に組み替え、推測統計のデータ分析プロセスを完成させるパズル。</p>
+            </div>
+            <div class="card-action">LAUNCH APP // <span>▶</span></div>
+        </a>
+
+        <a href="./apps/algorithm/" class="card algo">
+            <div>
+                <div class="card-header">
+                    <span class="card-tag">ALGORITHM</span>
+                </div>
+                <h2>総合アルゴリズム・ビルダー</h2>
+                <p>基本情報技術者試験などのフルシラバスに対応。ロジックを視覚的に組み立てる構造化パズル。</p>
+            </div>
+            <div class="card-action">LAUNCH APP // <span>▶</span></div>
+        </a>
+
+        <a href="./apps/scraping-dojo/" class="card scraping">
+            <div>
+                <div class="card-header">
+                    <span class="card-tag">WEB CRAWLING</span>
+                </div>
+                <h2>スクレイピング道場</h2>
+                <p>「抜く・絞る・納める」の仕込み図からコード構築まで、データ収集の職人技を叩き込む特訓システム。</p>
+            </div>
+            <div class="card-action">LAUNCH APP // <span>▶</span></div>
         </a>
     </main>
 </div>
