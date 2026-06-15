@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡️ SQL SPEED RUN - Ultimate Hybrid Edition</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Zen+Kaku+Gothic+New:wght@700;900&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background-color: #0b0f19;
+    color: #e2e8f0;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ヘッダー・タイマー */
+  .header {
+    width: 100%; padding: 12px; text-align: center;
+    background: linear-gradient(90deg, #1e1b4b, #312e81, #1e1b4b);
+    border-bottom: 2px solid #6366f1;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    flex-shrink: 0;
+  }
+  .app-title { font-family: 'Share Tech Mono', monospace; font-size: 18px; color: #a5b4fc; letter-spacing: 2px; }
+  .timer-display { font-family: 'Share Tech Mono', monospace; font-size: 42px; font-weight: bold; color: #fbbf24; text-shadow: 0 0 20px rgba(251, 191, 36, 0.5); margin: 2px 0; }
+  .progress { font-size: 14px; color: #818cf8; font-weight: bold; }
+
+  /* メインエリア */
+  .main-container { width: 100%; max-width: 800px; padding: 12px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; }
+
+  /* 問題パネル */
+  .quiz-panel {
+    background: #1e293b; padding: 12px; border-radius: 8px; border-left: 6px solid #10b981;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s;
+  }
+  .quiz-panel.flash { animation: flash-green 0.3s ease-out; }
+  @keyframes flash-green { 0% { background: #059669; transform: scale(1.02); } 100% { background: #1e293b; transform: scale(1); } }
+  .quiz-label { font-size: 11px; color: #10b981; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .quiz-text { font-size: 15px; line-height: 1.4; color: #fff; }
+
+  /* スキーマ（テーブル構造）パネル */
+  .schema-panel {
+    background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 8px; padding: 8px 12px;
+    font-family: 'Share Tech Mono', monospace; font-size: 11px; color: #94a3b8; line-height: 1.5;
+  }
+  .schema-panel .tbl { color: #34d399; font-weight: bold; }
+  .schema-panel .col { color: #38bdf8; }
+
+  /* テキスト入力エリア */
+  .editor-wrapper { position: relative; width: 100%; flex-shrink: 0; }
+  .sql-input {
+    width: 100%; height: 90px; background: #0f172a; color: #38bdf8;
+    border: 2px solid #334155; border-radius: 8px; padding: 12px;
+    font-family: 'Share Tech Mono', monospace; font-size: 18px; resize: none; outline: none;
+    transition: border-color 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+  }
+  .sql-input:focus { border-color: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.3), inset 0 2px 4px rgba(0,0,0,0.5); }
+  
+  /* クリアボタン */
+  .btn-clear-text {
+    width: 100%; background: #4c0519; border: 1px solid #be123c; color: #fecdd3;
+    padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.1s;
+  }
+  .btn-clear-text:active { background: #be123c; }
+
+  /* ボタンコンテナのカテゴリ */
+  .button-category { display: flex; flex-direction: column; gap: 4px; background: rgba(30, 41, 59, 0.5); padding: 8px; border-radius: 8px; border: 1px solid #1e293b; }
+  .category-title { font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ボタンレイアウト */
+  .button-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+
+  .btn-part {
+    background: #1e1b4b; border: 1px solid #4f46e5; color: #c7d2fe;
+    padding: 8px 4px; border-radius: 6px; font-family: 'Share Tech Mono', monospace; font-weight: bold; font-size: 12px;
+    cursor: pointer; transition: all 0.05s; box-shadow: 0 2px 0 #111827; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .btn-part:active { transform: translateY(2px); box-shadow: none; background: #4f46e5; color: #fff; }
+  
+  /* カテゴリ別カラー */
+  .cat-syntax { background: #1e1b4b; border-color: #4f46e5; color: #c7d2fe; }
+  .cat-func { background: #064e3b; border-color: #10b981; color: #a7f3d0; }
+  .cat-table { background: #78350f; border-color: #d97706; color: #fde68a; }
+  .cat-column { background: #0c4a6e; border-color: #0284c7; color: #bae6fd; }
+
+  /* タイトル・リザルト画面 */
+  .overlay {
+    position: absolute; inset: 0; background: rgba(11, 15, 25, 0.95);
+    display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
+  }
+  .btn-start {
+    background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; border: none;
+    padding: 16px 48px; font-size: 24px; font-weight: 900; border-radius: 50px;
+    cursor: pointer; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); transition: transform 0.1s;
+  }
+  .btn-start:active { transform: scale(0.95); }
+  .result-time { font-family: 'Share Tech Mono', monospace; font-size: 72px; color: #10b981; margin: 20px 0; text-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="titleScreen">
+  <h1 style="font-size: 42px; margin-bottom: 10px; font-family: 'Share Tech Mono', monospace; color: #fbbf24;">SQL SPEED RUN</h1>
+  <p style="margin-bottom: 30px; font-size: 16px; color: #94a3b8;">ULTIMATE EDITION - 激甘判定＆ハイブリッド</p>
+  <button class="btn-start" onclick="startGame()">START</button>
+</div>
+
+<div class="overlay" id="resultScreen" style="display: none;">
+  <h1 style="font-size: 36px; color: #fff;">CLEAR!</h1>
+  <div class="result-time" id="finalTime">00:00.000</div>
+  <p style="margin-bottom: 40px; color: #94a3b8;">お見事！最速記録です！</p>
+  <button class="btn-start" onclick="location.reload()">RETRY</button>
+</div>
+
+<div class="header">
+  <div class="app-title">VTuber Analytics RTA</div>
+  <div class="timer-display" id="timer">00:00.000</div>
+  <div class="progress" id="progress">0 / 10</div>
+</div>
+
+<div class="main-container">
+  <div class="quiz-panel" id="quizPanel">
+    <div class="quiz-label">Q<span id="qNum">1</span>. MISSION</div>
+    <div class="quiz-text" id="quizText">問題文がここに表示されます</div>
+  </div>
+
+  <div class="schema-panel">
+    <div style="color: #64748b; margin-bottom: 2px; font-size: 10px;">▼ DATABASE SCHEMA</div>
+    <div><span class="tbl">groups</span> : <span class="col">group_id, group_name</span></div>
+    <div><span class="tbl">names</span> : <span class="col">id, name, group_id, group_name</span></div>
+    <div><span class="tbl">full_ranking</span> : <span class="col">rank, name, views</span></div>
+    <div><span class="tbl">mini_ranking</span> : <span class="col">group_name, views</span></div>
+    <div><span class="tbl">shorts_ranking</span> : <span class="col">name, views</span></div>
+  </div>
+
+  <div class="editor-wrapper">
+    <textarea class="sql-input" id="sqlInput" placeholder="キーボード入力 or 下のボタンをタップ" autocomplete="off" spellcheck="false"></textarea>
+  </div>
+  <button class="btn-clear-text" onclick="clearInput()">❌ 入力クリア</button>
+
+  <div class="button-category">
+    <div class="category-title">1. KEYWORDS</div>
+    <div class="button-grid">
+      <button class="btn-part cat-syntax" onclick="insertText('SELECT ')">SELECT</button>
+      <button class="btn-part cat-syntax" onclick="insertText('FROM ')">FROM</button>
+      <button class="btn-part cat-syntax" onclick="insertText('WHERE ')">WHERE</button>
+      <button class="btn-part cat-syntax" onclick="insertText('JOIN ')">JOIN</button>
+      <button class="btn-part cat-syntax" onclick="insertText('ON ')">ON</button>
+      <button class="btn-part cat-syntax" onclick="insertText('GROUP BY ')">GROUP BY</button>
+      <button class="btn-part cat-syntax" onclick="insertText('ORDER BY ')">ORDER BY</button>
+      <button class="btn-part cat-syntax" onclick="insertText('DESC ')">DESC</button>
+      <button class="btn-part cat-syntax" onclick="insertText('DISTINCT ')">DISTINCT</button>
+      <button class="btn-part cat-syntax" onclick="insertText('IS NULL ')">IS NULL</button>
+    </div>
+  </div>
+
+  <div class="button-category">
+    <div class="category-title">2. FUNCTIONS & SIGNS</div>
+    <div class="button-grid">
+      <button class="btn-part cat-func" onclick="insertText('* ')">*</button>
+      <button class="btn-part cat-func" onclick="insertText('COUNT(*) ')">COUNT(*)</button>
+      <button class="btn-part cat-func" onclick="insertText('SUM() ', -2)">SUM()</button>
+      <button class="btn-part cat-func" onclick="insertText('MAX() ', -2)">MAX()</button>
+      <button class="btn-part cat-func" onclick="insertText('= ')">=</button>
+      <button class="btn-part cat-func" onclick="insertText('>= ')">&gt;=</button>
+    </div>
+  </div>
+
+  <div class="button-category">
+    <div class="category-title">3. TABLES</div>
+    <div class="button-grid">
+      <button class="btn-part cat-table" onclick="insertText('groups ')">groups</button>
+      <button class="btn-part cat-table" onclick="insertText('names ')">names</button>
+      <button class="btn-part cat-table" onclick="insertText('full_ranking ')">full_ranking</button>
+      <button class="btn-part cat-table" onclick="insertText('mini_ranking ')">mini_ranking</button>
+      <button class="btn-part cat-table" onclick="insertText('shorts_ranking ')">shorts_ranking</button>
+    </div>
+  </div>
+
+  <div class="button-category">
+    <div class="category-title">4. COLUMNS & VALUES</div>
+    <div class="button-grid">
+      <button class="btn-part cat-column" onclick="insertText('group_name ')">group_name</button>
+      <button class="btn-part cat-column" onclick="insertText('name ')">name</button>
+      <button class="btn-part cat-column" onclick="insertText('views ')">views</button>
+      <button class="btn-part cat-column" onclick="insertText('rank ')">rank</button>
+      <button class="btn-part cat-column" onclick="insertText('group_id ')">group_id</button>
+      <button class="btn-part cat-column" onclick="insertText('1 ')">1</button>
+      <button class="btn-part cat-column" onclick="insertText('10000000 ')">10000000</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// 問題データ
+// ==========================================
+const quizBank = [
+  {
+    text: "groupsテーブルから、すべての列のデータを取得して。",
+    answers: ["SELECT * FROM groups"]
+  },
+  {
+    text: "namesテーブルの全レコード数（行数）をカウントして。",
+    answers: ["SELECT COUNT(*) FROM names", "SELECT COUNT(1) FROM names", "SELECT COUNT(id) FROM names", "SELECT COUNT(name) FROM names"]
+  },
+  {
+    text: "full_rankingテーブルから、再生数(views)が1000万回以上のデータをすべて抽出して。",
+    answers: ["SELECT * FROM full_ranking WHERE views >= 10000000", "SELECT * FROM full_ranking WHERE 10000000 <= views"]
+  },
+  {
+    text: "mini_rankingテーブルを使って、グループ名(group_name)別に再生数(views)の合計を出して。",
+    answers: ["SELECT group_name, SUM(views) FROM mini_ranking GROUP BY group_name"]
+  },
+  {
+    text: "shorts_rankingテーブルから、再生数(views)が多い順に全データを並べ替えて。",
+    answers: ["SELECT * FROM shorts_ranking ORDER BY views DESC"]
+  },
+  {
+    text: "namesテーブルから、所属グループ名(group_name)が未設定（NULL）になっているVTuberを抽出して。",
+    answers: ["SELECT * FROM names WHERE group_name IS NULL", "SELECT name FROM names WHERE group_name IS NULL"]
+  },
+  {
+    text: "full_rankingで、月別ランキングが1位(rank = 1)になったことのあるVTuber名(name)を取得して。",
+    answers: ["SELECT name FROM full_ranking WHERE rank = 1", "SELECT name FROM full_ranking WHERE 1 = rank"]
+  },
+  {
+    text: "names と groups をJOINして、全てのデータを取得して。条件は group_id が一致すること。",
+    answers: [
+      "SELECT * FROM names JOIN groups ON group_id = group_id",
+      "SELECT * FROM names INNER JOIN groups ON group_id = group_id",
+      "SELECT * FROM groups JOIN names ON group_id = group_id"
+    ]
+  },
+  {
+    text: "full_rankingテーブルから、VTuber名(name)のみをすべて重複なし（DISTINCT）で取得して。",
+    answers: ["SELECT DISTINCT name FROM full_ranking"]
+  },
+  {
+    text: "最後に、mini_rankingから再生数(views)の最大値(MAX)を取得してフィニッシュ！",
+    answers: ["SELECT MAX(views) FROM mini_ranking"]
+  }
+];
+
+let currentQuizIndex = 0;
+let startTime = 0;
+let timerInterval;
+const sqlInput = document.getElementById('sqlInput');
+
+// ==========================================
+// ゲーム制御
+// ==========================================
+function startGame() {
+  document.getElementById('titleScreen').style.display = 'none';
+  currentQuizIndex = 0;
+  loadQuiz();
+  startTime = Date.now();
+  timerInterval = setInterval(updateTimer, 10);
+  sqlInput.value = '';
+  sqlInput.focus();
+}
+
+function updateTimer() {
+  const elapsed = Date.now() - startTime;
+  const minutes = String(Math.floor(elapsed / 60000)).padStart(2, '0');
+  const seconds = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0');
+  const ms = String(elapsed % 1000).padStart(3, '0');
+  document.getElementById('timer').textContent = `${minutes}:${seconds}.${ms}`;
+}
+
+function loadQuiz() {
+  if (currentQuizIndex >= quizBank.length) {
+    endGame();
+    return;
+  }
+  document.getElementById('qNum').textContent = currentQuizIndex + 1;
+  document.getElementById('progress').textContent = `${currentQuizIndex + 1} / ${quizBank.length}`;
+  document.getElementById('quizText').textContent = quizBank[currentQuizIndex].text;
+  sqlInput.value = '';
+}
+
+function endGame() {
+  clearInterval(timerInterval);
+  document.getElementById('resultScreen').style.display = 'flex';
+  document.getElementById('finalTime').textContent = document.getElementById('timer').textContent;
+  sqlInput.blur();
+}
+
+function insertText(text, offset = 0) {
+  const start = sqlInput.selectionStart;
+  const end = sqlInput.selectionEnd;
+  const val = sqlInput.value;
+  sqlInput.value = val.slice(0, start) + text + val.slice(end);
+  sqlInput.selectionStart = sqlInput.selectionEnd = start + text.length + offset;
+  sqlInput.focus();
+  checkAnswer(); 
+}
+
+function clearInput() {
+  sqlInput.value = '';
+  sqlInput.focus();
+}
+
+sqlInput.addEventListener('input', checkAnswer);
+
+// ==========================================
+// 超柔軟パーサー（判定ロジック）
+// ==========================================
+function canonicalize(sql) {
+  let s = sql.toUpperCase();
+  
+  s = s.replace(/;/g, ""); // セミコロン削除
+  
+  // 余計なエイリアスをプレイヤーが手打ちした場合も全て無効化して吸収
+  s = s.replace(/NAMES N/g, "NAMES");
+  s = s.replace(/GROUPS G/g, "GROUPS");
+  s = s.replace(/N\./g, "");
+  s = s.replace(/G\./g, "");
+
+  // スペースや記号の揺れを吸収
+  s = s.replace(/\s+/g, " "); 
+  s = s.replace(/\s*,\s*/g, ",");
+  s = s.replace(/\s*\(\s*/g, "(");
+  s = s.replace(/\s*\)\s*/g, ")");
+  s = s.replace(/\s*=\s*/g, "=");
+  s = s.replace(/\s*>\s*=\s*/g, ">=");
+  s = s.replace(/\s*<\s*=\s*/g, "<=");
+  
+  // A=B と B=A の揺れを吸収
+  const parts = s.split("=");
+  if(parts.length === 2) {
+    const p1 = parts[0].trim();
+    const p2 = parts[1].trim();
+    if(p1 > p2) {
+      s = p2 + "=" + p1;
+    }
+  }
+  
+  return s.trim();
+}
+
+function checkAnswer() {
+  const userInput = sqlInput.value;
+  if (!userInput) return;
+
+  const userCanon = canonicalize(userInput);
+  const currentAnswers = quizBank[currentQuizIndex].answers;
+
+  const isCorrect = currentAnswers.some(ans => {
+    return userCanon === canonicalize(ans);
+  });
+
+  if (isCorrect) {
+    const panel = document.getElementById('quizPanel');
+    panel.classList.remove('flash');
+    void panel.offsetWidth;
+    panel.classList.add('flash');
+    currentQuizIndex++;
+    loadQuiz();
+  }
+}
+</script>
+</body>
+</html>
