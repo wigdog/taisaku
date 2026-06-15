@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚡️ SQL SPEED RUN - Ultimate Hybrid Edition</title>
+<title>⚡️ SQL SPEED RUN - 温泉データ分析 RTA</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Zen+Kaku+Gothic+New:wght@700;900&display=swap');
 
@@ -47,7 +47,7 @@
   /* スキーマ（テーブル構造）パネル */
   .schema-panel {
     background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 8px; padding: 8px 12px;
-    font-family: 'Share Tech Mono', monospace; font-size: 11px; color: #94a3b8; line-height: 1.5;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px; color: #94a3b8; line-height: 1.6;
   }
   .schema-panel .tbl { color: #34d399; font-weight: bold; }
   .schema-panel .col { color: #38bdf8; }
@@ -65,7 +65,7 @@
   /* クリアボタン */
   .btn-clear-text {
     width: 100%; background: #4c0519; border: 1px solid #be123c; color: #fecdd3;
-    padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.1s;
+    padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.1s; margin-bottom: 4px;
   }
   .btn-clear-text:active { background: #be123c; }
 
@@ -74,7 +74,7 @@
   .category-title { font-size: 11px; color: #64748b; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
 
   /* ボタンレイアウト */
-  .button-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+  .button-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 6px; }
 
   .btn-part {
     background: #1e1b4b; border: 1px solid #4f46e5; color: #c7d2fe;
@@ -95,6 +95,18 @@
     position: absolute; inset: 0; background: rgba(11, 15, 25, 0.95);
     display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
   }
+  .diff-buttons { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 340px; margin-top: 20px;}
+  .btn-diff {
+    padding: 16px; border-radius: 12px; border: none; font-weight: 900; font-size: 16px;
+    font-family: 'Zen Kaku Gothic New', sans-serif; cursor: pointer; transition: transform 0.1s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  }
+  .btn-diff:active { transform: scale(0.95); }
+  .btn-easy { background: linear-gradient(135deg, #27ae60, #2ecc71); color: #fff; }
+  .btn-normal { background: linear-gradient(135deg, #d35400, #e67e22); color: #fff; }
+  .btn-hard { background: linear-gradient(135deg, #c0392b, #e74c3c); color: #fff; }
+  .btn-extreme { background: linear-gradient(135deg, #8e44ad, #9b59b6); color: #fff; border: 2px solid #d2b4de; }
+  
   .btn-start {
     background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; border: none;
     padding: 16px 48px; font-size: 24px; font-weight: 900; border-radius: 50px;
@@ -107,22 +119,28 @@
 <body>
 
 <div class="overlay" id="titleScreen">
-  <h1 style="font-size: 42px; margin-bottom: 10px; font-family: 'Share Tech Mono', monospace; color: #fbbf24;">SQL SPEED RUN</h1>
-  <p style="margin-bottom: 30px; font-size: 16px; color: #94a3b8;">ULTIMATE EDITION - 激甘判定＆ハイブリッド</p>
-  <button class="btn-start" onclick="startGame()">START</button>
+  <h1 style="font-size: 42px; margin-bottom: 5px; font-family: 'Share Tech Mono', monospace; color: #fbbf24;">SQL SPEED RUN</h1>
+  <p style="font-size: 16px; color: #94a3b8;">温泉施設データ分析 RTA - 各5問勝負</p>
+  
+  <div class="diff-buttons">
+    <button class="btn-diff btn-easy" onclick="startGame('easy')">🛁 ぬるま湯 (Easy)</button>
+    <button class="btn-diff btn-normal" onclick="startGame('normal')">♨ 適温 (Normal)</button>
+    <button class="btn-diff btn-hard" onclick="startGame('hard')">🌋 熱湯 (Hard)</button>
+    <button class="btn-diff btn-extreme" onclick="startGame('extreme')">🌌 草津の湯 (Extreme)</button>
+  </div>
 </div>
 
 <div class="overlay" id="resultScreen" style="display: none;">
-  <h1 style="font-size: 36px; color: #fff;">CLEAR!</h1>
+  <h1 style="font-size: 36px; color: #fff;">ALL MISSIONS CLEARED!</h1>
   <div class="result-time" id="finalTime">00:00.000</div>
-  <p style="margin-bottom: 40px; color: #94a3b8;">お見事！最速記録です！</p>
-  <button class="btn-start" onclick="location.reload()">RETRY</button>
+  <p style="margin-bottom: 40px; color: #94a3b8;">お見事！最速記録を更新しよう！</p>
+  <button class="btn-start" onclick="location.reload()">RETRY / タイトルへ戻る</button>
 </div>
 
 <div class="header">
-  <div class="app-title">VTuber Analytics RTA</div>
+  <div class="app-title">♨ 温泉施設 Analytics RTA</div>
   <div class="timer-display" id="timer">00:00.000</div>
-  <div class="progress" id="progress">0 / 10</div>
+  <div class="progress" id="progress">0 / 5</div>
 </div>
 
 <div class="main-container">
@@ -133,11 +151,9 @@
 
   <div class="schema-panel">
     <div style="color: #64748b; margin-bottom: 2px; font-size: 10px;">▼ DATABASE SCHEMA</div>
-    <div><span class="tbl">groups</span> : <span class="col">group_id, group_name</span></div>
-    <div><span class="tbl">names</span> : <span class="col">id, name, group_id, group_name</span></div>
-    <div><span class="tbl">full_ranking</span> : <span class="col">rank, name, views</span></div>
-    <div><span class="tbl">mini_ranking</span> : <span class="col">group_name, views</span></div>
-    <div><span class="tbl">shorts_ranking</span> : <span class="col">name, views</span></div>
+    <div><span class="tbl">facilities(f)</span> : <span class="col">facility_id, name, manga_volumes, area_id</span></div>
+    <div><span class="tbl">visitor_logs(v)</span> : <span class="col">log_id, facility_id, spent_amount, visit_date</span></div>
+    <div><span class="tbl">areas(a)</span> : <span class="col">area_id, area_name</span></div>
   </div>
 
   <div class="editor-wrapper">
@@ -154,8 +170,11 @@
       <button class="btn-part cat-syntax" onclick="insertText('JOIN ')">JOIN</button>
       <button class="btn-part cat-syntax" onclick="insertText('ON ')">ON</button>
       <button class="btn-part cat-syntax" onclick="insertText('GROUP BY ')">GROUP BY</button>
+      <button class="btn-part cat-syntax" onclick="insertText('HAVING ')">HAVING</button>
       <button class="btn-part cat-syntax" onclick="insertText('ORDER BY ')">ORDER BY</button>
       <button class="btn-part cat-syntax" onclick="insertText('DESC ')">DESC</button>
+      <button class="btn-part cat-syntax" onclick="insertText('UNION ')">UNION</button>
+      <button class="btn-part cat-syntax" onclick="insertText('EXISTS ')">EXISTS</button>
       <button class="btn-part cat-syntax" onclick="insertText('DISTINCT ')">DISTINCT</button>
       <button class="btn-part cat-syntax" onclick="insertText('IS NULL ')">IS NULL</button>
     </div>
@@ -168,87 +187,70 @@
       <button class="btn-part cat-func" onclick="insertText('COUNT(*) ')">COUNT(*)</button>
       <button class="btn-part cat-func" onclick="insertText('SUM() ', -2)">SUM()</button>
       <button class="btn-part cat-func" onclick="insertText('MAX() ', -2)">MAX()</button>
+      <button class="btn-part cat-func" onclick="insertText('MIN() ', -2)">MIN()</button>
+      <button class="btn-part cat-func" onclick="insertText('COALESCE() ', -2)">COALESCE()</button>
+      <button class="btn-part cat-func" onclick="insertText('MONTH() ', -2)">MONTH()</button>
+      <button class="btn-part cat-func" onclick="insertText('CASE WHEN ')">CASE WHEN</button>
+      <button class="btn-part cat-func" onclick="insertText(' THEN ')">THEN</button>
+      <button class="btn-part cat-func" onclick="insertText(' ELSE ')">ELSE</button>
+      <button class="btn-part cat-func" onclick="insertText(' END ')">END</button>
       <button class="btn-part cat-func" onclick="insertText('= ')">=</button>
       <button class="btn-part cat-func" onclick="insertText('>= ')">&gt;=</button>
+      <button class="btn-part cat-func" onclick="insertText('< ')">&lt;</button>
     </div>
   </div>
 
   <div class="button-category">
-    <div class="category-title">3. TABLES</div>
+    <div class="category-title">3. TABLES & COLUMNS</div>
     <div class="button-grid">
-      <button class="btn-part cat-table" onclick="insertText('groups ')">groups</button>
-      <button class="btn-part cat-table" onclick="insertText('names ')">names</button>
-      <button class="btn-part cat-table" onclick="insertText('full_ranking ')">full_ranking</button>
-      <button class="btn-part cat-table" onclick="insertText('mini_ranking ')">mini_ranking</button>
-      <button class="btn-part cat-table" onclick="insertText('shorts_ranking ')">shorts_ranking</button>
-    </div>
-  </div>
-
-  <div class="button-category">
-    <div class="category-title">4. COLUMNS & VALUES</div>
-    <div class="button-grid">
-      <button class="btn-part cat-column" onclick="insertText('group_name ')">group_name</button>
+      <button class="btn-part cat-table" onclick="insertText('facilities ')">facilities</button>
+      <button class="btn-part cat-table" onclick="insertText('visitor_logs ')">visitor_logs</button>
+      <button class="btn-part cat-column" onclick="insertText('facility_id ')">facility_id</button>
       <button class="btn-part cat-column" onclick="insertText('name ')">name</button>
-      <button class="btn-part cat-column" onclick="insertText('views ')">views</button>
-      <button class="btn-part cat-column" onclick="insertText('rank ')">rank</button>
-      <button class="btn-part cat-column" onclick="insertText('group_id ')">group_id</button>
-      <button class="btn-part cat-column" onclick="insertText('1 ')">1</button>
-      <button class="btn-part cat-column" onclick="insertText('10000000 ')">10000000</button>
+      <button class="btn-part cat-column" onclick="insertText('manga_volumes ')">manga_volumes</button>
+      <button class="btn-part cat-column" onclick="insertText('area_id ')">area_id</button>
+      <button class="btn-part cat-column" onclick="insertText('spent_amount ')">spent_amount</button>
+      <button class="btn-part cat-column" onclick="insertText('visit_date ')">visit_date</button>
     </div>
   </div>
 </div>
 
 <script>
 // ==========================================
-// 問題データ
+// RTA用クイズマスターデータ（難易度別）
 // ==========================================
-const quizBank = [
-  {
-    text: "groupsテーブルから、すべての列のデータを取得して。",
-    answers: ["SELECT * FROM groups"]
-  },
-  {
-    text: "namesテーブルの全レコード数（行数）をカウントして。",
-    answers: ["SELECT COUNT(*) FROM names", "SELECT COUNT(1) FROM names", "SELECT COUNT(id) FROM names", "SELECT COUNT(name) FROM names"]
-  },
-  {
-    text: "full_rankingテーブルから、再生数(views)が1000万回以上のデータをすべて抽出して。",
-    answers: ["SELECT * FROM full_ranking WHERE views >= 10000000", "SELECT * FROM full_ranking WHERE 10000000 <= views"]
-  },
-  {
-    text: "mini_rankingテーブルを使って、グループ名(group_name)別に再生数(views)の合計を出して。",
-    answers: ["SELECT group_name, SUM(views) FROM mini_ranking GROUP BY group_name"]
-  },
-  {
-    text: "shorts_rankingテーブルから、再生数(views)が多い順に全データを並べ替えて。",
-    answers: ["SELECT * FROM shorts_ranking ORDER BY views DESC"]
-  },
-  {
-    text: "namesテーブルから、所属グループ名(group_name)が未設定（NULL）になっているVTuberを抽出して。",
-    answers: ["SELECT * FROM names WHERE group_name IS NULL", "SELECT name FROM names WHERE group_name IS NULL"]
-  },
-  {
-    text: "full_rankingで、月別ランキングが1位(rank = 1)になったことのあるVTuber名(name)を取得して。",
-    answers: ["SELECT name FROM full_ranking WHERE rank = 1", "SELECT name FROM full_ranking WHERE 1 = rank"]
-  },
-  {
-    text: "names と groups をJOINして、全てのデータを取得して。条件は group_id が一致すること。",
-    answers: [
-      "SELECT * FROM names JOIN groups ON group_id = group_id",
-      "SELECT * FROM names INNER JOIN groups ON group_id = group_id",
-      "SELECT * FROM groups JOIN names ON group_id = group_id"
-    ]
-  },
-  {
-    text: "full_rankingテーブルから、VTuber名(name)のみをすべて重複なし（DISTINCT）で取得して。",
-    answers: ["SELECT DISTINCT name FROM full_ranking"]
-  },
-  {
-    text: "最後に、mini_rankingから再生数(views)の最大値(MAX)を取得してフィニッシュ！",
-    answers: ["SELECT MAX(views) FROM mini_ranking"]
-  }
-];
+const quizMaster = {
+  easy: [
+    { text: "「施設」のリストが欲しいんだけど、すべてのデータを抽出して出してくれるかな？", answers: ["SELECT * FROM facilities"] },
+    { text: "「入館履歴」のリストが欲しいんだけど、すべてのデータを抽出して。", answers: ["SELECT * FROM visitor_logs"] },
+    { text: "データの絞り込みをお願い。「施設」の中で、マンガの蔵書数が3000以上のデータだけピックアップして。", answers: ["SELECT * FROM facilities WHERE manga_volumes >= 3000"] },
+    { text: "データの絞り込みをお願い。「入館履歴」の中で、利用額が5000未満のデータをすべて拾って。", answers: ["SELECT * FROM visitor_logs WHERE spent_amount < 5000"] },
+    { text: "「施設」の一覧をレポートにしたい。マンガの蔵書数が多い順で並べて、施設名だけを抽出して。", answers: ["SELECT name FROM facilities ORDER BY manga_volumes DESC"] }
+  ],
+  normal: [
+    { text: "各施設ごとの売上状況を知りたいな。「入館履歴」を使って、施設IDごとに利用額の合計を集計して。", answers: ["SELECT facility_id, SUM(spent_amount) FROM visitor_logs GROUP BY facility_id"] },
+    { text: "リピーターが多い施設を特定したい。「入館履歴」で、利用件数が5件以上ある施設IDと、その件数を一覧にして。", answers: ["SELECT facility_id, COUNT(*) FROM visitor_logs GROUP BY facility_id HAVING COUNT(*) >= 5"] },
+    { text: "売上データに施設名をくっつけたい。「施設」と「入館履歴」を紐づけて(等価結合)、施設名と利用額を出して。", answers: ["SELECT name, spent_amount FROM facilities JOIN visitor_logs ON facilities.facility_id = visitor_logs.facility_id"] },
+    { text: "データ不備の調査を頼む。「施設」の中で、エリアIDが登録されていない(NULL)施設の名前を出して。", answers: ["SELECT name FROM facilities WHERE area_id IS NULL"] },
+    { text: "「入館履歴」の利用額の最大値と最小値を同時に出して。", answers: ["SELECT MAX(spent_amount), MIN(spent_amount) FROM visitor_logs"] }
+  ],
+  hard: [
+    { text: "1回の利用額が10000円以上の「入館履歴」が存在する施設に絞って、施設名を抽出して。(※サブクエリを使用)", answers: ["SELECT name FROM facilities WHERE facility_id IN (SELECT facility_id FROM visitor_logs WHERE spent_amount >= 10000)"] },
+    { text: "「施設」のIDと「入館履歴」の施設IDを、重複を省いて(UNION)縦に繋げて出して。", answers: ["SELECT facility_id FROM facilities UNION SELECT facility_id FROM visitor_logs"] },
+    { text: "蔵書数が5000冊以上なら'大型'、それ以外なら'小型'という判定結果を、施設名と一緒に取得して。(※CASE式を使用)", answers: ["SELECT name, CASE WHEN manga_volumes >= 5000 THEN '大型' ELSE '小型' END FROM facilities"] },
+    { text: "【重複エラー調査】「入館履歴」の中で、同じ施設(ID)に同じ日に入館しているデータを探して。施設IDと入館日を取得し、件数が1より大きいものを抽出。", answers: ["SELECT facility_id, visit_date FROM visitor_logs GROUP BY facility_id, visit_date HAVING COUNT(*) > 1"] },
+    { text: "純粋な集客力を測りたい。入館履歴から、重複を省いた『ユニークな施設IDの数』を集計して。", answers: ["SELECT COUNT(DISTINCT facility_id) FROM visitor_logs"] }
+  ],
+  extreme: [
+    { text: "利用額が5000円以上なら'高額'、それ以外を'少額'と分類し、それぞれの件数を集計して。(※SELECTとGROUP BYの両方にCASEを書く)", answers: ["SELECT CASE WHEN spent_amount >= 5000 THEN '高額' ELSE '少額' END, COUNT(*) FROM visitor_logs GROUP BY CASE WHEN spent_amount >= 5000 THEN '高額' ELSE '少額' END"] },
+    { text: "【集客ゼロ調査】「施設」として登録されているのに、入館履歴が『1件も存在しない』施設名を取得して。(※NOT EXISTSを活用)", answers: ["SELECT name FROM facilities WHERE NOT EXISTS (SELECT * FROM visitor_logs WHERE facilities.facility_id = visitor_logs.facility_id)"] },
+    { text: "利用額が10000円以上の入館履歴が存在する施設名を取得して。(※EXISTSを使用 相関サブクエリ)", answers: ["SELECT name FROM facilities WHERE EXISTS (SELECT * FROM visitor_logs WHERE facilities.facility_id = visitor_logs.facility_id AND spent_amount >= 10000)"] },
+    { text: "【欠損値処理】施設の一覧を出す際、エリアIDが未設定（NULL）のものは『未分類』に置き換えて(COALESCE)施設名とともに取得して。", answers: ["SELECT name, COALESCE(area_id, '未分類') FROM facilities"] },
+    { text: "【時系列集計】「入館履歴」の入館日から『月』(MONTH)だけを抽出し、その月ごとに利用額の合計を集計して。", answers: ["SELECT MONTH(visit_date), SUM(spent_amount) FROM visitor_logs GROUP BY MONTH(visit_date)"] }
+  ]
+};
 
+let currentQuizzes = [];
 let currentQuizIndex = 0;
 let startTime = 0;
 let timerInterval;
@@ -257,12 +259,15 @@ const sqlInput = document.getElementById('sqlInput');
 // ==========================================
 // ゲーム制御
 // ==========================================
-function startGame() {
+function startGame(difficulty) {
   document.getElementById('titleScreen').style.display = 'none';
+  currentQuizzes = quizMaster[difficulty];
   currentQuizIndex = 0;
+  
   loadQuiz();
   startTime = Date.now();
   timerInterval = setInterval(updateTimer, 10);
+  
   sqlInput.value = '';
   sqlInput.focus();
 }
@@ -276,21 +281,21 @@ function updateTimer() {
 }
 
 function loadQuiz() {
-  if (currentQuizIndex >= quizBank.length) {
-    endGame();
+  if(currentQuizIndex >= currentQuizzes.length) {
+    finishGame();
     return;
   }
+  const q = currentQuizzes[currentQuizIndex];
   document.getElementById('qNum').textContent = currentQuizIndex + 1;
-  document.getElementById('progress').textContent = `${currentQuizIndex + 1} / ${quizBank.length}`;
-  document.getElementById('quizText').textContent = quizBank[currentQuizIndex].text;
-  sqlInput.value = '';
+  document.getElementById('quizText').textContent = q.text;
+  document.getElementById('progress').textContent = `${currentQuizIndex} / ${currentQuizzes.length}`;
 }
 
-function endGame() {
+function finishGame() {
   clearInterval(timerInterval);
-  document.getElementById('resultScreen').style.display = 'flex';
+  document.getElementById('progress').textContent = `${currentQuizzes.length} / ${currentQuizzes.length}`;
   document.getElementById('finalTime').textContent = document.getElementById('timer').textContent;
-  sqlInput.blur();
+  document.getElementById('resultScreen').style.display = 'flex';
 }
 
 function insertText(text, offset = 0) {
@@ -300,7 +305,7 @@ function insertText(text, offset = 0) {
   sqlInput.value = val.slice(0, start) + text + val.slice(end);
   sqlInput.selectionStart = sqlInput.selectionEnd = start + text.length + offset;
   sqlInput.focus();
-  checkAnswer(); 
+  checkAnswer();
 }
 
 function clearInput() {
@@ -317,12 +322,16 @@ function canonicalize(sql) {
   let s = sql.toUpperCase();
   
   s = s.replace(/;/g, ""); // セミコロン削除
+  s = s.replace(/INNER JOIN/g, "JOIN");
   
-  // 余計なエイリアスをプレイヤーが手打ちした場合も全て無効化して吸収
-  s = s.replace(/NAMES N/g, "NAMES");
-  s = s.replace(/GROUPS G/g, "GROUPS");
-  s = s.replace(/N\./g, "");
-  s = s.replace(/G\./g, "");
+  // テーブルエイリアスの無効化吸収（f. v. などプレイヤーが手打ちした場合を無効化）
+  s = s.replace(/FACILITIES F/g, "FACILITIES");
+  s = s.replace(/VISITOR_LOGS V/g, "VISITOR_LOGS");
+  s = s.replace(/F\./g, "");
+  s = s.replace(/V\./g, "");
+  s = s.replace(/FACILITIES\./g, "");
+  s = s.replace(/VISITOR_LOGS\./g, "");
+  s = s.replace(/AREAS\./g, "");
 
   // スペースや記号の揺れを吸収
   s = s.replace(/\s+/g, " "); 
@@ -332,14 +341,20 @@ function canonicalize(sql) {
   s = s.replace(/\s*=\s*/g, "=");
   s = s.replace(/\s*>\s*=\s*/g, ">=");
   s = s.replace(/\s*<\s*=\s*/g, "<=");
+  s = s.replace(/\s*>\s*/g, ">");
+  s = s.replace(/\s*<\s*/g, "<");
+  s = s.replace(/'/g, ""); // クォーテーション除去
+  s = s.replace(/"/g, ""); 
   
-  // A=B と B=A の揺れを吸収
+  // A=B と B=A の揺れを吸収（ON句などの順序吸収）
   const parts = s.split("=");
   if(parts.length === 2) {
     const p1 = parts[0].trim();
     const p2 = parts[1].trim();
     if(p1 > p2) {
       s = p2 + "=" + p1;
+    } else {
+      s = p1 + "=" + p2;
     }
   }
   
@@ -347,25 +362,23 @@ function canonicalize(sql) {
 }
 
 function checkAnswer() {
-  const userInput = sqlInput.value;
-  if (!userInput) return;
-
-  const userCanon = canonicalize(userInput);
-  const currentAnswers = quizBank[currentQuizIndex].answers;
-
-  const isCorrect = currentAnswers.some(ans => {
-    return userCanon === canonicalize(ans);
-  });
-
+  const userAns = canonicalize(sqlInput.value);
+  const q = currentQuizzes[currentQuizIndex];
+  
+  const isCorrect = q.answers.some(ans => userAns === canonicalize(ans));
+  
   if (isCorrect) {
     const panel = document.getElementById('quizPanel');
     panel.classList.remove('flash');
-    void panel.offsetWidth;
+    void panel.offsetWidth; 
     panel.classList.add('flash');
+
     currentQuizIndex++;
+    sqlInput.value = '';
     loadQuiz();
   }
 }
 </script>
+
 </body>
 </html>
