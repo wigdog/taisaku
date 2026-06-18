@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>♨️ 総合アルゴリズム・ビルダー フルシラバス版</title>
+<title>♨️ 総合アルゴリズム・ビルダー フルシラバス完全版（+Python道場）</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Share+Tech+Mono&display=swap');
 
@@ -52,6 +52,7 @@
   .btn-level2 { background: linear-gradient(135deg, #f39c12, #d68910); color: #fff; }
   .btn-level3 { background: linear-gradient(135deg, #d35400, #a04000); color: #fff; }
   .btn-level4 { background: linear-gradient(135deg, #c0392b, #7b241c); color: #fff; }
+  .btn-level5 { background: linear-gradient(135deg, #306998, #1e3a5f); color: #fff; border-left: 6px solid #FFD43B; } /* Python特化モード */
 
   /* 画面2：メインアプリ */
   #appShell { display: none; flex-direction: column; flex: 1; overflow: hidden; position: relative; z-index: 20; }
@@ -63,10 +64,13 @@
   .quiz-card { background: linear-gradient(135deg, #fff9f0 0%, #fef5e7 100%); border-radius: 12px; padding: 12px 16px; border: 2px solid var(--warm-yellow); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
   .quiz-label { font-size: 11px; font-weight: 900; color: var(--noren-red); letter-spacing: 1px; margin-bottom: 4px; }
   .diff-badge { float: right; padding: 2px 6px; border-radius: 4px; font-size: 10px; color: #fff; font-weight: bold; }
-  .quiz-text { font-size: 14px; font-weight: 700; color: #2c1a0e; line-height: 1.5; }
+  .quiz-text { font-size: 13px; font-weight: 700; color: #2c1a0e; line-height: 1.5; white-space: pre-wrap; }
 
-  /* ビジュアル描画エリア（フローチャート＆図解） */
-  .fc-visual-box { background-color: var(--fc-bg); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px; margin-top: 8px; font-family: 'Share Tech Mono', monospace; font-size: 12px; line-height: 1.3; color: #5dade2; white-space: pre; overflow-x: auto; box-shadow: inset 0 2px 8px rgba(0,0,0,0.8); }
+  /* ビジュアル描画エリア＆IOボックス */
+  .fc-visual-box { background-color: var(--fc-bg); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px; margin-top: 8px; font-family: 'Share Tech Mono', monospace; font-size: 11px; line-height: 1.4; color: #5dade2; white-space: pre; overflow-x: auto; box-shadow: inset 0 2px 8px rgba(0,0,0,0.8); }
+  .io-box { background: #1e1e1e; border-radius: 6px; padding: 10px; font-family: 'Share Tech Mono', monospace; font-size: 12px; color: #d4d4d4; border: 1px solid #444; white-space: pre-wrap; line-height: 1.4; margin-top: 8px; display: none; }
+  .io-box span.comment { color: #6a9955; }
+  .io-box span.data { color: #ce9178; }
 
   .build-area { background: #0d1117; border-radius: 12px; border: 1.5px solid rgba(255,255,255,0.1); padding: 12px; min-height: 75px; }
   .build-label { font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
@@ -75,13 +79,20 @@
   .slot-block { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 6px; font-family: 'Share Tech Mono', 'Zen Kaku Gothic New', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; user-select: none; animation: pop 0.2s ease; }
   @keyframes pop { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
 
-  /* パーツの色分け */
+  /* パーツの色分け（メインアプリ用） */
   .block-logic { background: #117a65; color: #a3e4d7; border: 1px solid #0e6251; }
   .block-math { background: #2471a3; color: #a9cce3; border: 1px solid #1a5276; }
   .block-complexity { background: #b9770e; color: #f9e79f; border: 1px solid #9c640c; }
   .block-keyword { background: #5b2c6f; color: #d7bde2; border: 1px solid #4a235a; }
   .block-value { background: #641e16; color: #f5b7b1; border: 1px solid #7b241c; }
   .block-symbol { background: #2e4053; color: #eaecee; border: 1px solid #212f3d; }
+
+  /* パーツの色分け（Python道場用 VSCode風） */
+  .block-bracket { background: #333; color: #ffd700; border: 1px solid #555; }
+  .block-expr { background: #1e3a5f; color: #9cdcfe; border: 1px solid #2a5288; }
+  .block-loop { background: #4b2a4e; color: #c586c0; border: 1px solid #6b3a6f; }
+  .block-cond { background: #5c4b1a; color: #dcdcaa; border: 1px solid #8c7328; }
+  .block-func { background: #115c54; color: #4ec9b0; border: 1px solid #1a7a70; }
 
   .empty-hint { font-size: 12px; color: rgba(255,255,255,0.25); font-style: italic; }
 
@@ -143,6 +154,10 @@
       <span>🔴 【極 熱】応用分野の真髄（数式コード）</span>
       <span class="sub">ダイクストラ最短経路・DPテーブル遷移式・機械学習</span>
     </button>
+    <button class="btn-diff btn-level5" onclick="startGame('level5')">
+      <span>🐍 【特 訓】Python 第6回 構文マスター道場</span>
+      <span class="sub">リスト内包表記・無名関数(lambda)・高階関数・再帰</span>
+    </button>
   </div>
 </div>
 
@@ -151,9 +166,10 @@
     <div class="main-area">
       <div class="quiz-card">
         <div class="diff-badge" id="diffBadge"></div>
-        <div class="quiz-label">📋 問題</div>
+        <div class="quiz-label" id="quizLabel">📋 問題</div>
         <div class="quiz-text" id="quizText"></div>
         <div class="fc-visual-box" id="fcVisualArea" style="display: none;"></div>
+        <div class="io-box" id="ioBox" style="display: none;"></div>
       </div>
       <div class="build-area">
         <div class="build-label">▶ タップしてブロックを連結（順序も厳密に判定されます）</div>
@@ -193,7 +209,7 @@ function initBg() {
 }
 initBg();
 
-// === 問題プール（全20問） ===
+// === 問題プール（全5モード分） ===
 var quizPool = {
   level1: [ // ぬるま湯（フローチャート）
     { text: "JIS規格において、プログラムの『条件分岐』を表す図形記号の名称を選択してください。", visual: "   ◇   ", answers: [["判断"]], parts: [{text: "判断", type: "logic"}, {text: "処理", type: "value"}, {text: "ループ端", type: "logic"}, {text: "端子", type: "keyword"}] },
@@ -222,6 +238,18 @@ var quizPool = {
     { text: "【動的計画法/ナップサック】重さ `w` の品物を追加するかどうかを判断する際、価値が最大となる方を選ぶためのDP遷移のコアとなる式(max関数)を構築してください。", visual: "dp[i][w] = ?\n( 品物を入れない場合の価値 vs 入れた場合の価値 )", answers: [["max(", "dp[i-1][w],", "dp[i-1][w-weight] + value", ")"]], parts: [{text: "max(", type: "keyword"}, {text: "dp[i-1][w],", type: "value"}, {text: "dp[i-1][w-weight] + value", type: "math"}, {text: ")", type: "symbol"}, {text: "min(", type: "keyword"}] },
     { text: "【機械学習基礎】勾配降下法において、現在の重み `w` を、学習率 `lr` と勾配 `grad` を用いて更新する数式コードを構築してください。", visual: "w_new = w_old - (学習率 × 勾配)", answers: [["w", "-=", "lr * grad"]], parts: [{text: "w", type: "value"}, {text: "-=", type: "math"}, {text: "lr * grad", type: "math"}, {text: "+=", type: "math"}, {text: "lr / grad", type: "math"}] },
     { text: "【ユークリッドの互除法】2つの変数 a, b の最大公約数を求めるため、b が 0 になるまで「a を b で割った余り」で更新していく一行のコードを構築してください。", visual: "a = 24, b = 9\n24 % 9 = 6  (a=9, b=6)\n 9 % 6 = 3  (a=6, b=3)\n 6 % 3 = 0  (a=3, b=0) -> GCDは3", answers: [["a, b", "=", "b, a % b"]], parts: [{text: "a, b", type: "value"}, {text: "=", type: "math"}, {text: "b, a % b", type: "math"}, {text: "a % b, b", type: "math"}] }
+  ],
+  level5: [ // 第6回 Python構文マスター道場（統合コンテンツ）
+    { title: "1.1 内包表記 (基本)", text: "0から4までの整数の『2乗』を要素とするリストを作成してください。", io: "<span class='comment'># 期待される出力</span>\n<span class='data'>[0, 1, 4, 9, 16]</span>", answers: [["[", "i**2", "for i in range(5)", "]"]], parts: [{text: "[", type: "bracket"}, {text: "]", type: "bracket"}, {text: "i**2", type: "expr"}, {text: "for i in range(5)", type: "loop"}, {text: "for i in 5", type: "loop"}] },
+    { title: "1.2 ネストしたfor文の内包表記", text: "2つのリスト `items` と `price` について、要素同士の全ての組み合わせを2重リストで作成してください。", io: "items = ['a', 'b']\nprice = [10, 20, 30]\n<span class='comment'># 出力: [['a', 10], ['a', 20], ...]</span>", answers: [["[", "[x, y]", "for x in items", "for y in price", "]"]], parts: [{text: "[", type: "bracket"}, {text: "]", type: "bracket"}, {text: "[x, y]", type: "expr"}, {text: "for x in items", type: "loop"}, {text: "for y in price", type: "loop"}, {text: "(x, y)", type: "expr"}] },
+    { title: "1.3 if文を含む内包表記", text: "0から9までの数列のうち、『偶数だけ』を取り出したリストを作成してください。", io: "<span class='comment'># 期待される出力</span>\n<span class='data'>[0, 2, 4, 6, 8]</span>", answers: [["[", "i", "for i in range(10)", "if i % 2 == 0", "]"]], parts: [{text: "[", type: "bracket"}, {text: "]", type: "bracket"}, {text: "i", type: "expr"}, {text: "for i in range(10)", type: "loop"}, {text: "if i % 2 == 0", type: "cond"}, {text: "if i % 2 == 1", type: "cond"}] },
+    { title: "2.2 無名関数 (lambda)", text: "引数xを受け取り、その『3乗』を返す無名関数を、変数 `cube` に代入してください。", io: "print(cube(10))\n<span class='comment'># 期待される出力</span>\n<span class='data'>1000</span>", answers: [["cube", "=", "lambda x:", "x**3"]], parts: [{text: "cube", type: "expr"}, {text: "=", type: "expr"}, {text: "lambda x:", type: "func"}, {text: "x**3", type: "expr"}, {text: "def x:", type: "cond"}] },
+    { title: "2.2 filter関数と無名関数", text: "文字列のリスト `words` から、文字の長さ(len)が『3に等しい』要素だけを抽出してください。", io: "words = ['one', 'two', 'three']\n<span class='comment'># 期待される出力</span>\n<span class='data'>['one', 'two']</span>", answers: [["list(", "filter(", "lambda x: len(x) == 3,", "words", "))"]], parts: [{text: "list(", type: "bracket"}, {text: "filter(", type: "func"}, {text: "lambda x: len(x) == 3,", type: "func"}, {text: "words", type: "expr"}, {text: "))", type: "bracket"}, {text: "map(", type: "func"}] },
+    { title: "2.2 map関数による要素の型変更", text: "文字列のリスト `lst` の全要素を、map関数を用いて『整数型(int)』に変換してください。", io: "lst = ['3', '4', '5']\n<span class='comment'># 期待される出力</span>\n<span class='data'>[3, 4, 5]</span>", answers: [["lst_int = list(", "map(", "int,", "lst", "))"]], parts: [{text: "lst_int = list(", type: "bracket"}, {text: "map(", type: "func"}, {text: "int,", type: "keyword"}, {text: "lst", type: "expr"}, {text: "))", type: "bracket"}, {text: "filter(", type: "func"}] },
+    { title: "2.2 map関数と無名関数の組み合わせ", text: "1から5までの数値に対して、それぞれ『2乗』を計算してリスト化してください。(mapとlambdaを使用)", io: "<span class='comment'># 期待される出力</span>\n<span class='data'>[1, 4, 9, 16, 25]</span>", answers: [["list(", "map(", "lambda x: x ** 2,", "range(1, 6)", "))"]], parts: [{text: "list(", type: "bracket"}, {text: "map(", type: "func"}, {text: "lambda x: x ** 2,", type: "func"}, {text: "range(1, 6)", type: "loop"}, {text: "))", type: "bracket"}] },
+    { title: "3.2 再帰関数 (N! 階乗の計算)", text: "引数Nの階乗(N!)を計算する再帰関数 `fact(N)` の中身を、終端条件と再帰呼び出しの順に並べてください。", io: "def fact(N):\n  <span class='comment'># ココを組み立てる</span>", answers: [["if N == 1:", "return 1", "return N * fact(N-1)"]], parts: [{text: "if N == 1:", type: "cond"}, {text: "return 1", type: "keyword"}, {text: "return N * fact(N-1)", type: "expr"}, {text: "return N * fact(N)", type: "expr"}] },
+    { title: "3.3 再帰関数と漸化式", text: "初項2、公差3の等差数列(an = an-1 + 3)を求める再帰関数 `recursion(n)` を並べてください。", io: "def recursion(n):\n  <span class='comment'># ココを組み立てる</span>", answers: [["if n == 1:", "return 2", "return recursion(n-1) + 3"]], parts: [{text: "if n == 1:", type: "cond"}, {text: "return 2", type: "keyword"}, {text: "return recursion(n-1) + 3", type: "expr"}, {text: "return recursion(n) + 3", type: "expr"}] },
+    { title: "3.4 再帰関数 (フィボナッチ数列)", text: "フィボナッチ数列を求める再帰関数 `fib(n)` の3つの条件分岐を、上から順に正しく並べてください。", io: "def fib(n):\n  <span class='comment'># ココを組み立てる</span>", answers: [["if n == 0:", "return 0", "elif n == 1:", "return 1", "else:", "return fib(n-1) + fib(n-2)"]], parts: [{text: "if n == 0:", type: "cond"}, {text: "return 0", type: "keyword"}, {text: "elif n == 1:", type: "cond"}, {text: "return 1", type: "keyword"}, {text: "else:", type: "cond"}, {text: "return fib(n-1) + fib(n-2)", type: "expr"}] }
   ]
 };
 
@@ -235,6 +263,7 @@ function startGame(mode) {
   if(mode === 'level2') { badge.textContent = '🟡 適温'; badge.style.backgroundColor = '#d35400'; }
   if(mode === 'level3') { badge.textContent = '🟠 熱湯'; badge.style.backgroundColor = '#c0392b'; }
   if(mode === 'level4') { badge.textContent = '🔴 極熱'; badge.style.backgroundColor = '#7b241c'; }
+  if(mode === 'level5') { badge.textContent = '🐍 第6回構文'; badge.style.backgroundColor = '#306998'; }
   
   solvedCount = 0; updateProgressUI(); generateNewQuiz();
 }
@@ -256,13 +285,19 @@ function generateNewQuiz() {
   
   var pool = quizPool[currentMode];
   if(solvedCount >= pool.length) {
-    alert("この湯加減の全問題を制覇しました！素晴らしい！"); showTitle(); return;
+    alert("このモードの全問題を制覇しました！素晴らしい！"); showTitle(); return;
   }
   currentQuiz = pool[solvedCount];
 
+  var qTitle = currentQuiz.title ? " (" + currentQuiz.title + ")" : "";
+  document.getElementById('quizLabel').textContent = "📋 問題" + qTitle;
   document.getElementById('quizText').textContent = currentQuiz.text;
+  
   var fcArea = document.getElementById('fcVisualArea');
   if (currentQuiz.visual) { fcArea.textContent = currentQuiz.visual; fcArea.style.display = 'block'; } else { fcArea.style.display = 'none'; }
+  
+  var ioBox = document.getElementById('ioBox');
+  if (currentQuiz.io) { ioBox.innerHTML = currentQuiz.io; ioBox.style.display = 'block'; } else { ioBox.style.display = 'none'; }
 
   var shuffledParts = shuffle(currentQuiz.parts);
   var container = document.getElementById('partsContainer'); container.innerHTML = '';
@@ -300,7 +335,7 @@ function checkAnswer() {
   var title = document.getElementById('resultTitle'); var msg = document.getElementById('resultMsg'); var ansBox = document.getElementById('resultSql');
 
   if (isCorrect) {
-    title.textContent = '🎉 正解！お見事、整いました♨️'; msg.textContent = 'アルゴリズムのロジックが完璧に構築されています。';
+    title.textContent = '🎉 正解！お見事、整いました♨️'; msg.textContent = 'アルゴリズム・構文のロジックが完璧に構築されています。';
     ansBox.textContent = 'あなたのコード:\n' + userAnsStr.join(' ');
     panel.querySelector('.btn-next').style.display = 'block'; solvedCount++; updateProgressUI();
   } else {
