@@ -427,7 +427,7 @@ async function finishGame() {
     const playerName = getPlayerName() || '名無しさん';
     const { entries, isTopRank, rankIndex, saved } = await submitScore(currentDifficulty, playerName, elapsedMs);
     if (!saved) {
-      msg.textContent = '⚠ この画面ではランキングを保存できませんでした（保存APIが使えない環境です）';
+      msg.textContent = '⚠ ランキングサーバーに接続できなかったため、記録は保存されませんでした';
     } else {
       msg.textContent = isTopRank
         ? `🎉 ${DIFF_LABELS[currentDifficulty]} TOP${RANK_LIMIT} にランクイン！（${rankIndex + 1}位）`
@@ -778,20 +778,24 @@ function checkAnswer() {
 }
 
 // ==========================================
-// ランキングボード（難易度別 TOP10・全プレイヤー共有）
+// ランキングボード（難易度別 TOP10・Googleスプレッドシート + SheetDBで全プレイヤー共有）
 // ==========================================
 const RANK_LIMIT = 10;
 const TITLE_RANK_LIMIT = 3; // タイトル画面プレビューはTOP3まで
 let currentRankTab = 'easy';
 let currentTitleRankTab = 'easy';
 
-function rankingKey(difficulty) {
-  return `ranking:${difficulty}`;
-}
+// ▼▼▼ ここをsheetdb.ioで発行されたAPI IDに置き換えてください ▼▼▼
+// 1. Googleスプレッドシートを新規作成し、1行目に difficulty / name / time / at の見出しを入れる
+// 2. https://sheetdb.io にGoogleアカウントでログイン →「Create API」→ そのシートを選ぶ
+// 3. 発行されたID（例: 58f61be4dda40）をここに貼る
+const SHEETDB_API_ID = "gr5er7rsh466h";
+// ▲▲▲ ここまで ▲▲▲
 
-// このアーティファクト環境でランキング保存APIが使えるかどうか
-function isStorageAvailable() {
-  return typeof window !== 'undefined' && !!window.storage;
+const SHEETDB_BASE = `https://sheetdb.io/api/v1/${SHEETDB_API_ID}`;
+
+function sheetdbReady() {
+  return SHEETDB_API_ID !== 'YOUR_API_ID';
 }
 
 function formatTime(ms) {
@@ -801,53 +805,60 @@ function formatTime(ms) {
   return `${minutes}:${seconds}.${milli}`;
 }
 
-// 難易度のランキング一覧を取得する。
-// 保存APIが使えない環境ではnullを返し（「記録なし」と区別するため）、
-// 保存APIは使えるが記録がまだ無い場合は空配列を返す。
-async function loadRanking(difficulty) {
-  if (!isStorageAvailable()) return null;
+// 難易度のランキング上位（time昇順=速い順）をスプレッドシートから取得する。
+// SheetDB未設定・通信エラーの場合はnullを返し、「記録がまだ無い」状態と区別する。
+async function loadRanking(difficulty, limit = RANK_LIMIT) {
+  if (!sheetdbReady()) return null;
   try {
-    const result = await window.storage.get(rankingKey(difficulty), true);
-    if (!result || !result.value) return [];
-    const parsed = JSON.parse(result.value);
-    return Array.isArray(parsed) ? parsed : [];
+    const url = `${SHEETDB_BASE}/search?difficulty=${encodeURIComponent(difficulty)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    return rows
+      .map(r => ({ name: String(r.name ?? ''), time: Number(r.time), at: Number(r.at) }))
+      .filter(e => Number.isFinite(e.time))
+      .sort((a, b) => a.time - b.time)
+      .slice(0, limit);
   } catch (e) {
-    return [];
+    console.error('ランキング取得に失敗しました:', e);
+    return null;
   }
 }
 
-// スコアを登録し、TOP10でソート・トリムした最新ランキングを返す。
-// 同時書き込みはlast-write-winsのため簡易的な再試行はせず、
-// 取得→マージ→保存の一連の流れのみ行う。
+// スコアをスプレッドシートに新規1行追加し、登録後のTOP10を返す。
+// 行を追加するだけなので、他プレイヤーとの同時投稿でデータが
+// 消えたり競合したりすることはない。
 async function submitScore(difficulty, playerName, elapsedMs) {
-  const stored = await loadRanking(difficulty);
-  const entries = stored === null ? [] : stored;
   const myEntry = { name: playerName.slice(0, 10), time: elapsedMs, at: Date.now() };
-  entries.push(myEntry);
-  entries.sort((a, b) => a.time - b.time);
-  const trimmed = entries.slice(0, RANK_LIMIT);
 
   let saved = false;
-  if (isStorageAvailable()) {
+  if (sheetdbReady()) {
     try {
-      await window.storage.set(rankingKey(difficulty), JSON.stringify(trimmed), true);
-      saved = true;
+      const res = await fetch(SHEETDB_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: [{ difficulty, name: myEntry.name, time: myEntry.time, at: myEntry.at }] })
+      });
+      saved = res.ok;
     } catch (e) {
-      // 保存に失敗してもプレイ自体は継続できるようにする
+      console.error('ランキング登録に失敗しました:', e);
       saved = false;
     }
   }
 
-  const rankIndex = trimmed.indexOf(myEntry);
-  return { entries: trimmed, isTopRank: rankIndex !== -1, rankIndex, saved };
+  const top = await loadRanking(difficulty);
+  const entries = top === null ? [] : top;
+  const rankIndex = entries.findIndex(e => e.name === myEntry.name && e.time === myEntry.time && e.at === myEntry.at);
+
+  return { entries, isTopRank: rankIndex !== -1, rankIndex, saved };
 }
 
 // ランキング配列をHTMLとして描画する。highlightTime/highlightNameが
 // 与えられた場合、一致する行を「自分の記録」として強調する。
-// entriesがnullの場合は「保存APIが使えない環境」と判断し、専用メッセージを出す。
+// entriesがnullの場合は「未接続」と判断し、専用メッセージを出す。
 function renderRankBoard(container, entries, highlightName, highlightTime) {
   if (entries === null) {
-    container.innerHTML = '<div class="rank-empty">⚠ この画面ではランキング保存機能が使えません<br>（Claudeのチャット上でプレビュー表示してください）</div>';
+    container.innerHTML = '<div class="rank-empty">⚠ ランキングシートに接続できません<br>（SheetDBの設定をご確認ください）</div>';
     return;
   }
   if (!entries || entries.length === 0) {
@@ -907,8 +918,8 @@ async function switchTitleRankTab(difficulty) {
   const board = document.getElementById('titleRankBoard');
   board.innerHTML = '<div class="rank-loading">読み込み中...</div>';
 
-  const entries = await loadRanking(difficulty);
-  renderRankBoard(board, entries.slice(0, TITLE_RANK_LIMIT));
+  const entries = await loadRanking(difficulty, TITLE_RANK_LIMIT);
+  renderRankBoard(board, entries);
 }
 
 // 初期表示時にタイトル画面のTOP3プレビューを読み込む
