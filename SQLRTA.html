@@ -425,10 +425,14 @@ async function finishGame() {
 
   try {
     const playerName = getPlayerName() || '名無しさん';
-    const { entries, isTopRank, rankIndex } = await submitScore(currentDifficulty, playerName, elapsedMs);
-    msg.textContent = isTopRank
-      ? `🎉 ${DIFF_LABELS[currentDifficulty]} TOP${RANK_LIMIT} にランクイン！（${rankIndex + 1}位）`
-      : 'お見事！クリアタイムをランキングに記録したよ。';
+    const { entries, isTopRank, rankIndex, saved } = await submitScore(currentDifficulty, playerName, elapsedMs);
+    if (!saved) {
+      msg.textContent = '⚠ この画面ではランキングを保存できませんでした（保存APIが使えない環境です）';
+    } else {
+      msg.textContent = isTopRank
+        ? `🎉 ${DIFF_LABELS[currentDifficulty]} TOP${RANK_LIMIT} にランクイン！（${rankIndex + 1}位）`
+        : 'お見事！クリアタイムをランキングに記録したよ。';
+    }
     renderRankBoard(board, entries, playerName, elapsedMs);
   } catch (e) {
     board.innerHTML = '<div class="rank-empty">ランキングの取得に失敗しました</div>';
@@ -785,6 +789,11 @@ function rankingKey(difficulty) {
   return `ranking:${difficulty}`;
 }
 
+// このアーティファクト環境でランキング保存APIが使えるかどうか
+function isStorageAvailable() {
+  return typeof window !== 'undefined' && !!window.storage;
+}
+
 function formatTime(ms) {
   const minutes = String(Math.floor(ms / 60000)).padStart(2, '0');
   const seconds = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
@@ -792,9 +801,11 @@ function formatTime(ms) {
   return `${minutes}:${seconds}.${milli}`;
 }
 
-// 難易度のランキング一覧を取得する（保存が無ければ空配列）
+// 難易度のランキング一覧を取得する。
+// 保存APIが使えない環境ではnullを返し（「記録なし」と区別するため）、
+// 保存APIは使えるが記録がまだ無い場合は空配列を返す。
 async function loadRanking(difficulty) {
-  if (!window.storage) return [];
+  if (!isStorageAvailable()) return null;
   try {
     const result = await window.storage.get(rankingKey(difficulty), true);
     if (!result || !result.value) return [];
@@ -809,27 +820,36 @@ async function loadRanking(difficulty) {
 // 同時書き込みはlast-write-winsのため簡易的な再試行はせず、
 // 取得→マージ→保存の一連の流れのみ行う。
 async function submitScore(difficulty, playerName, elapsedMs) {
-  const entries = await loadRanking(difficulty);
+  const stored = await loadRanking(difficulty);
+  const entries = stored === null ? [] : stored;
   const myEntry = { name: playerName.slice(0, 10), time: elapsedMs, at: Date.now() };
   entries.push(myEntry);
   entries.sort((a, b) => a.time - b.time);
   const trimmed = entries.slice(0, RANK_LIMIT);
 
-  if (window.storage) {
+  let saved = false;
+  if (isStorageAvailable()) {
     try {
       await window.storage.set(rankingKey(difficulty), JSON.stringify(trimmed), true);
+      saved = true;
     } catch (e) {
       // 保存に失敗してもプレイ自体は継続できるようにする
+      saved = false;
     }
   }
 
   const rankIndex = trimmed.indexOf(myEntry);
-  return { entries: trimmed, isTopRank: rankIndex !== -1, rankIndex };
+  return { entries: trimmed, isTopRank: rankIndex !== -1, rankIndex, saved };
 }
 
 // ランキング配列をHTMLとして描画する。highlightTime/highlightNameが
 // 与えられた場合、一致する行を「自分の記録」として強調する。
+// entriesがnullの場合は「保存APIが使えない環境」と判断し、専用メッセージを出す。
 function renderRankBoard(container, entries, highlightName, highlightTime) {
+  if (entries === null) {
+    container.innerHTML = '<div class="rank-empty">⚠ この画面ではランキング保存機能が使えません<br>（Claudeのチャット上でプレビュー表示してください）</div>';
+    return;
+  }
   if (!entries || entries.length === 0) {
     container.innerHTML = '<div class="rank-empty">まだ記録がありません。最初の挑戦者になろう！</div>';
     return;
