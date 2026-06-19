@@ -94,6 +94,7 @@
   .overlay {
     position: absolute; inset: 0; background: rgba(11, 15, 25, 0.95);
     display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
+    overflow-y: auto; padding: 24px 16px; text-align: center;
   }
   .diff-buttons { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 340px; margin-top: 20px;}
   .btn-diff {
@@ -113,28 +114,129 @@
     cursor: pointer; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); transition: transform 0.1s;
   }
   .btn-start:active { transform: scale(0.95); }
-  .result-time { font-family: 'Share Tech Mono', monospace; font-size: 72px; color: #10b981; margin: 20px 0; text-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+  .result-time { font-family: 'Share Tech Mono', monospace; font-size: 56px; color: #10b981; margin: 12px 0; text-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+  .result-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; width: 100%; max-width: 340px; }
+
+  /* プレイヤーネーム入力 */
+  .name-entry { width: 100%; max-width: 340px; margin-bottom: 4px; }
+  .name-label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 6px; letter-spacing: 1px; }
+  .name-input {
+    width: 100%; background: #0f172a; color: #fbbf24; border: 2px solid #4f46e5;
+    border-radius: 10px; padding: 12px 14px; font-size: 18px; text-align: center;
+    font-family: 'Zen Kaku Gothic New', sans-serif; outline: none; transition: border-color 0.2s;
+  }
+  .name-input:focus { border-color: #fbbf24; box-shadow: 0 0 12px rgba(251, 191, 36, 0.3); }
+  .name-warning { color: #fb7185; font-size: 13px; margin-top: 10px; font-weight: bold; }
+
+  .btn-rank-view {
+    margin-top: 18px; background: rgba(99, 102, 241, 0.15); border: 1px solid #6366f1; color: #c7d2fe;
+    padding: 10px 20px; border-radius: 30px; font-size: 13px; font-weight: bold; cursor: pointer;
+  }
+  .btn-rank-view:active { background: rgba(99, 102, 241, 0.35); }
+
+  /* ランキングボード */
+  .rank-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; justify-content: center; }
+  .rank-tab {
+    background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 8px 14px;
+    border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.15s;
+  }
+  .rank-tab.active { background: #6366f1; border-color: #818cf8; color: #fff; }
+
+  .rank-board { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 8px; }
+  .rank-row {
+    display: flex; align-items: center; gap: 10px; background: #1e293b; border: 1px solid #334155;
+    border-radius: 10px; padding: 10px 14px;
+  }
+  .rank-row.rank-1 { border-color: #fbbf24; background: rgba(251, 191, 36, 0.1); }
+  .rank-row.rank-2 { border-color: #cbd5e1; background: rgba(203, 213, 225, 0.08); }
+  .rank-row.rank-3 { border-color: #d97706; background: rgba(217, 119, 6, 0.08); }
+  .rank-row.is-me { box-shadow: 0 0 0 2px #10b981 inset; }
+  .rank-medal { font-size: 18px; width: 28px; text-align: center; flex-shrink: 0; }
+  .rank-name {
+    flex: 1; text-align: left; font-weight: bold; color: #e2e8f0; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .rank-time { font-family: 'Share Tech Mono', monospace; color: #38bdf8; font-size: 15px; flex-shrink: 0; }
+  .rank-empty { color: #64748b; font-size: 13px; padding: 20px 0; }
+  .rank-loading { color: #64748b; font-size: 13px; padding: 20px 0; }
+
+  /* タイトル画面のミニランキング（TOP3プレビュー） */
+  .title-rank-preview { width: 100%; max-width: 340px; margin: 14px 0 0; }
+  .title-rank-header {
+    font-size: 11px; color: #fbbf24; letter-spacing: 1px; margin-bottom: 8px;
+    font-weight: bold; text-align: center;
+  }
+  .rank-tabs-mini { margin-bottom: 8px; gap: 4px; }
+  .rank-tab-mini { padding: 5px 10px; font-size: 11px; }
+  .rank-board-mini { gap: 5px; }
+  .rank-board-mini .rank-row { padding: 6px 10px; }
+  .rank-board-mini .rank-medal { font-size: 14px; width: 22px; }
+  .rank-board-mini .rank-name { font-size: 13px; }
+  .rank-board-mini .rank-time { font-size: 13px; }
+  .rank-board-mini .rank-empty,
+  .rank-board-mini .rank-loading { font-size: 12px; padding: 10px 0; }
 </style>
 </head>
 <body>
 
+
 <div class="overlay" id="titleScreen">
   <h1 style="font-size: 42px; margin-bottom: 5px; font-family: 'Share Tech Mono', monospace; color: #fbbf24;">SQL SPEED RUN</h1>
-  <p style="font-size: 16px; color: #94a3b8;">温泉施設データ分析 RTA - 各5問勝負</p>
-  
+  <p style="font-size: 16px; color: #94a3b8; margin-bottom: 16px;">温泉施設データ分析 RTA - 各5問勝負</p>
+
+  <div class="name-entry">
+    <label for="playerName" class="name-label">🏷 プレイヤーネーム</label>
+    <input type="text" id="playerName" class="name-input" placeholder="なまえを入力 (最大10文字)" maxlength="10" autocomplete="off">
+  </div>
+
   <div class="diff-buttons">
     <button class="btn-diff btn-easy" onclick="startGame('easy')">🛁 ぬるま湯 (Easy)</button>
     <button class="btn-diff btn-normal" onclick="startGame('normal')">♨ 適温 (Normal)</button>
     <button class="btn-diff btn-hard" onclick="startGame('hard')">🌋 熱湯 (Hard)</button>
     <button class="btn-diff btn-extreme" onclick="startGame('extreme')">🌌 草津の湯 (Extreme)</button>
   </div>
+
+  <div class="title-rank-preview">
+    <div class="title-rank-header">🏆 RANKING TOP3</div>
+    <div class="rank-tabs rank-tabs-mini" id="titleRankTabs">
+      <button class="rank-tab rank-tab-mini active" data-diff="easy" onclick="switchTitleRankTab('easy')">Easy</button>
+      <button class="rank-tab rank-tab-mini" data-diff="normal" onclick="switchTitleRankTab('normal')">Normal</button>
+      <button class="rank-tab rank-tab-mini" data-diff="hard" onclick="switchTitleRankTab('hard')">Hard</button>
+      <button class="rank-tab rank-tab-mini" data-diff="extreme" onclick="switchTitleRankTab('extreme')">Extreme</button>
+    </div>
+    <div class="rank-board rank-board-mini" id="titleRankBoard"></div>
+  </div>
+
+  <button class="btn-rank-view" onclick="openRankingScreen()">📋 TOP10をすべて見る</button>
+  <div class="name-warning" id="nameWarning" style="display:none;">⚠ 先にプレイヤーネームを入力してください</div>
 </div>
 
 <div class="overlay" id="resultScreen" style="display: none;">
   <h1 style="font-size: 36px; color: #fff;">ALL MISSIONS CLEARED!</h1>
   <div class="result-time" id="finalTime">00:00.000</div>
-  <p style="margin-bottom: 40px; color: #94a3b8;">お見事！最速記録を更新しよう！</p>
-  <button class="btn-start" onclick="location.reload()">RETRY / タイトルへ戻る</button>
+  <p style="margin-bottom: 16px; color: #94a3b8;" id="resultRankMsg">お見事！最速記録を更新しよう！</p>
+
+  <div class="rank-board" id="resultRankBoard"></div>
+
+  <div class="result-buttons">
+    <button class="btn-start" onclick="location.reload()">RETRY / タイトルへ戻る</button>
+  </div>
+</div>
+
+<div class="overlay" id="rankingScreen" style="display: none;">
+  <h1 style="font-size: 28px; color: #fbbf24; margin-bottom: 4px;">🏆 RANKING BOARD</h1>
+  <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">難易度ごとのTOP10 RTAタイム</p>
+
+  <div class="rank-tabs" id="rankTabs">
+    <button class="rank-tab active" data-diff="easy" onclick="switchRankingTab('easy')">Easy</button>
+    <button class="rank-tab" data-diff="normal" onclick="switchRankingTab('normal')">Normal</button>
+    <button class="rank-tab" data-diff="hard" onclick="switchRankingTab('hard')">Hard</button>
+    <button class="rank-tab" data-diff="extreme" onclick="switchRankingTab('extreme')">Extreme</button>
+  </div>
+
+  <div class="rank-board" id="rankingBoard"></div>
+
+  <button class="btn-start" style="margin-top: 20px; padding: 12px 36px; font-size: 16px;" onclick="closeRankingScreen()">もどる</button>
 </div>
 
 <div class="header">
@@ -252,16 +354,35 @@ const quizMaster = {
 
 let currentQuizzes = [];
 let currentQuizIndex = 0;
+let currentDifficulty = null;
 let startTime = 0;
 let timerInterval;
 const sqlInput = document.getElementById('sqlInput');
+
+const DIFF_LABELS = { easy: '🛁 ぬるま湯 (Easy)', normal: '♨ 適温 (Normal)', hard: '🌋 熱湯 (Hard)', extreme: '🌌 草津の湯 (Extreme)' };
+
+// ==========================================
+// プレイヤーネーム管理
+// ==========================================
+function getPlayerName() {
+  return document.getElementById('playerName').value.trim();
+}
 
 // ==========================================
 // ゲーム制御
 // ==========================================
 function startGame(difficulty) {
+  const name = getPlayerName();
+  if (!name) {
+    document.getElementById('nameWarning').style.display = 'block';
+    document.getElementById('playerName').focus();
+    return;
+  }
+  document.getElementById('nameWarning').style.display = 'none';
+
   document.getElementById('titleScreen').style.display = 'none';
   currentQuizzes = quizMaster[difficulty];
+  currentDifficulty = difficulty;
   currentQuizIndex = 0;
   
   loadQuiz();
@@ -291,11 +412,27 @@ function loadQuiz() {
   document.getElementById('progress').textContent = `${currentQuizIndex} / ${currentQuizzes.length}`;
 }
 
-function finishGame() {
+async function finishGame() {
   clearInterval(timerInterval);
   document.getElementById('progress').textContent = `${currentQuizzes.length} / ${currentQuizzes.length}`;
+  const elapsedMs = Date.now() - startTime;
   document.getElementById('finalTime').textContent = document.getElementById('timer').textContent;
   document.getElementById('resultScreen').style.display = 'flex';
+
+  const board = document.getElementById('resultRankBoard');
+  const msg = document.getElementById('resultRankMsg');
+  board.innerHTML = '<div class="rank-loading">ランキング集計中...</div>';
+
+  try {
+    const playerName = getPlayerName() || '名無しさん';
+    const { entries, isTopRank, rankIndex } = await submitScore(currentDifficulty, playerName, elapsedMs);
+    msg.textContent = isTopRank
+      ? `🎉 ${DIFF_LABELS[currentDifficulty]} TOP${RANK_LIMIT} にランクイン！（${rankIndex + 1}位）`
+      : 'お見事！クリアタイムをランキングに記録したよ。';
+    renderRankBoard(board, entries, playerName, elapsedMs);
+  } catch (e) {
+    board.innerHTML = '<div class="rank-empty">ランキングの取得に失敗しました</div>';
+  }
 }
 
 function insertText(text, offset = 0) {
@@ -635,6 +772,127 @@ function checkAnswer() {
     loadQuiz();
   }
 }
+
+// ==========================================
+// ランキングボード（難易度別 TOP10・全プレイヤー共有）
+// ==========================================
+const RANK_LIMIT = 10;
+const TITLE_RANK_LIMIT = 3; // タイトル画面プレビューはTOP3まで
+let currentRankTab = 'easy';
+let currentTitleRankTab = 'easy';
+
+function rankingKey(difficulty) {
+  return `ranking:${difficulty}`;
+}
+
+function formatTime(ms) {
+  const minutes = String(Math.floor(ms / 60000)).padStart(2, '0');
+  const seconds = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
+  const milli = String(ms % 1000).padStart(3, '0');
+  return `${minutes}:${seconds}.${milli}`;
+}
+
+// 難易度のランキング一覧を取得する（保存が無ければ空配列）
+async function loadRanking(difficulty) {
+  if (!window.storage) return [];
+  try {
+    const result = await window.storage.get(rankingKey(difficulty), true);
+    if (!result || !result.value) return [];
+    const parsed = JSON.parse(result.value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// スコアを登録し、TOP10でソート・トリムした最新ランキングを返す。
+// 同時書き込みはlast-write-winsのため簡易的な再試行はせず、
+// 取得→マージ→保存の一連の流れのみ行う。
+async function submitScore(difficulty, playerName, elapsedMs) {
+  const entries = await loadRanking(difficulty);
+  const myEntry = { name: playerName.slice(0, 10), time: elapsedMs, at: Date.now() };
+  entries.push(myEntry);
+  entries.sort((a, b) => a.time - b.time);
+  const trimmed = entries.slice(0, RANK_LIMIT);
+
+  if (window.storage) {
+    try {
+      await window.storage.set(rankingKey(difficulty), JSON.stringify(trimmed), true);
+    } catch (e) {
+      // 保存に失敗してもプレイ自体は継続できるようにする
+    }
+  }
+
+  const rankIndex = trimmed.indexOf(myEntry);
+  return { entries: trimmed, isTopRank: rankIndex !== -1, rankIndex };
+}
+
+// ランキング配列をHTMLとして描画する。highlightTime/highlightNameが
+// 与えられた場合、一致する行を「自分の記録」として強調する。
+function renderRankBoard(container, entries, highlightName, highlightTime) {
+  if (!entries || entries.length === 0) {
+    container.innerHTML = '<div class="rank-empty">まだ記録がありません。最初の挑戦者になろう！</div>';
+    return;
+  }
+
+  const medals = ['🥇', '🥈', '🥉'];
+  container.innerHTML = entries.map((e, i) => {
+    const isMe = highlightName !== undefined && highlightTime !== undefined &&
+                 e.name === highlightName.slice(0, 10) && e.time === highlightTime;
+    const medal = medals[i] || `${i + 1}`;
+    const rankClass = i < 3 ? `rank-${i + 1}` : '';
+    return `<div class="rank-row ${rankClass} ${isMe ? 'is-me' : ''}">
+      <div class="rank-medal">${medal}</div>
+      <div class="rank-name">${escapeHtml(e.name)}</div>
+      <div class="rank-time">${formatTime(e.time)}</div>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function openRankingScreen() {
+  document.getElementById('rankingScreen').style.display = 'flex';
+  await switchRankingTab(currentRankTab);
+}
+
+function closeRankingScreen() {
+  document.getElementById('rankingScreen').style.display = 'none';
+}
+
+async function switchRankingTab(difficulty) {
+  currentRankTab = difficulty;
+  document.querySelectorAll('#rankTabs .rank-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.diff === difficulty);
+  });
+
+  const board = document.getElementById('rankingBoard');
+  board.innerHTML = '<div class="rank-loading">読み込み中...</div>';
+
+  const entries = await loadRanking(difficulty);
+  renderRankBoard(board, entries);
+}
+
+// タイトル画面のミニランキング（TOP3プレビュー）を切り替える
+async function switchTitleRankTab(difficulty) {
+  currentTitleRankTab = difficulty;
+  document.querySelectorAll('#titleRankTabs .rank-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.diff === difficulty);
+  });
+
+  const board = document.getElementById('titleRankBoard');
+  board.innerHTML = '<div class="rank-loading">読み込み中...</div>';
+
+  const entries = await loadRanking(difficulty);
+  renderRankBoard(board, entries.slice(0, TITLE_RANK_LIMIT));
+}
+
+// 初期表示時にタイトル画面のTOP3プレビューを読み込む
+switchTitleRankTab(currentTitleRankTab);
 </script>
 
 </body>
