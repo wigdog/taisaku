@@ -317,56 +317,313 @@ sqlInput.addEventListener('input', checkAnswer);
 
 // ==========================================
 // 超柔軟パーサー（判定ロジック）
+// 「文字列が完全一致するか」ではなく「クエリの構造・意味が
+// 一致しているか」を見るため、SQLを句(SELECT/FROM/WHERE...)
+// 単位に分解し、各句の中身を要素ごとに正規化・順序無視で比較する。
+// 例: INNER JOIN と JOIN, SELECT a,b と SELECT b,a, ON x=y と
+//     ON y=x, AS の有無, != と <>, 余分な空白や引用符 などは
+//     すべて「同じ意味」として正解扱いにする。
 // ==========================================
-function canonicalize(sql) {
-  let s = sql.toUpperCase();
-  
-  s = s.replace(/;/g, ""); // セミコロン削除
-  s = s.replace(/INNER JOIN/g, "JOIN");
-  
-  // テーブルエイリアスの無効化吸収（f. v. などプレイヤーが手打ちした場合を無効化）
-  s = s.replace(/FACILITIES F/g, "FACILITIES");
-  s = s.replace(/VISITOR_LOGS V/g, "VISITOR_LOGS");
-  s = s.replace(/F\./g, "");
-  s = s.replace(/V\./g, "");
-  s = s.replace(/FACILITIES\./g, "");
-  s = s.replace(/VISITOR_LOGS\./g, "");
-  s = s.replace(/AREAS\./g, "");
 
-  // スペースや記号の揺れを吸収
-  s = s.replace(/\s+/g, " "); 
-  s = s.replace(/\s*,\s*/g, ",");
+// SQL全体に対する表記ゆれの正規化（句分解の前処理）
+function normalizeTokens(sql) {
+  let s = sql.toUpperCase();
+
+  s = s.replace(/;/g, " ");                 // セミコロン削除
+  s = s.replace(/`/g, "");                  // バッククォート除去
+  s = s.replace(/"/g, "");                  // ダブルクォート除去
+  s = s.replace(/'/g, "");                  // シングルクォート除去（文字列値はそのまま比較対象になる）
+
+  s = s.replace(/INNER\s+JOIN/g, "JOIN");   // INNER JOIN と JOIN を同一視
+  s = s.replace(/<>/g, "!=");               // <> と != を同一視
+
+  // テーブルエイリアスの吸収（f./v./a. やテーブル名直後の別名表記を無効化）
+  s = s.replace(/\bFACILITIES\s+(?:AS\s+)?F\b/g, "FACILITIES");
+  s = s.replace(/\bVISITOR_LOGS\s+(?:AS\s+)?V\b/g, "VISITOR_LOGS");
+  s = s.replace(/\bAREAS\s+(?:AS\s+)?A\b/g, "AREAS");
+  s = s.replace(/\bF\./g, "");
+  s = s.replace(/\bV\./g, "");
+  s = s.replace(/\bA\./g, "");
+  s = s.replace(/\bFACILITIES\./g, "");
+  s = s.replace(/\bVISITOR_LOGS\./g, "");
+  s = s.replace(/\bAREAS\./g, "");
+
+  // 記号まわりの空白を統一してからトリム
   s = s.replace(/\s*\(\s*/g, "(");
   s = s.replace(/\s*\)\s*/g, ")");
+  s = s.replace(/\s*,\s*/g, ",");
   s = s.replace(/\s*=\s*/g, "=");
-  s = s.replace(/\s*>\s*=\s*/g, ">=");
-  s = s.replace(/\s*<\s*=\s*/g, "<=");
+  s = s.replace(/\s*!=\s*/g, "!=");
+  s = s.replace(/\s*>=\s*/g, ">=");
+  s = s.replace(/\s*<=\s*/g, "<=");
   s = s.replace(/\s*>\s*/g, ">");
   s = s.replace(/\s*<\s*/g, "<");
-  s = s.replace(/'/g, ""); // クォーテーション除去
-  s = s.replace(/"/g, ""); 
-  
-  // A=B と B=A の揺れを吸収（ON句などの順序吸収）
-  const parts = s.split("=");
-  if(parts.length === 2) {
-    const p1 = parts[0].trim();
-    const p2 = parts[1].trim();
-    if(p1 > p2) {
-      s = p2 + "=" + p1;
-    } else {
-      s = p1 + "=" + p2;
-    }
-  }
-  
+  s = s.replace(/\s+/g, " ");
+
   return s.trim();
 }
 
+// "A op B" の左右の揺れを吸収する（A=B と B=A を同一視）。
+// AND/OR で連結された複数条件にも対応するため、個々の条件単位で適用する。
+function normalizeComparison(expr) {
+  const m = expr.match(/^(.+?)(=|!=|>=|<=|>|<)(.+)$/);
+  if (!m) return expr.trim();
+  const op = m[2];
+  let left = m[1].trim();
+  let right = m[3].trim();
+  // 対称な演算子(=, !=)のみ左右を正規順序に並べ替える。
+  // 大小比較(>, <, >=, <=)は意味が変わるため並べ替えない。
+  if (op === "=" || op === "!=") {
+    if (left > right) {
+      [left, right] = [right, left];
+    }
+  }
+  return `${left}${op}${right}`;
+}
+
+// 括弧の深さを考慮してANDで分割する（EXISTSサブクエリ内のANDを
+// 外側の条件区切りと誤認しないようにするため）
+function splitTopLevelAnd(text) {
+  const result = [];
+  let depth = 0;
+  let current = "";
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === "(") depth++;
+    if (ch === ")") depth--;
+    if (depth === 0 && text.slice(i, i + 3) === "AND" &&
+        (i === 0 || /\s/.test(text[i - 1])) &&
+        (i + 3 === text.length || /\s/.test(text[i + 3]))) {
+      result.push(current);
+      current = "";
+      i += 3;
+      continue;
+    }
+    current += ch;
+    i++;
+  }
+  if (current.trim().length > 0 || result.length === 0) result.push(current);
+  return result;
+}
+
+// EXISTS(...) / NOT EXISTS(...) のサブクエリ部分を見つけ、
+// その中身を独立したSELECT文として再帰的に構造化したうえで
+// 比較可能な文字列表現に変換する。条件式中にEXISTSが無ければ
+// そのまま返す。
+function normalizeExistsInCondition(cond) {
+  const m = cond.match(/^(NOT\s+)?EXISTS\((.+)\)$/);
+  if (!m) return cond;
+  const negate = m[1] ? "NOT " : "";
+  const subStruct = buildSingleSelectStructure(m[2]);
+  return `${negate}EXISTS(${JSON.stringify(subStruct)})`;
+}
+
+// AND で連結された条件列（WHERE句やON句）を、各条件を正規化した上で
+// 順序を無視して比較できる形（ソート済み配列）にする。
+// EXISTS(...)を含む条件は、その中のサブクエリを再帰的に構造化して比較する。
+function normalizeConditionList(text) {
+  if (!text) return [];
+  return splitTopLevelAnd(text)
+    .map(part => part.trim())
+    .filter(part => part.length > 0)
+    .map(part => {
+      if (/^(NOT\s+)?EXISTS\(/.test(part)) {
+        return normalizeExistsInCondition(part);
+      }
+      return normalizeComparison(part);
+    })
+    .sort();
+}
+
+// 括弧の深さを考慮してカンマで分割する（関数の引数区切りカンマを
+// SELECTカラムの区切りと誤認しないようにするため）
+function splitTopLevelComma(text) {
+  const result = [];
+  let depth = 0;
+  let current = "";
+  for (const ch of text) {
+    if (ch === "(") depth++;
+    if (ch === ")") depth--;
+    if (ch === "," && depth === 0) {
+      result.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  if (current.length > 0) result.push(current);
+  return result;
+}
+
+// カンマ区切りのリスト（SELECTのカラム、GROUP BYのカラムなど）を
+// 各要素ごとに正規化し、順序を無視して比較できる形にする。
+// 各要素内の "AS エイリアス" は出力名の言い換えなので無視する。
+function normalizeCommaList(text) {
+  if (!text) return [];
+  return splitTopLevelComma(text)
+    .map(part => part.trim())
+    .filter(part => part.length > 0)
+    .map(part => part.replace(/\s*\bAS\s+\S+$/, "")) // 末尾のASエイリアスを除去
+    .sort();
+}
+
+// SQLを主要な句に分解する。対応句: SELECT/FROM(+JOIN)/WHERE/GROUP BY/HAVING/ORDER BY
+// (UNIONはここでは扱わず、呼び出し側でUNION単位に分割してから渡す)
+// 括弧の中（EXISTSのサブクエリなど）にあるキーワードは句の境界として
+// 扱わないよう、括弧の深さ0の位置にあるキーワードのみを対象にする。
+function splitClauses(sql) {
+  const clauseNames = ["GROUP BY", "ORDER BY", "SELECT", "FROM", "WHERE", "HAVING"];
+  const pattern = new RegExp(`\\b(${clauseNames.join("|")})\\b`, "g");
+  const hits = [];
+  let depth = 0;
+  let m;
+  // 括弧の深さを位置ごとに事前計算
+  const depthAt = new Array(sql.length + 1).fill(0);
+  for (let i = 0; i < sql.length; i++) {
+    if (sql[i] === "(") depth++;
+    if (sql[i] === ")") depth--;
+    depthAt[i + 1] = depth;
+  }
+
+  while ((m = pattern.exec(sql)) !== null) {
+    if (depthAt[m.index] === 0) {
+      hits.push({ name: m[1], index: m.index });
+    }
+  }
+
+  const clauses = {};
+  for (let i = 0; i < hits.length; i++) {
+    const start = hits[i].index + hits[i].name.length;
+    const end = i + 1 < hits.length ? hits[i + 1].index : sql.length;
+    const body = sql.slice(start, end).trim();
+    clauses[hits[i].name] = body; // 同名句は単一クエリ内では1回のみ想定
+  }
+  return clauses;
+}
+
+// FROM句（JOIN/ONを含む）を、テーブル集合とON条件集合に分解して正規化する
+function normalizeFromClause(text) {
+  // ON条件を抜き出す（複数JOINにも対応するため繰り返し抽出）
+  const onConditions = [];
+  let rest = text;
+  const onPattern = /\bON\s+(.+?)(?=\bJOIN\b|$)/g;
+  let m;
+  while ((m = onPattern.exec(text)) !== null) {
+    onConditions.push(...normalizeConditionList(m[1].trim()));
+  }
+  // ON句を除いた残りからテーブル名集合を抽出
+  rest = rest.replace(/\bON\s+.+?(?=\bJOIN\b|$)/g, "");
+  const tables = rest
+    .split(/\bJOIN\b/)
+    .map(t => t.trim())
+    .filter(t => t.length > 0)
+    .sort();
+
+  return { tables, onConditions: onConditions.sort() };
+}
+
+// SQL文全体を、句ごとに意味的に比較可能な構造体へ変換する。
+// UNIONが含まれる場合は、まずUNIONでトップレベル分割し、
+// 各SELECT文を個別に構造化したうえで、UNION全体としての
+// 順序無視の集合として保持する。
+function buildComparableStructure(sql) {
+  const normalized = normalizeTokens(sql);
+
+  const unionParts = normalized.split(/\bUNION\b/).map(p => p.trim()).filter(p => p.length > 0);
+
+  if (unionParts.length > 1) {
+    return {
+      select: null, from: null, where: null, groupBy: null, having: null, orderBy: null,
+      union: unionParts.map(part => buildSingleSelectStructure(part))
+    };
+  }
+
+  return buildSingleSelectStructure(normalized);
+}
+
+// UNIONを含まない単一のSELECT文を句ごとの構造体に変換する
+function buildSingleSelectStructure(sql) {
+  const clauses = splitClauses(sql);
+
+  return {
+    select: clauses["SELECT"] !== undefined ? normalizeCommaList(clauses["SELECT"]) : null,
+    from: clauses["FROM"] !== undefined ? normalizeFromClause(clauses["FROM"]) : null,
+    where: clauses["WHERE"] !== undefined ? normalizeConditionList(clauses["WHERE"]) : null,
+    groupBy: clauses["GROUP BY"] !== undefined ? normalizeCommaList(clauses["GROUP BY"]) : null,
+    having: clauses["HAVING"] !== undefined ? normalizeComparisonOrText(clauses["HAVING"]) : null,
+    orderBy: clauses["ORDER BY"] !== undefined ? clauses["ORDER BY"].replace(/\s+/g, " ").trim() : null,
+    union: null
+  };
+}
+
+// HAVING句は "COUNT(*) >= 5" のような単純な比較が多いが、
+// 万一複合条件が来た場合に備えて条件リストとしても正規化しておく
+function normalizeComparisonOrText(text) {
+  const list = normalizeConditionList(text);
+  return list.length > 0 ? list : [text.replace(/\s+/g, " ").trim()];
+}
+
+// 配列同士をソート済みとして等しいか比較するヘルパー
+function arraysEqual(a, b) {
+  if (a === null || b === null) return a === b;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
+
+// buildComparableStructure同士を比較し、意味的に同一なクエリか判定する
+function structuresEqual(s1, s2) {
+  if (!arraysEqual(s1.select, s2.select)) return false;
+
+  if (s1.from === null || s2.from === null) {
+    if (s1.from !== s2.from) return false;
+  } else {
+    if (!arraysEqual(s1.from.tables, s2.from.tables)) return false;
+    if (!arraysEqual(s1.from.onConditions, s2.from.onConditions)) return false;
+  }
+
+  if (!arraysEqual(s1.where, s2.where)) return false;
+  if (!arraysEqual(s1.groupBy, s2.groupBy)) return false;
+  if (!arraysEqual(s1.having, s2.having)) return false;
+  if (s1.orderBy !== s2.orderBy) return false;
+
+  if (s1.union === null || s2.union === null) {
+    if (s1.union !== s2.union) return false;
+  } else {
+    if (s1.union.length !== s2.union.length) return false;
+    // UNIONは左右の順序が違っても結果集合としては同じ意味になるため、
+    // 順序を無視してマッチング判定する
+    const used = new Array(s2.union.length).fill(false);
+    for (const part1 of s1.union) {
+      const idx = s2.union.findIndex((part2, i) => !used[i] && structuresEqual(part1, part2));
+      if (idx === -1) return false;
+      used[idx] = true;
+    }
+  }
+
+  return true;
+}
+
+function isAnswerCorrect(userSql, correctSql) {
+  // 入力が空、または明らかに未完成な場合は判定しない
+  if (!userSql || !userSql.trim()) return false;
+
+  try {
+    const userStruct = buildComparableStructure(userSql);
+    const correctStruct = buildComparableStructure(correctSql);
+    return structuresEqual(userStruct, correctStruct);
+  } catch (e) {
+    // パース不能な入力は不正解扱い（クラッシュさせない）
+    return false;
+  }
+}
+
 function checkAnswer() {
-  const userAns = canonicalize(sqlInput.value);
+  const userInput = sqlInput.value;
   const q = currentQuizzes[currentQuizIndex];
-  
-  const isCorrect = q.answers.some(ans => userAns === canonicalize(ans));
-  
+
+  const isCorrect = q.answers.some(ans => isAnswerCorrect(userInput, ans));
+
   if (isCorrect) {
     const panel = document.getElementById('quizPanel');
     panel.classList.remove('flash');
