@@ -3,395 +3,364 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>コマ構成ジェネレーター</title>
+<title>コマ割ジェネレーター</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
     --paper: #F7F5F0;
     --ink: #1A1A1A;
-    --ink-light: #4A4744;
+    --ink-light: #5A5754;
     --border: #C8C4BC;
     --border-light: #E8E4DC;
     --red: #C0392B;
     --red-light: #F5ECEA;
-    --mono: 'JetBrains Mono', monospace;
-    --serif: 'Noto Serif JP', serif;
-    --sans: 'Noto Sans JP', sans-serif;
+    --mono: 'Courier New', monospace;
+    --serif: Georgia, serif;
+    --sans: system-ui, sans-serif;
   }
 
   body {
     background: var(--paper);
     color: var(--ink);
     font-family: var(--sans);
-    min-height: 100vh;
+    height: 100vh;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto 1fr;
-    gap: 0;
+    grid-template-rows: 52px 1fr;
+    overflow: hidden;
   }
 
-  /* ヘッダー */
   header {
-    grid-column: 1 / -1;
     border-bottom: 2px solid var(--ink);
-    padding: 16px 24px;
+    padding: 0 20px;
     display: flex;
-    align-items: baseline;
-    gap: 16px;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
   }
 
   .logo {
     font-family: var(--serif);
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     letter-spacing: 0.05em;
   }
 
-  .logo span {
-    color: var(--red);
-  }
+  .logo span { color: var(--red); }
 
   .tagline {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 10px;
     color: var(--ink-light);
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
   }
 
-  /* 左パネル：入力 */
-  .input-panel {
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+  }
+
+  /* 左パネル */
+  .left {
     border-right: 1.5px solid var(--ink);
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 57px);
+    overflow: hidden;
   }
 
-  .panel-header {
-    padding: 14px 20px;
+  .pane-head {
+    padding: 10px 16px;
     border-bottom: 1px solid var(--border);
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: 0.1em;
     color: var(--ink-light);
+    flex-shrink: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
-  .panel-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .panel-label::before {
-    content: '';
-    display: block;
-    width: 8px;
-    height: 8px;
-    border: 1.5px solid var(--ink);
-    background: transparent;
-  }
-
-  /* メタ情報 */
-  .meta-section {
-    padding: 16px 20px;
+  .meta {
+    padding: 12px 16px;
     border-bottom: 1px solid var(--border-light);
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 8px;
+    flex-shrink: 0;
   }
 
-  .meta-field label {
+  .meta-full { grid-column: 1 / -1; }
+
+  .field label {
     display: block;
     font-family: var(--mono);
     font-size: 10px;
     color: var(--ink-light);
-    letter-spacing: 0.08em;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
+    letter-spacing: 0.06em;
   }
 
-  .meta-field input, .meta-field select {
+  .field input, .field select {
     width: 100%;
     background: transparent;
     border: 1px solid var(--border);
-    padding: 6px 8px;
+    padding: 5px 8px;
     font-family: var(--sans);
-    font-size: 13px;
+    font-size: 12px;
     color: var(--ink);
     outline: none;
-    transition: border-color 0.15s;
   }
 
-  .meta-field input:focus, .meta-field select:focus {
+  .field input:focus, .field select:focus {
     border-color: var(--ink);
   }
 
-  /* 台本入力エリア */
-  .script-area {
+  .script-wrap {
     flex: 1;
-    padding: 16px 20px;
+    padding: 12px 16px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     overflow: hidden;
+    min-height: 0;
   }
 
-  .script-area label {
+  .script-wrap label {
     font-family: var(--mono);
     font-size: 10px;
     color: var(--ink-light);
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
   }
 
-  .script-textarea {
+  textarea {
     flex: 1;
     resize: none;
     background: transparent;
     border: 1px solid var(--border);
-    padding: 12px;
+    padding: 10px;
     font-family: var(--serif);
-    font-size: 13px;
-    line-height: 1.9;
+    font-size: 12px;
+    line-height: 1.8;
     color: var(--ink);
     outline: none;
-    transition: border-color 0.15s;
+    min-height: 0;
   }
 
-  .script-textarea:focus {
-    border-color: var(--ink);
-  }
+  textarea:focus { border-color: var(--ink); }
+  textarea::placeholder { color: var(--border); font-style: italic; }
 
-  .script-textarea::placeholder {
-    color: var(--border);
-    font-style: italic;
-  }
-
-  /* 生成ボタン */
-  .generate-section {
-    padding: 16px 20px;
+  .btn-area {
+    padding: 12px 16px;
     border-top: 1px solid var(--border-light);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    flex-shrink: 0;
   }
 
-  .style-note {
+  .note {
     font-family: var(--mono);
     font-size: 10px;
     color: var(--ink-light);
     line-height: 1.6;
-    padding: 8px 10px;
+    padding: 6px 8px;
     border-left: 2px solid var(--border);
+    margin-bottom: 8px;
   }
 
-  .generate-btn {
+  .btn {
+    width: 100%;
     background: var(--ink);
     color: var(--paper);
     border: none;
-    padding: 14px;
+    padding: 12px;
     font-family: var(--serif);
-    font-size: 14px;
+    font-size: 13px;
     letter-spacing: 0.1em;
     cursor: pointer;
     transition: background 0.15s;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
   }
 
-  .generate-btn:hover:not(:disabled) {
-    background: var(--red);
-  }
+  .btn:hover:not(:disabled) { background: var(--red); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  .generate-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .loading-dot {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
+  .dot {
+    width: 5px; height: 5px;
     background: var(--paper);
     border-radius: 50%;
-    animation: pulse 1s ease-in-out infinite;
+    animation: blink 1s ease-in-out infinite;
   }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,100%{opacity:0.2} 50%{opacity:1} }
 
-  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
-  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 1; }
-  }
-
-  /* 右パネル：出力 */
-  .output-panel {
+  /* 右パネル */
+  .right {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 57px);
     overflow: hidden;
   }
 
-  .output-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
 
+  .tab {
+    padding: 9px 14px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    color: var(--ink-light);
+    margin-bottom: -1px;
+  }
+
+  .tab.on { color: var(--ink); border-bottom-color: var(--ink); }
+
+  .out {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    min-height: 0;
+  }
+
+  .tc { display: none; }
+  .tc.on { display: block; }
+
   /* 空状態 */
-  .empty-state {
+  .empty {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 100%;
-    gap: 16px;
-    color: var(--border);
+    gap: 14px;
   }
 
   .empty-grid {
     display: grid;
-    grid-template-columns: repeat(3, 48px);
-    grid-template-rows: repeat(2, 32px);
-    gap: 4px;
+    grid-template-columns: repeat(3, 40px);
+    grid-template-rows: repeat(2, 28px);
+    gap: 3px;
   }
 
-  .empty-cell {
-    border: 1.5px solid var(--border-light);
-  }
+  .ec { border: 1.5px solid var(--border-light); }
 
-  .empty-text {
+  .empty-txt {
     font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.1em;
+    font-size: 10px;
+    letter-spacing: 0.08em;
     color: var(--border);
   }
 
-  /* ページ出力 */
+  /* ページブロック */
   .page-block {
-    margin-bottom: 28px;
+    margin-bottom: 20px;
     border: 1.5px solid var(--ink);
   }
 
-  .page-header {
+  .page-hd {
     background: var(--ink);
     color: var(--paper);
-    padding: 8px 14px;
+    padding: 6px 12px;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: 0.1em;
     display: flex;
     justify-content: space-between;
   }
 
-  .page-body {
-    padding: 0;
-  }
-
-  /* コマ */
-  .panel-item {
+  .panel-row {
     border-bottom: 1px solid var(--border-light);
-    padding: 14px 16px;
+    padding: 12px 14px;
     display: grid;
-    grid-template-columns: 80px 1fr;
-    gap: 12px;
+    grid-template-columns: 64px 1fr;
+    gap: 10px;
   }
 
-  .panel-item:last-child {
-    border-bottom: none;
-  }
+  .panel-row:last-child { border-bottom: none; }
 
-  .panel-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
+  .pm { display: flex; flex-direction: column; gap: 3px; }
 
-  .panel-num {
+  .pnum {
     font-family: var(--mono);
-    font-size: 18px;
-    font-weight: 500;
+    font-size: 16px;
+    font-weight: 700;
     color: var(--red);
     line-height: 1;
   }
 
-  .panel-size {
+  .psz {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 9px;
     color: var(--ink-light);
     line-height: 1.4;
   }
 
-  .panel-content {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
+  .pc { display: flex; flex-direction: column; gap: 6px; }
 
-  .panel-bg {
+  .pbg {
     font-family: var(--serif);
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.8;
     color: var(--ink);
     padding-bottom: 6px;
     border-bottom: 1px dashed var(--border-light);
   }
 
-  .panel-texts {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
+  .ptexts { display: flex; flex-direction: column; gap: 3px; }
 
-  .text-item {
-    font-size: 12px;
+  .ti {
+    font-size: 11px;
     line-height: 1.7;
     display: flex;
-    gap: 6px;
+    gap: 5px;
+    align-items: flex-start;
   }
 
-  .text-type {
+  .tt {
     font-family: var(--mono);
-    font-size: 10px;
-    padding: 1px 5px;
+    font-size: 9px;
+    padding: 1px 4px;
     border: 1px solid;
     white-space: nowrap;
-    height: fit-content;
     margin-top: 2px;
+    flex-shrink: 0;
   }
 
-  .text-type.nare { border-color: var(--border); color: var(--ink-light); }
-  .text-type.serif { border-color: var(--ink); color: var(--ink); }
-  .text-type.mono { border-color: var(--red); color: var(--red); font-style: italic; }
+  .tt.n { border-color: var(--border); color: var(--ink-light); }
+  .tt.s { border-color: var(--ink); color: var(--ink); }
+  .tt.m { border-color: var(--red); color: var(--red); }
 
-  .text-body { color: var(--ink); }
-
-  /* Midjourneyプロンプト */
-  .mj-section {
-    margin-top: 8px;
-    padding-top: 8px;
+  /* MJプロンプト */
+  .mj {
+    margin-top: 6px;
+    padding-top: 6px;
     border-top: 1px solid var(--border-light);
   }
 
-  .mj-label {
+  .mjl {
     font-family: var(--mono);
     font-size: 9px;
     color: var(--ink-light);
-    letter-spacing: 0.08em;
-    margin-bottom: 4px;
+    letter-spacing: 0.06em;
+    margin-bottom: 3px;
   }
 
-  .mj-prompt {
+  .mjp {
     background: var(--border-light);
-    padding: 8px 10px;
+    padding: 6px 8px;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 10px;
     color: var(--ink);
     line-height: 1.6;
     cursor: pointer;
@@ -400,13 +369,11 @@
     word-break: break-all;
   }
 
-  .mj-prompt:hover {
-    background: var(--border);
-  }
+  .mjp:hover { background: var(--border); }
 
-  .mj-copy {
+  .mjc {
     position: absolute;
-    top: 4px;
+    top: 3px;
     right: 6px;
     font-size: 9px;
     color: var(--ink-light);
@@ -414,64 +381,28 @@
   }
 
   /* エラー */
-  .error-msg {
+  .err {
     background: var(--red-light);
     border: 1px solid var(--red);
-    padding: 12px 16px;
-    font-size: 13px;
+    padding: 10px 14px;
+    font-size: 12px;
     color: var(--red);
     font-family: var(--mono);
+    line-height: 1.6;
   }
 
-  /* タブ */
-  .output-tabs {
-    display: flex;
-    border-bottom: 1.5px solid var(--border);
-  }
-
-  .tab-btn {
-    padding: 10px 16px;
+  /* RAW */
+  .raw {
     font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-    color: var(--ink-light);
-    margin-bottom: -1.5px;
-    transition: color 0.15s;
-  }
-
-  .tab-btn.active {
-    color: var(--ink);
-    border-bottom-color: var(--ink);
-  }
-
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-
-  /* raw JSON */
-  .raw-json {
-    font-family: var(--mono);
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1.7;
     color: var(--ink-light);
     white-space: pre-wrap;
-    padding: 16px;
     word-break: break-all;
   }
 
-  /* スクロールバー */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar { width: 3px; }
   ::-webkit-scrollbar-thumb { background: var(--border); }
-
-  @media (max-width: 768px) {
-    body { grid-template-columns: 1fr; }
-    .input-panel { height: auto; border-right: none; border-bottom: 1.5px solid var(--ink); }
-    .output-panel { height: 80vh; }
-  }
 </style>
 </head>
 <body>
@@ -481,90 +412,83 @@
   <div class="tagline">SCRIPT → PANEL COMPOSITION + MIDJOURNEY PROMPTS</div>
 </header>
 
-<!-- 左：入力 -->
-<div class="input-panel">
-  <div class="panel-header">
-    <div class="panel-label">台本入力</div>
-  </div>
+<div class="main">
 
-  <div class="meta-section">
-    <div class="meta-field">
-      <label>話数</label>
-      <input type="text" id="episode" placeholder="第1話" value="第1話">
+  <!-- 左：入力 -->
+  <div class="left">
+    <div class="pane-head">
+      <span>台本入力</span>
+      <span id="statusLabel" style="color:var(--ink-light)"></span>
     </div>
-    <div class="meta-field">
-      <label>ページ数</label>
-      <select id="pageCount">
-        <option value="8" selected>8ページ</option>
-        <option value="4">4ページ</option>
-        <option value="12">12ページ</option>
-        <option value="16">16ページ</option>
-      </select>
-    </div>
-    <div class="meta-field" style="grid-column: 1/-1">
-      <label>キャラクター設定</label>
-      <input type="text" id="charSetting" placeholder="顔なし・ラフな線画・5〜6頭身・感情は体で表現" value="顔なし・ラフな線画・5〜6頭身・感情は体で表現">
-    </div>
-  </div>
 
-  <div class="script-area">
-    <label>台本テキスト（ページ・コマ単位で記述）</label>
-    <textarea class="script-textarea" id="scriptInput" placeholder="PAGE 1
-背景：深夜のワンルーム。スマートフォンの画面だけが光っている。
-ナレーション：審査制マッチングアプリというものがある。
-ナレーション：私は最底辺ギリギリで、通過した。
-
-PAGE 2
-コマ1：会社のデスク。PCにグラフが並んでいる。後ろ姿。
-ナレーション：ゆうど。30代。データアナリスト。
-
-コマ2：深夜の部屋。ベッドに一人で座っている。
-ナレーション：35歳になった。彼女がいない。"></textarea>
-  </div>
-
-  <div class="generate-section">
-    <div class="style-note">
-      独白性重視 / 起承転結なし / 感情説明なし<br>
-      出来事と数字を淡々と並べる構成で出力します
-    </div>
-    <button class="generate-btn" id="generateBtn" onclick="generate()">
-      コマ構成を生成する
-    </button>
-  </div>
-</div>
-
-<!-- 右：出力 -->
-<div class="output-panel">
-  <div class="panel-header">
-    <div class="panel-label">コマ構成 + Midjourneyプロンプト</div>
-    <div id="statusLabel" style="font-family:var(--mono);font-size:10px;color:var(--ink-light)"></div>
-  </div>
-
-  <div class="output-tabs">
-    <button class="tab-btn active" onclick="switchTab('visual')">コマ構成</button>
-    <button class="tab-btn" onclick="switchTab('raw')">RAW JSON</button>
-  </div>
-
-  <div class="output-content">
-    <div class="tab-content active" id="tab-visual">
-      <div class="empty-state" id="emptyState">
-        <div class="empty-grid">
-          <div class="empty-cell"></div><div class="empty-cell"></div><div class="empty-cell"></div>
-          <div class="empty-cell"></div><div class="empty-cell"></div><div class="empty-cell"></div>
-        </div>
-        <div class="empty-text">台本を入力して生成してください</div>
+    <div class="meta">
+      <div class="field">
+        <label>話数</label>
+        <input type="text" id="episode" value="第1話">
       </div>
-      <div id="outputVisual" style="display:none"></div>
+      <div class="field">
+        <label>ページ数</label>
+        <select id="pageCount">
+          <option value="8" selected>8ページ</option>
+          <option value="4">4ページ</option>
+          <option value="12">12ページ</option>
+          <option value="16">16ページ</option>
+        </select>
+      </div>
+      <div class="field meta-full">
+        <label>キャラクター設定</label>
+        <input type="text" id="charSetting" value="顔なし・ラフな線画・5〜6頭身・感情は体で表現">
+      </div>
     </div>
-    <div class="tab-content" id="tab-raw">
-      <pre class="raw-json" id="outputRaw">—</pre>
+
+    <div class="script-wrap">
+      <label>台本テキスト</label>
+      <textarea id="scriptInput" placeholder="PAGE 1&#10;背景：深夜のワンルーム。スマートフォンの画面だけが光っている。&#10;ナレーション：審査制マッチングアプリというものがある。&#10;ナレーション：私は最底辺ギリギリで、通過した。&#10;&#10;PAGE 2&#10;コマ1：会社のデスク。PCにグラフが並んでいる。後ろ姿。&#10;ナレーション：ゆうど。30代。データアナリスト。"></textarea>
+    </div>
+
+    <div class="btn-area">
+      <div class="note">
+        独白性重視 / 起承転結なし / 感情説明なし<br>
+        出来事と数字を淡々と並べる構成で出力します
+      </div>
+      <button class="btn" id="genBtn" onclick="generate()">
+        コマ構成を生成する
+      </button>
     </div>
   </div>
+
+  <!-- 右：出力 -->
+  <div class="right">
+    <div class="pane-head">コマ構成 + Midjourneyプロンプト</div>
+
+    <div class="tabs">
+      <button class="tab on" onclick="switchTab('visual',this)">コマ構成</button>
+      <button class="tab" onclick="switchTab('raw',this)">RAW JSON</button>
+    </div>
+
+    <div class="out">
+      <div class="tc on" id="tc-visual">
+        <div class="empty" id="emptyState">
+          <div class="empty-grid">
+            <div class="ec"></div><div class="ec"></div><div class="ec"></div>
+            <div class="ec"></div><div class="ec"></div><div class="ec"></div>
+          </div>
+          <div class="empty-txt">台本を入力して生成してください</div>
+        </div>
+        <div id="visual" style="display:none"></div>
+      </div>
+      <div class="tc" id="tc-raw">
+        <pre class="raw" id="rawOut">—</pre>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
-const SYSTEM_PROMPT = `あなたはエッセイ漫画のコマ構成専門家です。
-台本を受け取り、以下のルールに従ってコマ構成をJSONで出力してください。
+const SYSTEM = `あなたはエッセイ漫画のコマ構成専門家です。
+台本を受け取り、以下のルールに従ってコマ構成をJSONのみで出力してください。
+前置き・説明・コードブロック記号は一切不要です。JSONだけを返してください。
 
 【絶対ルール】
 - 感情の説明・比喩表現・総括を一切入れない
@@ -574,56 +498,46 @@ const SYSTEM_PROMPT = `あなたはエッセイ漫画のコマ構成専門家で
 - コマとコマのあいだに因果関係を作らない
 - 読者が意味を読み取る余白を必ず残す
 
-【出力形式】JSON only、余分なテキスト不要
-
+【出力JSON形式】
 {
   "pages": [
     {
       "page": 1,
-      "layout": "コマ配置の説明（例：全ページ1コマ、上1/3+中1/3+下1/3 の3コマ）",
+      "layout": "コマ配置の説明",
       "panels": [
         {
           "panel": 1,
-          "size": "コマサイズ（例：全ページ縦長、上1/3横長、左下小）",
-          "background": "背景・場面描写（最小限の情報のみ）",
+          "size": "コマサイズ",
+          "background": "背景・場面描写（最小限）",
           "texts": [
             {"type": "ナレ", "text": "テキスト"},
             {"type": "セリフ", "text": "テキスト"},
             {"type": "モノローグ", "text": "テキスト"}
           ],
-          "mj_prompt": "Midjourney用英語プロンプト。キャラ設定と作風を含む。--cref [REF_URL] --sref [STYLE_URL] --cw 100 --ar 3:4 形式で終わる"
+          "mj_prompt": "simple rough sketch line art, faceless character no facial features, 5-6 head ratio, essay manga style, black ink white background, no screentone, [scene description in English] --cw 100 --ar 3:4"
         }
       ]
     }
   ]
-}
-
-Midjourneyプロンプトの作風指定：
-simple rough sketch line art, faceless character (no eyes nose mouth), 
-5-6 head ratio, minimal details, essay manga style, black ink white background, 
-no screentone, no fill, rough scratchy lines`;
+}`;
 
 async function generate() {
   const script = document.getElementById('scriptInput').value.trim();
   if (!script) { alert('台本を入力してください'); return; }
 
   const episode = document.getElementById('episode').value;
-  const pageCount = document.getElementById('pageCount').value;
-  const charSetting = document.getElementById('charSetting').value;
+  const pages   = document.getElementById('pageCount').value;
+  const charSet = document.getElementById('charSetting').value;
 
-  const btn = document.getElementById('generateBtn');
+  const btn = document.getElementById('genBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>';
+  btn.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
   document.getElementById('statusLabel').textContent = '生成中...';
   document.getElementById('emptyState').style.display = 'none';
-  document.getElementById('outputVisual').style.display = 'none';
-  document.getElementById('outputRaw').textContent = '—';
+  document.getElementById('visual').style.display = 'none';
+  document.getElementById('rawOut').textContent = '—';
 
-  const userPrompt = `【${episode}】${pageCount}ページ構成
-キャラクター設定：${charSetting}
-
-台本：
-${script}`;
+  const userMsg = `【${episode}】${pages}ページ構成\nキャラクター設定：${charSet}\n\n台本：\n${script}`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -632,24 +546,30 @@ ${script}`;
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 4000,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userPrompt }]
+        system: SYSTEM,
+        messages: [{ role: 'user', content: userMsg }]
       })
     });
 
+    if (!res.ok) {
+      const e = await res.json();
+      throw new Error(e.error?.message || `HTTP ${res.status}`);
+    }
+
     const data = await res.json();
-    const raw = data.content.map(c => c.text || '').join('');
+    const raw  = data.content.map(c => c.text || '').join('');
     const clean = raw.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
 
-    document.getElementById('outputRaw').textContent = JSON.stringify(parsed, null, 2);
-    renderVisual(parsed, episode);
-    document.getElementById('statusLabel').textContent = `${parsed.pages.length}ページ生成完了`;
+    document.getElementById('rawOut').textContent = JSON.stringify(parsed, null, 2);
+    renderVisual(parsed);
+    document.getElementById('statusLabel').textContent = `${parsed.pages.length}P 生成完了`;
 
-  } catch (err) {
-    document.getElementById('emptyState').style.display = 'flex';
-    document.getElementById('outputVisual').innerHTML = `<div class="error-msg">エラー：${err.message}</div>`;
-    document.getElementById('outputVisual').style.display = 'block';
+  } catch(err) {
+    document.getElementById('emptyState').style.display = 'none';
+    const v = document.getElementById('visual');
+    v.innerHTML = `<div class="err">エラー：${err.message}<br><br>台本の入力内容を確認してください。</div>`;
+    v.style.display = 'block';
     document.getElementById('statusLabel').textContent = 'エラー';
     console.error(err);
   }
@@ -658,90 +578,84 @@ ${script}`;
   btn.textContent = 'コマ構成を生成する';
 }
 
-function renderVisual(data, episode) {
-  const container = document.getElementById('outputVisual');
+function renderVisual(data) {
+  const container = document.getElementById('visual');
   container.innerHTML = '';
 
-  data.pages.forEach(page => {
+  (data.pages || []).forEach(page => {
     const block = document.createElement('div');
     block.className = 'page-block';
 
-    const header = document.createElement('div');
-    header.className = 'page-header';
-    header.innerHTML = `<span>PAGE ${page.page}</span><span>${page.layout || ''}</span>`;
-    block.appendChild(header);
-
-    const body = document.createElement('div');
-    body.className = 'page-body';
+    const hd = document.createElement('div');
+    hd.className = 'page-hd';
+    hd.innerHTML = `<span>PAGE ${page.page}</span><span>${page.layout || ''}</span>`;
+    block.appendChild(hd);
 
     (page.panels || []).forEach(panel => {
-      const item = document.createElement('div');
-      item.className = 'panel-item';
+      const row = document.createElement('div');
+      row.className = 'panel-row';
 
-      const meta = document.createElement('div');
-      meta.className = 'panel-meta';
-      meta.innerHTML = `
-        <div class="panel-num">コマ${panel.panel}</div>
-        <div class="panel-size">${panel.size || ''}</div>
-      `;
+      const pm = document.createElement('div');
+      pm.className = 'pm';
+      pm.innerHTML = `<div class="pnum">コマ${panel.panel}</div><div class="psz">${panel.size || ''}</div>`;
 
-      const content = document.createElement('div');
-      content.className = 'panel-content';
+      const pc = document.createElement('div');
+      pc.className = 'pc';
 
       if (panel.background) {
         const bg = document.createElement('div');
-        bg.className = 'panel-bg';
+        bg.className = 'pbg';
         bg.textContent = panel.background;
-        content.appendChild(bg);
+        pc.appendChild(bg);
       }
 
-      if (panel.texts && panel.texts.length) {
-        const texts = document.createElement('div');
-        texts.className = 'panel-texts';
+      if (panel.texts?.length) {
+        const pt = document.createElement('div');
+        pt.className = 'ptexts';
         panel.texts.forEach(t => {
           const ti = document.createElement('div');
-          ti.className = 'text-item';
-          const typeClass = t.type === 'ナレ' ? 'nare' : t.type === 'セリフ' ? 'serif' : 'mono';
-          ti.innerHTML = `<span class="text-type ${typeClass}">${t.type}</span><span class="text-body">${t.text}</span>`;
-          texts.appendChild(ti);
+          ti.className = 'ti';
+          const cls = t.type === 'ナレ' ? 'n' : t.type === 'セリフ' ? 's' : 'm';
+          ti.innerHTML = `<span class="tt ${cls}">${t.type}</span><span>${t.text}</span>`;
+          pt.appendChild(ti);
         });
-        content.appendChild(texts);
+        pc.appendChild(pt);
       }
 
       if (panel.mj_prompt) {
-        const mjSec = document.createElement('div');
-        mjSec.className = 'mj-section';
-        mjSec.innerHTML = `<div class="mj-label">MIDJOURNEY PROMPT</div>`;
-        const prompt = document.createElement('div');
-        prompt.className = 'mj-prompt';
-        prompt.innerHTML = `<span class="mj-copy">クリックでコピー</span>${panel.mj_prompt}`;
-        prompt.onclick = () => {
-          navigator.clipboard.writeText(panel.mj_prompt);
-          prompt.querySelector('.mj-copy').textContent = 'コピーしました';
-          setTimeout(() => prompt.querySelector('.mj-copy').textContent = 'クリックでコピー', 1500);
+        const mj = document.createElement('div');
+        mj.className = 'mj';
+        const mjp = document.createElement('div');
+        mjp.className = 'mjp';
+        mjp.innerHTML = `<span class="mjc">クリックでコピー</span>${panel.mj_prompt}`;
+        mjp.onclick = () => {
+          navigator.clipboard.writeText(panel.mj_prompt).then(() => {
+            const c = mjp.querySelector('.mjc');
+            c.textContent = 'コピー済み ✓';
+            setTimeout(() => c.textContent = 'クリックでコピー', 1500);
+          });
         };
-        mjSec.appendChild(prompt);
-        content.appendChild(mjSec);
+        mj.innerHTML = '<div class="mjl">MIDJOURNEY PROMPT</div>';
+        mj.appendChild(mjp);
+        pc.appendChild(mj);
       }
 
-      item.appendChild(meta);
-      item.appendChild(content);
-      body.appendChild(item);
+      row.appendChild(pm);
+      row.appendChild(pc);
+      block.appendChild(row);
     });
 
-    block.appendChild(body);
     container.appendChild(block);
   });
 
   container.style.display = 'block';
 }
 
-function switchTab(name) {
-  document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    b.classList.toggle('active', (i === 0 && name === 'visual') || (i === 1 && name === 'raw'));
-  });
-  document.getElementById('tab-visual').classList.toggle('active', name === 'visual');
-  document.getElementById('tab-raw').classList.toggle('active', name === 'raw');
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.tc').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('tc-' + name).classList.add('on');
 }
 </script>
 </body>
