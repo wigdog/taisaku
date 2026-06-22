@@ -295,7 +295,7 @@ var totalSolved = 0;
 
 var masterParts = {
   syntax: [
-    {l:'SELECT', t:'syntax'}, {l:'FROM', t:'syntax'}, {l:'WHERE', t:'syntax'},
+    {l:'SELECT', t:'syntax'}, {l:'FROM', t:'syntax'}, {l:'WHERE', t:'syntax'}, {l:'AS', t:'syntax'},
     {l:'INNER', t:'syntax'}, {l:'LEFT', t:'syntax'}, {l:'RIGHT', t:'syntax'}, {l:'JOIN', t:'syntax'}, {l:'ON', t:'syntax'},
     {l:'GROUP', t:'keyword'}, {l:'BY', t:'keyword'}, {l:'HAVING', t:'keyword'},
     {l:'ORDER', t:'keyword'}, {l:'ASC', t:'keyword'}, {l:'DESC', t:'keyword'},
@@ -507,7 +507,10 @@ function generateQuizLogic(mode) {
     }
   }
   else if (mode === 'kusatsu') {
-    var type = pick(['window', 'dml', 'case_groupby', 'not_exists', 'correlated', 'coalesce', 'month']);
+    var type = pick([
+      'window', 'window', 'window', 'window', // Window関数を40%に設定
+      'dml', 'case_groupby', 'not_exists', 'correlated', 'coalesce', 'month'
+    ]);
     
     if (type === 'window') {
       text = "全データのランキングを見たい。すべての「入館履歴」について、施設IDと、利用額が多い順の順位（ランキング）を出して。(※WINDOW関数を使用)";
@@ -602,7 +605,7 @@ function renderBuild() {
 function removeBlock(index) { built.splice(index, 1); renderBuild(); }
 function clearBuild() { built = []; renderBuild(); document.getElementById('resultPanel').style.display = 'none'; }
 
-// 👑 【復活】高度な柔軟判定AIパーサー（正規化処理）
+// 👑 高度な柔軟判定AIパーサー（正規化処理）
 // バラバラの数字パーツ(例: "1", "0")を "10" に結合する前処理
 function preprocessTokens(tokens) {
   let result = [];
@@ -620,78 +623,335 @@ function preprocessTokens(tokens) {
   return result;
 }
 
+// トークン配列を、句読点の前後スペースを詰めた1本のSQL文字列に変換する。
+// （以降の正規化・句分解処理はすべて文字列ベースで行う）
+function tokensToSqlString(rawTokens) {
+  const tokens = preprocessTokens(rawTokens).filter(t => t !== "↵" && t !== "");
+  let s = tokens.join(" ");
+  s = s.replace(/\s*\.\s*/g, ".");
+  s = s.replace(/\s*,\s*/g, ",");
+  s = s.replace(/\s*\(\s*/g, "(");
+  s = s.replace(/\s*\)\s*/g, ")");
+  s = s.replace(/\s*=\s*/g, "=");
+  s = s.replace(/\s*>\s*/g, ">");
+  s = s.replace(/\s*<\s*/g, "<");
+  return s.trim();
+}
+
+// テーブル別名（エイリアス）を動的に検出し、SQL文中の使用箇所をすべて
+// 元のテーブル名へ展開する。"テーブル名 (AS)? 識別子" というパターンを
+// FROM句・JOIN句から拾い、その識別子をどんな文字列で書いても
+// （f でも a でも x でも）同じ意味として扱えるようにする。
+const KNOWN_TABLES = ["FACILITIES", "VISITOR_LOGS", "AREAS", "RANKS"];
+const RESERVED_WORDS = new Set([
+  "SELECT","FROM","WHERE","AS","INNER","LEFT","RIGHT","JOIN","ON","GROUP","BY","HAVING",
+  "ORDER","ASC","DESC","CASE","WHEN","THEN","ELSE","END","UNION","ALL","IN","EXISTS","NOT",
+  "DISTINCT","OVER","INSERT","INTO","VALUES","UPDATE","SET","DELETE","START","TRANSACTION",
+  "COMMIT","ROLLBACK","SUM","AVG","COUNT","MAX","MIN","ROUND","COALESCE","MONTH","RANK",
+  "BETWEEN","AND","OR","IS","NULL"
+].map(w => w.toUpperCase()));
+
+function expandTableAliases(sql) {
+  let s = sql;
+  // "TABLE AS ALIAS" と "TABLE ALIAS" の両方を検出する。
+  // ALIASは予約語・既知テーブル名でない単一トークン（英数字）であること。
+  const aliasMap = {}; // ALIAS -> TABLE
+  for (const table of KNOWN_TABLES) {
+    const pattern = new RegExp(`\\b${table}\\s+(?:AS\\s+)?([A-Z0-9_]+)\\b`, "g");
+    let m;
+    while ((m = pattern.exec(s)) !== null) {
+      const candidate = m[1];
+      if (RESERVED_WORDS.has(candidate) || KNOWN_TABLES.includes(candidate)) continue;
+      aliasMap[candidate] = table;
+    }
+  }
+
+  // "TABLE AS ALIAS" / "TABLE ALIAS" の宣言部分そのものを削除し、
+  // 以後はテーブル名のみで統一する（エイリアス宣言の文字列差異を無視）。
+  for (const table of KNOWN_TABLES) {
+    s = s.replace(new RegExp(`\\b${table}\\s+AS\\s+[A-Z0-9_]+\\b`, "g"), table);
+  }
+  for (const alias in aliasMap) {
+    const table = aliasMap[alias];
+    s = s.replace(new RegExp(`\\b${table}\\s+${alias}\\b`), table); // 宣言箇所(1回目)を除去
+  }
+
+  // 文中に残るすべての "ALIAS." 参照を "TABLE." に置き換える
+  for (const alias in aliasMap) {
+    const table = aliasMap[alias];
+    s = s.replace(new RegExp(`\\b${alias}\\.`, "g"), `${table}.`);
+  }
+
+  // 自己結合判定: 同じテーブルが複数回エイリアスされていた場合のみ、
+  // テーブル修飾子はカラムの出自を区別するために必要なので保持する。
+  // 自己結合でなければ、「name」も「facilities.name」も同じ意味として
+  // 扱えるよう、テーブル修飾子そのものを取り除く。
+  const tableUsageCount = {};
+  for (const alias in aliasMap) {
+    const table = aliasMap[alias];
+    tableUsageCount[table] = (tableUsageCount[table] || 0) + 1;
+  }
+  const selfJoinedTables = new Set(
+    Object.keys(tableUsageCount).filter(t => tableUsageCount[t] > 1)
+  );
+  for (const table of KNOWN_TABLES) {
+    if (selfJoinedTables.has(table)) continue; // 自己結合対象は修飾子を残す
+    s = s.replace(new RegExp(`\\b${table}\\.`, "g"), "");
+  }
+
+  return s;
+}
+
+// SQL全体に対する表記ゆれの正規化
+function normalizeTokensExe(sql) {
+  let s = sql.toUpperCase();
+  s = s.replace(/;/g, " ");
+  s = s.replace(/`/g, "").replace(/"/g, "");
+  s = s.replace(/\bINNER\s+JOIN/g, "JOIN");
+  s = s.replace(/<>/g, "!=");
+  s = s.replace(/\bASC\b/g, ""); // ASCは既定値なので明示有無を無視
+  s = expandTableAliases(s);
+  s = s.replace(/\s*\(\s*/g, "(");
+  s = s.replace(/\s*\)\s*/g, ")");
+  s = s.replace(/\s*,\s*/g, ",");
+  s = s.replace(/\s*\.\s*/g, ".");
+  s = s.replace(/\s*=\s*/g, "=");
+  s = s.replace(/\s*!=\s*/g, "!=");
+  s = s.replace(/\s*>=\s*/g, ">=");
+  s = s.replace(/\s*<=\s*/g, "<=");
+  s = s.replace(/\s*>\s*/g, ">");
+  s = s.replace(/\s*<\s*/g, "<");
+  s = s.replace(/\s+/g, " ");
+  return s.trim();
+}
+
+// "A op B" の左右の揺れを吸収する（A=B と B=A を同一視）。対称演算子のみ。
+function normalizeComparisonExe(expr) {
+  const m = expr.match(/^(.+?)(=|!=|>=|<=|>|<)(.+)$/);
+  if (!m) return expr.trim();
+  const op = m[2];
+  let left = m[1].trim();
+  let right = m[3].trim();
+  if (op === "=" || op === "!=") {
+    if (left > right) [left, right] = [right, left];
+  }
+  return `${left}${op}${right}`;
+}
+
+// 括弧の深さを考慮してANDで分割する
+function splitTopLevelAndExe(text) {
+  const result = [];
+  let depth = 0, current = "", i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === "(") depth++;
+    if (ch === ")") depth--;
+    if (depth === 0 && text.slice(i, i + 3) === "AND" &&
+        (i === 0 || /\s/.test(text[i - 1])) &&
+        (i + 3 === text.length || /\s/.test(text[i + 3]))) {
+      result.push(current); current = ""; i += 3; continue;
+    }
+    current += ch; i++;
+  }
+  if (current.trim().length > 0 || result.length === 0) result.push(current);
+  return result;
+}
+
+// 括弧の深さを考慮してカンマで分割する
+function splitTopLevelCommaExe(text) {
+  const result = [];
+  let depth = 0, current = "";
+  for (const ch of text) {
+    if (ch === "(") depth++;
+    if (ch === ")") depth--;
+    if (ch === "," && depth === 0) { result.push(current); current = ""; }
+    else current += ch;
+  }
+  if (current.length > 0) result.push(current);
+  return result;
+}
+
+function normalizeExistsInConditionExe(cond) {
+  const m = cond.match(/^(NOT\s+)?EXISTS\((.+)\)$/);
+  if (!m) return cond;
+  const negate = m[1] ? "NOT " : "";
+  const subStruct = buildSingleSelectStructureExe(m[2]);
+  return `${negate}EXISTS(${JSON.stringify(subStruct)})`;
+}
+
+function normalizeConditionListExe(text) {
+  if (!text) return [];
+  return splitTopLevelAndExe(text)
+    .map(p => p.trim())
+    .filter(p => p.length > 0)
+    .map(p => /^(NOT\s+)?EXISTS\(/.test(p) ? normalizeExistsInConditionExe(p) : normalizeComparisonExe(p))
+    .sort();
+}
+
+function normalizeCommaListExe(text) {
+  if (!text) return [];
+  return splitTopLevelCommaExe(text)
+    .map(p => p.trim())
+    .filter(p => p.length > 0)
+    .map(p => p.replace(/\s*\bAS\s+\S+$/, "")) // 末尾のASカラムエイリアスを除去
+    .sort();
+}
+
+// SQLを主要な句に分解する（括弧の深さ0の位置にあるキーワードのみ境界とする）
+function splitClausesExe(sql) {
+  const clauseNames = ["GROUP BY", "ORDER BY", "SELECT", "FROM", "WHERE", "HAVING", "SET", "VALUES", "INTO"];
+  const pattern = new RegExp(`\\b(${clauseNames.join("|")})\\b`, "g");
+  const hits = [];
+  let depth = 0;
+  const depthAt = new Array(sql.length + 1).fill(0);
+  for (let i = 0; i < sql.length; i++) {
+    if (sql[i] === "(") depth++;
+    if (sql[i] === ")") depth--;
+    depthAt[i + 1] = depth;
+  }
+  let m;
+  while ((m = pattern.exec(sql)) !== null) {
+    if (depthAt[m.index] === 0) hits.push({ name: m[1], index: m.index });
+  }
+  const clauses = {};
+  for (let i = 0; i < hits.length; i++) {
+    const start = hits[i].index + hits[i].name.length;
+    const end = i + 1 < hits.length ? hits[i + 1].index : sql.length;
+    clauses[hits[i].name] = sql.slice(start, end).trim();
+  }
+  return clauses;
+}
+
+// FROM句（JOIN/ONを含む）を、テーブル集合とON条件集合に分解して正規化する
+function normalizeFromClauseExe(text) {
+  const onConditions = [];
+  const onPattern = /\bON\s+(.+?)(?=\bJOIN\b|$)/g;
+  let m;
+  while ((m = onPattern.exec(text)) !== null) {
+    onConditions.push(...normalizeConditionListExe(m[1].trim()));
+  }
+  const rest = text.replace(/\bON\s+.+?(?=\bJOIN\b|$)/g, "");
+  // JOIN種別(LEFT/RIGHT/JOIN)ごとにテーブルを抽出（種別自体は意味が違うので残す）
+  const tableTokens = rest.split(/\b(LEFT JOIN|RIGHT JOIN|JOIN)\b/).map(t => t.trim()).filter(t => t.length > 0);
+  return { tableTokens: tableTokens.sort(), onConditions: onConditions.sort() };
+}
+
+function normalizeComparisonOrTextExe(text) {
+  const list = normalizeConditionListExe(text);
+  return list.length > 0 ? list : [text.replace(/\s+/g, " ").trim()];
+}
+
+function buildSingleSelectStructureExe(sql) {
+  const clauses = splitClausesExe(sql);
+  return {
+    select: clauses["SELECT"] !== undefined ? normalizeCommaListExe(clauses["SELECT"]) : null,
+    from: clauses["FROM"] !== undefined ? normalizeFromClauseExe(clauses["FROM"]) : null,
+    where: clauses["WHERE"] !== undefined ? normalizeConditionListExe(clauses["WHERE"]) : null,
+    groupBy: clauses["GROUP BY"] !== undefined ? normalizeCommaListExe(clauses["GROUP BY"]) : null,
+    having: clauses["HAVING"] !== undefined ? normalizeComparisonOrTextExe(clauses["HAVING"]) : null,
+    orderBy: clauses["ORDER BY"] !== undefined ? clauses["ORDER BY"].replace(/\s+/g, " ").trim() : null,
+    into: clauses["INTO"] !== undefined ? clauses["INTO"].replace(/\s+/g, " ").trim() : null,
+    set: clauses["SET"] !== undefined ? normalizeConditionListExe(clauses["SET"]) : null,
+    values: clauses["VALUES"] !== undefined ? normalizeCommaListExe(clauses["VALUES"].replace(/^\(|\)$/g, "")) : null,
+    union: null
+  };
+}
+
+// DML文(INSERT/UPDATE/DELETE)も含めて文頭のコマンドを判定し、適切に構造化する
+function buildComparableStructureExe(sql) {
+  const normalized = normalizeTokensExe(sql);
+
+  // INSERT / UPDATE / DELETE はSELECT系の句分解と異なるため別扱い
+  const cmd = normalized.split(" ")[0];
+  if (cmd === "INSERT" || cmd === "UPDATE" || cmd === "DELETE") {
+    const rest = normalized.replace(/^\w+\s*/, "");
+    const struct = buildSingleSelectStructureExe((cmd === "DELETE" ? "" : "") + rest);
+    struct.command = cmd;
+    // DELETEはFROM句のみ、INSERTはINTO+VALUES、UPDATEはテーブル名+SET+WHEREを使う
+    if (cmd === "UPDATE") {
+      // "UPDATE table SET ... WHERE ..." -> tableをfromとして扱う
+      const tableMatch = rest.match(/^([A-Z0-9_]+)/);
+      struct.updateTable = tableMatch ? tableMatch[1] : null;
+    }
+    return struct;
+  }
+
+  const unionParts = normalized.split(/\bUNION\b/).map(p => p.trim()).filter(p => p.length > 0);
+  if (unionParts.length > 1) {
+    return {
+      command: "SELECT", select: null, from: null, where: null, groupBy: null, having: null,
+      orderBy: null, into: null, set: null, values: null,
+      union: unionParts.map(part => buildSingleSelectStructureExe(part))
+    };
+  }
+  const struct = buildSingleSelectStructureExe(normalized);
+  struct.command = "SELECT";
+  return struct;
+}
+
+function arraysEqualExe(a, b) {
+  if (a === null || b === null) return a === b;
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
+
+function structuresEqualExe(s1, s2) {
+  if (s1.command !== s2.command) return false;
+  if (!arraysEqualExe(s1.select, s2.select)) return false;
+
+  if (s1.from === null || s2.from === null) {
+    if (s1.from !== s2.from) return false;
+  } else {
+    if (!arraysEqualExe(s1.from.tableTokens, s2.from.tableTokens)) return false;
+    if (!arraysEqualExe(s1.from.onConditions, s2.from.onConditions)) return false;
+  }
+
+  if (!arraysEqualExe(s1.where, s2.where)) return false;
+  if (!arraysEqualExe(s1.groupBy, s2.groupBy)) return false;
+  if (!arraysEqualExe(s1.having, s2.having)) return false;
+  if (s1.orderBy !== s2.orderBy) return false;
+  if (s1.into !== s2.into) return false;
+  if (!arraysEqualExe(s1.set, s2.set)) return false;
+  if (!arraysEqualExe(s1.values, s2.values)) return false;
+  if (s1.updateTable !== s2.updateTable) return false;
+
+  if (s1.union === null || s2.union === null) {
+    if (s1.union !== s2.union) return false;
+  } else {
+    if (s1.union.length !== s2.union.length) return false;
+    const used = new Array(s2.union.length).fill(false);
+    for (const part1 of s1.union) {
+      const idx = s2.union.findIndex((part2, i) => !used[i] && structuresEqualExe(part1, part2));
+      if (idx === -1) return false;
+      used[idx] = true;
+    }
+  }
+  return true;
+}
+
+// トークン配列を比較可能な構造へ変換する。
+// クラッシュした場合は、せめて自己一致だけは保てる簡易フォールバックを返す。
 function canonicalize(rawTokens) {
-  // 1. 数字の結合
-  let tokens = preprocessTokens(rawTokens);
-  let arr = tokens.filter(t => t !== "↵" && t !== "");
-  
-  // 2. 同義語の標準化 (大文字化、INNER JOIN -> JOIN統⼀、ASCの消去)
-  let cleaned = [];
-  for (let i = 0; i < arr.length; i++) {
-    let current = arr[i].toUpperCase();
-    let next = arr[i+1] ? arr[i+1].toUpperCase() : "";
-    if (current === "INNER" && next === "JOIN") {
-      cleaned.push("JOIN");
-      i++;
-    } else {
-      cleaned.push(arr[i]);
-    }
+  try {
+    const sql = tokensToSqlString(rawTokens);
+    return buildComparableStructureExe(sql);
+  } catch (e) {
+    return { command: "__PARSE_ERROR__", raw: tokensToSqlString(rawTokens).toUpperCase() };
   }
-  arr = cleaned.filter(t => t.toUpperCase() !== "ASC");
+}
 
-  // 3. 等号演算子「=」の左右反転を許容するロジック
-  for (let i = 0; i < arr.length; i++) {
-    if (arr[i] === "=") {
-      let leftStart = i - 1;
-      if (i - 3 >= 0 && arr[i-2] === ".") leftStart = i - 3;
-      let rightEnd = i + 1;
-      if (i + 3 < arr.length && arr[i+2] === ".") rightEnd = i + 3;
-      
-      if (leftStart >= 0 && rightEnd < arr.length) {
-        let leftStr = arr.slice(leftStart, i).join("").toUpperCase();
-        let rightStr = arr.slice(i + 1, rightEnd + 1).join("").toUpperCase();
-        if (leftStr > rightStr) {
-          let leftPiece = arr.slice(leftStart, i);
-          let rightPiece = arr.slice(i + 1, rightEnd + 1);
-          arr.splice(leftStart, (rightEnd - leftStart + 1), ...rightPiece, "=", ...leftPiece);
-        }
-      }
-    }
+// 2つのcanonicalize結果が意味的に同一か判定する。
+// UNIONの順序非依存比較などを正しく働かせるため、JSON文字列の単純比較ではなく
+// structuresEqualExeによる構造比較を用いる。
+function isCanonEqual(c1, c2) {
+  if (c1.command === "__PARSE_ERROR__" || c2.command === "__PARSE_ERROR__") {
+    return c1.command === c2.command && c1.raw === c2.raw;
   }
-
-  // 4. SELECT句等のカンマ区切りソート
-  let selectIdx = -1; let fromIdx = -1;
-  for (let i = 0; i < arr.length; i++) {
-    if (arr[i].toUpperCase() === "SELECT") selectIdx = i;
-    if (arr[i].toUpperCase() === "FROM") { fromIdx = i; break; }
+  try {
+    return structuresEqualExe(c1, c2);
+  } catch (e) {
+    return false;
   }
-  if (selectIdx !== -1 && fromIdx !== -1 && fromIdx > selectIdx) {
-    let colTokens = arr.slice(selectIdx + 1, fromIdx);
-    let chunks = []; let currentChunk = [];
-    for (let t of colTokens) {
-      if (t === ",") {
-        if (currentChunk.length > 0) chunks.push(currentChunk);
-        currentChunk = [];
-      } else {
-        currentChunk.push(t);
-      }
-    }
-    if (currentChunk.length > 0) chunks.push(currentChunk);
-    
-    // カラム群を文字列表現でソート
-    chunks.sort((a, b) => a.join("").toUpperCase().localeCompare(b.join("").toUpperCase()));
-    
-    // カラムをカンマで再結合
-    let sortedCols = [];
-    for (let i = 0; i < chunks.length; i++) {
-      sortedCols = sortedCols.concat(chunks[i]);
-      if (i < chunks.length - 1) sortedCols.push(",");
-    }
-    arr.splice(selectIdx + 1, fromIdx - selectIdx - 1, ...sortedCols);
-  }
-
-  // 比較のために不要なスペースを詰めて文字列化
-  return arr.map(t => t.toUpperCase()).join(" ").replace(/\s+\.\s+/g, ".").replace(/\s+,\s+/g, ",").replace(/\s+\(\s+/g, "(").replace(/\s+\)\s+/g, ")").trim();
 }
 
 function checkAnswer() {
@@ -702,7 +962,7 @@ function checkAnswer() {
   var userCanon = canonicalize(currentAnswer);
 
   var isCorrect = currentQuiz.answers.some(function(ans) {
-    return userCanon === canonicalize(ans);
+    return isCanonEqual(userCanon, canonicalize(ans));
   });
 
   var panel = document.getElementById('resultPanel');
