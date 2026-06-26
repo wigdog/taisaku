@@ -312,7 +312,10 @@
     <div class="answer-label">✅ ANSWER</div>
     <div class="answer-sql" id="answerSql"></div>
   </div>
-  <button class="btn-clear-text" onclick="clearInput()">❌ 入力クリア</button>
+  <div style="display:flex; gap:6px;">
+    <button class="btn-clear-text" style="flex:1" onclick="clearInput()">❌ クリア</button>
+    <button class="btn-clear-text" style="flex:2; background:#1e3a5f; border-color:#38bdf8; color:#bae6fd;" onclick="checkAnswer()">⏎ 判定する</button>
+  </div>
 
   <div class="button-category">
     <div class="category-title">1. KEYWORDS</div>
@@ -510,7 +513,6 @@ function insertText(text, offset = 0) {
   sqlInput.value = val.slice(0, start) + text + val.slice(end);
   sqlInput.selectionStart = sqlInput.selectionEnd = start + text.length + offset;
   sqlInput.focus();
-  checkAnswer();
 }
 
 function clearInput() {
@@ -518,7 +520,13 @@ function clearInput() {
   sqlInput.focus();
 }
 
-sqlInput.addEventListener('input', checkAnswer);
+// Enterキーで判定（Shift+Enterは改行）
+sqlInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    checkAnswer();
+  }
+});
 
 // ==========================================
 // 超柔軟パーサー（判定ロジック）
@@ -847,17 +855,17 @@ function checkAnswer() {
     setTimeout(() => panel.classList.remove('wrong'), 300);
 
     wrongCount++;
-    if (wrongCount >= 2) {
-      // 2回以上間違えたらヒントを表示
+    if (wrongCount >= 1) {
+      // 1回間違えたらヒントを表示
       const hintArea = document.getElementById('hintArea');
       document.getElementById('hintText').textContent = q.hint || 'ヒントはありません。';
       hintArea.classList.add('visible');
     }
-    if (wrongCount >= 4) {
-      // 4回以上間違えたら「答えを見る」ボタンを表示
+    if (wrongCount >= 3) {
+      // 3回以上間違えたら「答えを見る」ボタンを表示
       document.getElementById('btnShowAnswer').classList.add('visible');
     }
-    document.getElementById('wrongCount').textContent = wrongCount >= 2 ? `❌ ${wrongCount}回ミス` : '';
+    document.getElementById('wrongCount').textContent = `❌ ${wrongCount}回ミス`;
   }
 }
 
