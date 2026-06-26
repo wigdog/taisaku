@@ -90,6 +90,46 @@
   .cat-table { background: #78350f; border-color: #d97706; color: #fde68a; }
   .cat-column { background: #0c4a6e; border-color: #0284c7; color: #bae6fd; }
 
+  /* ヒント・答えエリア */
+  .hint-area {
+    background: rgba(251, 191, 36, 0.08); border: 1px solid #d97706;
+    border-radius: 8px; padding: 10px 14px; font-size: 13px;
+    animation: fadeIn 0.4s ease-out;
+    display: none;
+  }
+  .hint-area.visible { display: block; }
+  .hint-label { color: #fbbf24; font-weight: bold; font-size: 11px; letter-spacing: 1px; margin-bottom: 4px; }
+  .hint-text { color: #fde68a; line-height: 1.5; }
+
+  .answer-area {
+    background: rgba(16, 185, 129, 0.08); border: 1px solid #059669;
+    border-radius: 8px; padding: 10px 14px; font-size: 13px;
+    display: none; animation: fadeIn 0.3s ease-out;
+  }
+  .answer-area.visible { display: block; }
+  .answer-label { color: #10b981; font-weight: bold; font-size: 11px; letter-spacing: 1px; margin-bottom: 4px; }
+  .answer-sql {
+    font-family: 'Share Tech Mono', monospace; color: #6ee7b7; font-size: 14px;
+    word-break: break-all; line-height: 1.6;
+  }
+
+  .btn-show-answer {
+    width: 100%; background: #134e4a; border: 1px solid #0d9488; color: #99f6e4;
+    padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer;
+    transition: 0.1s; font-size: 13px; display: none;
+  }
+  .btn-show-answer.visible { display: block; }
+  .btn-show-answer:active { background: #0d9488; }
+
+  .wrong-count {
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    color: #f87171; text-align: right; padding-right: 4px; min-height: 18px;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 60%{transform:translateX(6px)} }
+  .quiz-panel.wrong { animation: shake 0.3s ease-out; border-left-color: #ef4444; }
+
   /* タイトル・リザルト画面 */
   .overlay {
     position: absolute; inset: 0; background: rgba(11, 15, 25, 0.95);
@@ -258,8 +298,19 @@
     <div><span class="tbl">areas(a)</span> : <span class="col">area_id, area_name</span></div>
   </div>
 
+  <div class="hint-area" id="hintArea">
+    <div class="hint-label">💡 HINT</div>
+    <div class="hint-text" id="hintText"></div>
+  </div>
+
   <div class="editor-wrapper">
     <textarea class="sql-input" id="sqlInput" placeholder="キーボード入力 or 下のボタンをタップ" autocomplete="off" spellcheck="false"></textarea>
+  </div>
+  <div class="wrong-count" id="wrongCount"></div>
+  <button class="btn-show-answer" id="btnShowAnswer" onclick="toggleAnswer()">🔍 答えを見る</button>
+  <div class="answer-area" id="answerArea">
+    <div class="answer-label">✅ ANSWER</div>
+    <div class="answer-sql" id="answerSql"></div>
   </div>
   <button class="btn-clear-text" onclick="clearInput()">❌ 入力クリア</button>
 
@@ -323,32 +374,32 @@
 // ==========================================
 const quizMaster = {
   easy: [
-    { text: "「施設」のリストが欲しいんだけど、すべてのデータを抽出して出してくれるかな？", answers: ["SELECT * FROM facilities"] },
-    { text: "「入館履歴」のリストが欲しいんだけど、すべてのデータを抽出して。", answers: ["SELECT * FROM visitor_logs"] },
-    { text: "データの絞り込みをお願い。「施設」の中で、マンガの蔵書数が3000以上のデータだけピックアップして。", answers: ["SELECT * FROM facilities WHERE manga_volumes >= 3000"] },
-    { text: "データの絞り込みをお願い。「入館履歴」の中で、利用額が5000未満のデータをすべて拾って。", answers: ["SELECT * FROM visitor_logs WHERE spent_amount < 5000"] },
-    { text: "「施設」の一覧をレポートにしたい。マンガの蔵書数が多い順で並べて、施設名だけを抽出して。", answers: ["SELECT name FROM facilities ORDER BY manga_volumes DESC"] }
+    { text: "「施設」のリストが欲しいんだけど、すべてのデータを抽出して出してくれるかな？", answers: ["SELECT * FROM facilities"], hint: "すべてのカラムを取得するには * を使います。テーブル名は facilities です。構文: SELECT [列] FROM [テーブル]" },
+    { text: "「入館履歴」のリストが欲しいんだけど、すべてのデータを抽出して。", answers: ["SELECT * FROM visitor_logs"], hint: "入館履歴のテーブル名は visitor_logs です。全カラム取得には * を使いましょう。" },
+    { text: "データの絞り込みをお願い。「施設」の中で、マンガの蔵書数が3000以上のデータだけピックアップして。", answers: ["SELECT * FROM facilities WHERE manga_volumes >= 3000"], hint: "条件で絞り込むには WHERE 句を使います。「以上」は >= 演算子。カラム名は manga_volumes です。" },
+    { text: "データの絞り込みをお願い。「入館履歴」の中で、利用額が5000未満のデータをすべて拾って。", answers: ["SELECT * FROM visitor_logs WHERE spent_amount < 5000"], hint: "「未満」は < 演算子を使います。利用額のカラムは spent_amount です。" },
+    { text: "「施設」の一覧をレポートにしたい。マンガの蔵書数が多い順で並べて、施設名だけを抽出して。", answers: ["SELECT name FROM facilities ORDER BY manga_volumes DESC"], hint: "並び替えは ORDER BY 句。多い順（降順）は DESC をつけます。施設名カラムは name です。" }
   ],
   normal: [
-    { text: "各施設ごとの売上状況を知りたいな。「入館履歴」を使って、施設IDごとに利用額の合計を集計して。", answers: ["SELECT facility_id, SUM(spent_amount) FROM visitor_logs GROUP BY facility_id"] },
-    { text: "リピーターが多い施設を特定したい。「入館履歴」で、利用件数が5件以上ある施設IDと、その件数を一覧にして。", answers: ["SELECT facility_id, COUNT(*) FROM visitor_logs GROUP BY facility_id HAVING COUNT(*) >= 5"] },
-    { text: "売上データに施設名をくっつけたい。「施設」と「入館履歴」を紐づけて(等価結合)、施設名と利用額を出して。", answers: ["SELECT name, spent_amount FROM facilities JOIN visitor_logs ON facilities.facility_id = visitor_logs.facility_id"] },
-    { text: "データ不備の調査を頼む。「施設」の中で、エリアIDが登録されていない(NULL)施設の名前を出して。", answers: ["SELECT name FROM facilities WHERE area_id IS NULL"] },
-    { text: "「入館履歴」の利用額の最大値と最小値を同時に出して。", answers: ["SELECT MAX(spent_amount), MIN(spent_amount) FROM visitor_logs"] }
+    { text: "各施設ごとの売上状況を知りたいな。「入館履歴」を使って、施設IDごとに利用額の合計を集計して。", answers: ["SELECT facility_id, SUM(spent_amount) FROM visitor_logs GROUP BY facility_id"], hint: "グループ別に集計するには GROUP BY 句を使います。合計は SUM() 関数。SELECT にも集計キーを含めましょう。" },
+    { text: "リピーターが多い施設を特定したい。「入館履歴」で、利用件数が5件以上ある施設IDと、その件数を一覧にして。", answers: ["SELECT facility_id, COUNT(*) FROM visitor_logs GROUP BY facility_id HAVING COUNT(*) >= 5"], hint: "GROUP BY 後の集計結果を絞り込むには HAVING 句を使います。件数は COUNT(*) で取得できます。" },
+    { text: "売上データに施設名をくっつけたい。「施設」と「入館履歴」を紐づけて(等価結合)、施設名と利用額を出して。", answers: ["SELECT name, spent_amount FROM facilities JOIN visitor_logs ON facilities.facility_id = visitor_logs.facility_id"], hint: "テーブルの結合には JOIN ～ ON を使います。共通キーは facility_id です。" },
+    { text: "データ不備の調査を頼む。「施設」の中で、エリアIDが登録されていない(NULL)施設の名前を出して。", answers: ["SELECT name FROM facilities WHERE area_id IS NULL"], hint: "NULL かどうかの判定は = NULL ではなく IS NULL を使います。" },
+    { text: "「入館履歴」の利用額の最大値と最小値を同時に出して。", answers: ["SELECT MAX(spent_amount), MIN(spent_amount) FROM visitor_logs"], hint: "最大値は MAX()、最小値は MIN() 関数。SELECT の中に両方並べて書けます。" }
   ],
   hard: [
-    { text: "1回の利用額が10000円以上の「入館履歴」が存在する施設に絞って、施設名を抽出して。(※サブクエリを使用)", answers: ["SELECT name FROM facilities WHERE facility_id IN (SELECT facility_id FROM visitor_logs WHERE spent_amount >= 10000)"] },
-    { text: "「施設」のIDと「入館履歴」の施設IDを、重複を省いて(UNION)縦に繋げて出して。", answers: ["SELECT facility_id FROM facilities UNION SELECT facility_id FROM visitor_logs"] },
-    { text: "蔵書数が5000冊以上なら'大型'、それ以外なら'小型'という判定結果を、施設名と一緒に取得して。(※CASE式を使用)", answers: ["SELECT name, CASE WHEN manga_volumes >= 5000 THEN '大型' ELSE '小型' END FROM facilities"] },
-    { text: "【重複エラー調査】「入館履歴」の中で、同じ施設(ID)に同じ日に入館しているデータを探して。施設IDと入館日を取得し、件数が1より大きいものを抽出。", answers: ["SELECT facility_id, visit_date FROM visitor_logs GROUP BY facility_id, visit_date HAVING COUNT(*) > 1"] },
-    { text: "純粋な集客力を測りたい。入館履歴から、重複を省いた『ユニークな施設IDの数』を集計して。", answers: ["SELECT COUNT(DISTINCT facility_id) FROM visitor_logs"] }
+    { text: "1回の利用額が10000円以上の「入館履歴」が存在する施設に絞って、施設名を抽出して。(※サブクエリを使用)", answers: ["SELECT name FROM facilities WHERE facility_id IN (SELECT facility_id FROM visitor_logs WHERE spent_amount >= 10000)"], hint: "WHERE の条件にサブクエリを使います。構文: WHERE facility_id IN (SELECT ...)。外側は facilities、内側は visitor_logs です。" },
+    { text: "「施設」のIDと「入館履歴」の施設IDを、重複を省いて(UNION)縦に繋げて出して。", answers: ["SELECT facility_id FROM facilities UNION SELECT facility_id FROM visitor_logs"], hint: "2つの SELECT 結果を縦に連結するには UNION を使います。UNION は自動で重複を除きます。" },
+    { text: "蔵書数が5000冊以上なら'大型'、それ以外なら'小型'という判定結果を、施設名と一緒に取得して。(※CASE式を使用)", answers: ["SELECT name, CASE WHEN manga_volumes >= 5000 THEN '大型' ELSE '小型' END FROM facilities"], hint: "条件分岐は CASE WHEN [条件] THEN [値] ELSE [値] END の構文です。SELECT 内に書きます。" },
+    { text: "【重複エラー調査】「入館履歴」の中で、同じ施設(ID)に同じ日に入館しているデータを探して。施設IDと入館日を取得し、件数が1より大きいものを抽出。", answers: ["SELECT facility_id, visit_date FROM visitor_logs GROUP BY facility_id, visit_date HAVING COUNT(*) > 1"], hint: "GROUP BY に複数カラムを指定できます。「1件より多い」は HAVING COUNT(*) > 1 で絞り込みます。" },
+    { text: "純粋な集客力を測りたい。入館履歴から、重複を省いた『ユニークな施設IDの数』を集計して。", answers: ["SELECT COUNT(DISTINCT facility_id) FROM visitor_logs"], hint: "重複を省いてカウントするには COUNT(DISTINCT カラム名) を使います。" }
   ],
   extreme: [
-    { text: "利用額が5000円以上なら'高額'、それ以外を'少額'と分類し、それぞれの件数を集計して。(※SELECTとGROUP BYの両方にCASEを書く)", answers: ["SELECT CASE WHEN spent_amount >= 5000 THEN '高額' ELSE '少額' END, COUNT(*) FROM visitor_logs GROUP BY CASE WHEN spent_amount >= 5000 THEN '高額' ELSE '少額' END"] },
-    { text: "【集客ゼロ調査】「施設」として登録されているのに、入館履歴が『1件も存在しない』施設名を取得して。(※NOT EXISTSを活用)", answers: ["SELECT name FROM facilities WHERE NOT EXISTS (SELECT * FROM visitor_logs WHERE facilities.facility_id = visitor_logs.facility_id)"] },
-    { text: "利用額が10000円以上の入館履歴が存在する施設名を取得して。(※EXISTSを使用 相関サブクエリ)", answers: ["SELECT name FROM facilities WHERE EXISTS (SELECT * FROM visitor_logs WHERE facilities.facility_id = visitor_logs.facility_id AND spent_amount >= 10000)"] },
-    { text: "【欠損値処理】施設の一覧を出す際、エリアIDが未設定（NULL）のものは『未分類』に置き換えて(COALESCE)施設名とともに取得して。", answers: ["SELECT name, COALESCE(area_id, '未分類') FROM facilities"] },
-    { text: "【時系列集計】「入館履歴」の入館日から『月』(MONTH)だけを抽出し、その月ごとに利用額の合計を集計して。", answers: ["SELECT MONTH(visit_date), SUM(spent_amount) FROM visitor_logs GROUP BY MONTH(visit_date)"] }
+    { text: "利用額が5000円以上なら'高額'、それ以外を'少額'と分類し、それぞれの件数を集計して。(※SELECTとGROUP BYの両方にCASEを書く)", answers: ["SELECT CASE WHEN spent_amount >= 5000 THEN '高額' ELSE '少額' END, COUNT(*) FROM visitor_logs GROUP BY CASE WHEN spent_amount >= 5000 THEN '高額' ELSE '少額' END"], hint: "CASE 式を SELECT と GROUP BY の両方に同じ内容で書く必要があります。GROUP BY にも CASE WHEN ... END を記述します。" },
+    { text: "【集客ゼロ調査】「施設」として登録されているのに、入館履歴が『1件も存在しない』施設名を取得して。(※NOT EXISTSを活用)", answers: ["SELECT name FROM facilities WHERE NOT EXISTS (SELECT * FROM visitor_logs WHERE facilities.facility_id = visitor_logs.facility_id)"], hint: "「存在しない」の判定は NOT EXISTS (サブクエリ) を使います。サブクエリ内で外側のテーブルを参照する相関サブクエリです。" },
+    { text: "利用額が10000円以上の入館履歴が存在する施設名を取得して。(※EXISTSを使用 相関サブクエリ)", answers: ["SELECT name FROM facilities WHERE EXISTS (SELECT * FROM visitor_logs WHERE facilities.facility_id = visitor_logs.facility_id AND spent_amount >= 10000)"], hint: "EXISTS (サブクエリ) は「サブクエリが1件でも返れば真」です。AND で条件を追加して利用額も絞り込みます。" },
+    { text: "【欠損値処理】施設の一覧を出す際、エリアIDが未設定（NULL）のものは『未分類』に置き換えて(COALESCE)施設名とともに取得して。", answers: ["SELECT name, COALESCE(area_id, '未分類') FROM facilities"], hint: "NULL を別の値に置き換えるには COALESCE(カラム, 代替値) を使います。" },
+    { text: "【時系列集計】「入館履歴」の入館日から『月』(MONTH)だけを抽出し、その月ごとに利用額の合計を集計して。", answers: ["SELECT MONTH(visit_date), SUM(spent_amount) FROM visitor_logs GROUP BY MONTH(visit_date)"], hint: "日付から月を取り出すには MONTH(カラム) 関数を使います。GROUP BY にも同じ関数を書きます。" }
   ]
 };
 
@@ -357,6 +408,8 @@ let currentQuizIndex = 0;
 let currentDifficulty = null;
 let startTime = 0;
 let timerInterval;
+let wrongCount = 0;
+let answerVisible = false;
 const sqlInput = document.getElementById('sqlInput');
 
 const DIFF_LABELS = { easy: '🛁 ぬるま湯 (Easy)', normal: '♨ 適温 (Normal)', hard: '🌋 熱湯 (Hard)', extreme: '🌌 草津の湯 (Extreme)' };
@@ -410,6 +463,17 @@ function loadQuiz() {
   document.getElementById('qNum').textContent = currentQuizIndex + 1;
   document.getElementById('quizText').textContent = q.text;
   document.getElementById('progress').textContent = `${currentQuizIndex} / ${currentQuizzes.length}`;
+
+  // ヒント・答えをリセット
+  wrongCount = 0;
+  answerVisible = false;
+  document.getElementById('hintArea').classList.remove('visible');
+  document.getElementById('hintText').textContent = '';
+  document.getElementById('answerArea').classList.remove('visible');
+  document.getElementById('answerSql').textContent = '';
+  document.getElementById('btnShowAnswer').classList.remove('visible');
+  document.getElementById('btnShowAnswer').textContent = '🔍 答えを見る';
+  document.getElementById('wrongCount').textContent = '';
 }
 
 async function finishGame() {
@@ -767,13 +831,48 @@ function checkAnswer() {
 
   if (isCorrect) {
     const panel = document.getElementById('quizPanel');
-    panel.classList.remove('flash');
-    void panel.offsetWidth; 
+    panel.classList.remove('flash', 'wrong');
+    void panel.offsetWidth;
     panel.classList.add('flash');
 
     currentQuizIndex++;
     sqlInput.value = '';
     loadQuiz();
+  } else if (userInput.trim().length > 5) {
+    // 5文字以上入力して不正解なら誤答カウント & ヒント表示
+    const panel = document.getElementById('quizPanel');
+    panel.classList.remove('wrong');
+    void panel.offsetWidth;
+    panel.classList.add('wrong');
+    setTimeout(() => panel.classList.remove('wrong'), 300);
+
+    wrongCount++;
+    if (wrongCount >= 2) {
+      // 2回以上間違えたらヒントを表示
+      const hintArea = document.getElementById('hintArea');
+      document.getElementById('hintText').textContent = q.hint || 'ヒントはありません。';
+      hintArea.classList.add('visible');
+    }
+    if (wrongCount >= 4) {
+      // 4回以上間違えたら「答えを見る」ボタンを表示
+      document.getElementById('btnShowAnswer').classList.add('visible');
+    }
+    document.getElementById('wrongCount').textContent = wrongCount >= 2 ? `❌ ${wrongCount}回ミス` : '';
+  }
+}
+
+function toggleAnswer() {
+  const q = currentQuizzes[currentQuizIndex];
+  const answerArea = document.getElementById('answerArea');
+  const btn = document.getElementById('btnShowAnswer');
+  answerVisible = !answerVisible;
+  if (answerVisible) {
+    document.getElementById('answerSql').textContent = q.answers[0];
+    answerArea.classList.add('visible');
+    btn.textContent = '🙈 答えを隠す';
+  } else {
+    answerArea.classList.remove('visible');
+    btn.textContent = '🔍 答えを見る';
   }
 }
 
