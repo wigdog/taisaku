@@ -278,7 +278,14 @@
         <div class="cat-name">サブクエリ</div>
         <div class="cat-sub">IN / EXISTS / 相関</div>
         <div class="cat-prog"><div class="cat-prog-fill" id="prog-subquery" style="background:#9b59b6; width:0%"></div></div>
-        <div class="cat-count" id="count-subquery">0 / 4問</div>
+        <div class="cat-count" id="count-subquery">0 / 3問</div>
+      </button>
+      <button class="cat-card" onclick="startGame('union')">
+        <div class="cat-icon">🔀</div>
+        <div class="cat-name">UNION</div>
+        <div class="cat-sub">UNION / UNION ALL</div>
+        <div class="cat-prog"><div class="cat-prog-fill" id="prog-union" style="background:#16a085; width:0%"></div></div>
+        <div class="cat-count" id="count-union">0 / 3問</div>
       </button>
       <button class="cat-card" onclick="startGame('window')">
         <div class="cat-icon">🪟</div>
@@ -418,8 +425,8 @@ var score = 0;
 var totalSolved = 0;
 
 // 各カテゴリの進捗（セッション中）
-var catProgress = { select:0, aggregate:0, join:0, case:0, subquery:0, window:0, dml:0 };
-var catTotal    = { select:5, aggregate:5, join:4, case:3, subquery:4, window:2, dml:5 };
+var catProgress = { select:0, aggregate:0, join:0, case:0, subquery:0, union:0, window:0, dml:0 };
+var catTotal    = { select:5, aggregate:5, join:4, case:3, subquery:3, union:3, window:2, dml:4 };
 
 // 多解モード：現在の問題で使ったアプローチを記録
 var usedApproachIdx = -1;
@@ -509,7 +516,7 @@ function switchTitleMode(mode) {
 }
 
 function updateCatProgress() {
-  var cats = ['select','aggregate','join','case','subquery','window','dml'];
+  var cats = ['select','aggregate','join','case','subquery','union','window','dml'];
   cats.forEach(function(cat) {
     var pct = catTotal[cat] > 0 ? Math.min(catProgress[cat] / catTotal[cat] * 100, 100) : 0;
     var bar = document.getElementById('prog-' + cat);
@@ -531,13 +538,13 @@ function startGame(mode) {
   var badge = document.getElementById('diffBadge');
   var labels = {
     select:'📌 基礎SELECT', aggregate:'📊 集計・GROUP BY', join:'🔗 JOIN',
-    case:'🔀 CASE式', subquery:'🪆 サブクエリ', window:'🪟 WINDOW関数', dml:'✏️ DML・その他',
+    case:'🔀 CASE式', subquery:'🪆 サブクエリ', union:'🔗 UNION', window:'🪟 WINDOW関数', dml:'✏️ DML・その他',
     multi_leftjoin:'🔀 多解：集客ゼロ施設', multi_highval:'🔀 多解：高額利用施設',
     multi_rank:'🔀 多解：売上順位', multi_monthly:'🔀 多解：月別集計'
   };
   var colors = {
     select:'#e67e22', aggregate:'#3498db', join:'#27ae60',
-    case:'#e74c3c', subquery:'#9b59b6', window:'#1abc9c', dml:'#f39c12',
+    case:'#e74c3c', subquery:'#9b59b6', union:'#16a085', window:'#1abc9c', dml:'#f39c12',
     multi_leftjoin:'#8e44ad', multi_highval:'#8e44ad', multi_rank:'#8e44ad', multi_monthly:'#8e44ad'
   };
   badge.textContent = labels[mode] || mode;
@@ -590,7 +597,12 @@ var quizBank = {
     { text:"1回の利用額が5000円以上の入館履歴がある施設の施設名を取得して（WHERE IN＋サブクエリ）。", answers:[["SELECT","name","FROM","facilities","WHERE","facility_id","IN","(","SELECT","facility_id","FROM","visitor_logs","WHERE","spent_amount",">","=","5000",")"]] },
     { text:"入館履歴が1件も存在しない施設名を取得して（NOT EXISTS使用）。", answers:[["SELECT","name","FROM","facilities","f","WHERE","NOT","EXISTS","(","SELECT","*","FROM","visitor_logs","v","WHERE","f",".","facility_id","=","v",".","facility_id",")"]] },
     { text:"利用額が10000円以上の入館履歴が存在する施設名を取得して（EXISTS使用）。", answers:[["SELECT","name","FROM","facilities","f","WHERE","EXISTS","(","SELECT","*","FROM","visitor_logs","v","WHERE","f",".","facility_id","=","v",".","facility_id","AND","spent_amount",">","=","10000",")"]] },
-    { text:"「施設」のIDと「入館履歴」の施設IDを重複なしで縦に繋げて出して（UNION使用）。", answers:[["SELECT","facility_id","FROM","facilities","UNION","SELECT","facility_id","FROM","visitor_logs"]] },
+  ],
+  // ── UNION ──
+  union: [
+    { text:"「施設」のfacility_idと「入館履歴」のfacility_idを重複なしで縦に繋げて出して（UNION使用）。", answers:[["SELECT","facility_id","FROM","facilities","UNION","SELECT","facility_id","FROM","visitor_logs"]] },
+    { text:"「施設」のfacility_idと「入館履歴」のfacility_idを重複も含めてすべて縦に繋げて出して（UNION ALL使用）。", answers:[["SELECT","facility_id","FROM","facilities","UNION","ALL","SELECT","facility_id","FROM","visitor_logs"]] },
+    { text:"施設名の一覧と、エリア名の一覧を縦に繋げてまとめて出して（UNION使用）。", answers:[["SELECT","name","FROM","facilities","UNION","SELECT","area_name","FROM","areas"]] },
   ],
   // ── WINDOW関数 ──
   window: [
