@@ -198,6 +198,31 @@
   .quick-btn:active { transform: scale(0.90); }
   .quick-btn.btn-newline { background: #007acc; border-color: #005a9e; }
 
+  .custom-input-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .custom-input {
+    flex: 1; min-width: 0; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06); color: #fff; font-family: 'Share Tech Mono', monospace; font-size: 13px;
+  }
+  .custom-input::placeholder { color: rgba(255,255,255,0.3); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; }
+  .custom-input:focus { outline: none; border-color: var(--hot-orange); background: rgba(255,255,255,0.1); }
+  .btn-custom-add {
+    flex-shrink: 0; padding: 8px 12px; border-radius: 6px; border: 1px solid #b7770d; background: #4a2f00;
+    color: #f8c471; font-weight: 700; font-size: 12px; cursor: pointer; white-space: nowrap;
+  }
+  .btn-custom-add:active { transform: scale(0.92); }
+
+  .self-check-banner {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;
+    background: #3d0d0d; border-top: 2px solid var(--wrong); color: #fff;
+    font-size: 11px; line-height: 1.6; padding: 10px 14px; max-height: 35vh; overflow-y: auto;
+    font-family: 'Share Tech Mono', monospace; box-shadow: 0 -4px 14px rgba(0,0,0,0.5);
+  }
+  .self-check-banner b { color: #ffce54; font-family: 'Zen Kaku Gothic New', sans-serif; }
+  .self-check-banner .close-banner {
+    float: right; cursor: pointer; background: none; border: none; color: #fff;
+    font-size: 16px; line-height: 1; padding: 0 4px;
+  }
+
   .warehouse-tabs { display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; }
   .tab-btn { flex: 1; padding: 8px 2px; font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); border-radius: 6px 6px 0 0; cursor: pointer; white-space: nowrap; text-align: center; transition: all 0.2s; border-bottom: none; }
   .tab-btn.active { background: var(--noren-red); color: #fff; border-color: #e74c3c; box-shadow: 0 -2px 8px rgba(192,57,43,0.3); }
@@ -399,8 +424,14 @@
           <button class="quick-btn" onclick="addPart(',', 'symbol')">,</button>
           <button class="quick-btn" onclick="addPart('(', 'symbol')">(</button>
           <button class="quick-btn" onclick="addPart(')', 'symbol')">)</button>
+          <button class="quick-btn" onclick="addPart('*', 'column')">*</button>
           <button class="quick-btn" onclick="addPart('=', 'operator')">=</button>
           <button class="quick-btn btn-newline" onclick="addPart('↵', 'newline')">↵</button>
+        </div>
+
+        <div class="custom-input-row" id="customInputRow">
+          <input type="text" id="customPartInput" class="custom-input" placeholder="✏️ ボタンにない文字をそのまま入力…" onkeydown="if(event.key==='Enter'){addCustomPart();}">
+          <button class="btn-custom-add" onclick="addCustomPart()">＋追加</button>
         </div>
 
         <div class="warehouse-tabs">
@@ -466,7 +497,64 @@ var masterParts = {
   ]
 };
 
-window.onload = function() { initBg(); initTabs(); updateCatProgress(); };
+window.onload = function() { initBg(); initTabs(); updateCatProgress(); validateQuizData(); };
+
+// ===================== 自己検査 =====================
+// answers / tokens に登場するすべてのトークンが、ボタン操作（masterParts + quickBar）
+// で実際に入力可能かを起動時に自動チェックする。バッククォート混入のような
+// 「答えに入力不可能な文字が含まれている」バグを今後自動検出するための仕組み。
+function validateQuizData() {
+  var available = {};
+  Object.keys(masterParts).forEach(function(tab) {
+    masterParts[tab].forEach(function(p) { available[p.l] = true; });
+  });
+  ['.', ',', '(', ')', '*', '=', '↵'].forEach(function(s) { available[s] = true; });
+
+  var problems = [];
+  function checkTokenList(tokens, where) {
+    tokens.forEach(function(t) {
+      if (/^\d+$/.test(t)) return; // 数字は0-9ボタンの組み合わせで作成可能
+      if (!available[t]) problems.push({ token: t, where: where });
+    });
+  }
+
+  Object.keys(quizBank).forEach(function(cat) {
+    quizBank[cat].forEach(function(q, qi) {
+      (q.answers || []).forEach(function(ans, ai) {
+        checkTokenList(ans, cat + '[' + qi + '].answers[' + ai + ']');
+      });
+    });
+  });
+  Object.keys(multiBank).forEach(function(mk) {
+    multiBank[mk].approaches.forEach(function(ap, ai) {
+      checkTokenList(ap.tokens, mk + '.approaches[' + ai + ']');
+    });
+  });
+
+  if (problems.length > 0) {
+    console.warn('⚠️ [自己検査] ボタンで入力できないトークンが answers/tokens に含まれています:', problems);
+    showSelfCheckWarning(problems);
+  } else {
+    console.log('✅ [自己検査] すべての正解トークンはボタン操作（またはクイック追加欄）で入力可能です。');
+  }
+}
+
+function showSelfCheckWarning(problems) {
+  var existing = document.getElementById('selfCheckBanner');
+  if (existing) existing.remove();
+  var banner = document.createElement('div');
+  banner.id = 'selfCheckBanner';
+  banner.className = 'self-check-banner';
+  var lines = problems.map(function(p) {
+    return '・「' + p.token + '」 — ' + p.where;
+  }).join('<br>');
+  banner.innerHTML =
+    '<button class="close-banner" onclick="document.getElementById(\'selfCheckBanner\').remove()">×</button>' +
+    '<b>⚠️ 自己検査: 入力不可能なトークンを検出</b><br>' +
+    '以下の正解データはボタン操作では再現できません（自由入力欄で文字を直接入力すれば一致させられます）：<br>' +
+    lines;
+  document.body.appendChild(banner);
+}
 
 function initBg() {
   try {
@@ -606,8 +694,8 @@ var quizBank = {
   ],
   // ── WINDOW関数 ──
   window: [
-    { text:"すべての入館履歴について、施設IDと利用額が多い順の順位を出して（RANK()OVER使用）。", answers:[["SELECT","facility_id",",","RANK","(",")","`OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"],["SELECT","facility_id",",","RANK","(",")","`OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
-    { text:"すべての入館履歴について、施設IDと利用額が多い順の順位を出して（RANK()OVER使用）。", answers:[["SELECT","facility_id",",","RANK","(",")","`OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
+    { text:"すべての入館履歴について、施設IDと利用額が多い順の順位を出して（RANK()OVER使用）。", answers:[["SELECT","facility_id",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"],["SELECT","facility_id",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
+    { text:"すべての入館履歴について、施設IDと利用額が多い順の順位を出して（RANK()OVER使用）。", answers:[["SELECT","facility_id",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
   ],
   // ── DML・その他 ──
   dml: [
@@ -647,7 +735,7 @@ var multiBank = {
       { label:"A: GROUP BY + ORDER BY", sql:"SELECT facility_id, SUM(spent_amount) FROM visitor_logs GROUP BY facility_id ORDER BY SUM(spent_amount) DESC",
         tokens:["SELECT","facility_id",",","SUM","(","spent_amount",")","FROM","visitor_logs","GROUP","BY","facility_id","ORDER","BY","SUM","(","spent_amount",")","DESC"] },
       { label:"B: RANK() OVER", sql:"SELECT facility_id, spent_amount, RANK() OVER (ORDER BY spent_amount DESC) FROM visitor_logs",
-        tokens:["SELECT","facility_id",",","spent_amount",",","RANK","(",")","`OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"] },
+        tokens:["SELECT","facility_id",",","spent_amount",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"] },
     ]
   },
   multi_monthly: {
@@ -662,13 +750,14 @@ var multiBank = {
 // ── WINDOW関数の answers を正しく直す ──
 quizBank.window = [
   { text:"すべての入館履歴について、施設IDと利用額が多い順の順位を出して（RANK() OVER使用）。",
-    answers:[["SELECT","facility_id",",","RANK","(",")","`OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
+    answers:[["SELECT","facility_id",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
   { text:"すべての入館履歴について、施設IDと利用額と、施設ID内での利用額順位を出して（RANK() OVER PARTITION BY使用）。",
-    answers:[["SELECT","facility_id",",","spent_amount",",","RANK","(",")","`OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
+    answers:[["SELECT","facility_id",",","spent_amount",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
 ];
 
-// OVER対応のため `OVER` キーワードのバッククォートを除去（表示用のみ）
-// 実際のトークン照合は normalizeTokens 内で対処
+// [修正済み] 以前はOVERトークンの先頭にバッククォートが誤って付与されており、
+// ボタンから入力できる "OVER" と一致しないため WINDOW関数の問題が正解不可能だった。
+// データを修正済み。下の validateQuizData() が今後同種のミスを自動検出する。
 
 var catQuizQueue = {};
 
@@ -713,6 +802,21 @@ function addPart(label, type) {
   built.push({label: label, type: type});
   renderBuild();
   document.getElementById('topPane').scrollTop = document.getElementById('topPane').scrollHeight;
+}
+
+// ボタンに無い文字・記号・キーワードもそのまま追加できる自由入力欄
+function addCustomPart() {
+  var input = document.getElementById('customPartInput');
+  var raw = input.value;
+  if (!raw || !raw.trim()) return;
+  var val = raw.trim();
+  // 数字だけ／キーワードらしき大文字英字だけ／それ以外で見た目の色分けを変える
+  var type = 'value';
+  if (/^[A-Z_]+$/.test(val)) type = 'keyword';
+  else if (/^\d+$/.test(val)) type = 'value';
+  addPart(val, type);
+  input.value = '';
+  input.focus();
 }
 
 function renderBuild() {
