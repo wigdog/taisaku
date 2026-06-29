@@ -84,6 +84,19 @@
   .mode-sw-btn.active { background: var(--noren-red); color: #fff; box-shadow: 0 2px 8px rgba(192,57,43,0.4); }
 
   .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+
+  .learning-map {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; text-align: left; width: 100%;
+  }
+  .lm-title { font-size: 12px; font-weight: 900; color: #fff; margin-bottom: 5px; }
+  .lm-desc { font-size: 10.5px; color: rgba(255,255,255,0.5); line-height: 1.55; margin-bottom: 9px; }
+  .lm-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; }
+  .lm-step {
+    font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 12px;
+    background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.85); white-space: nowrap;
+  }
+  .lm-arrow { font-size: 10px; color: rgba(255,255,255,0.3); padding: 0 1px; }
   .cat-card {
     background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
     border-radius: 10px; padding: 12px; cursor: pointer; text-align: left;
@@ -269,61 +282,75 @@
 
   <!-- 構文別パネル -->
   <div id="panelCat" class="diff-buttons" style="max-width:380px;">
+    <div class="learning-map" id="learningMap">
+      <div class="lm-title">📍 学習の流れ（このアプリで身につくこと）</div>
+      <div class="lm-desc">基本のSELECTから始めて、複数テーブルの結合、条件分岐、応用的な分析（サブクエリ・WINDOW関数）、データの変更操作まで、段階的に学べる構成になっています。</div>
+      <div class="lm-steps">
+        <span class="lm-step">① SELECT基本</span><span class="lm-arrow">→</span>
+        <span class="lm-step">② 集計</span><span class="lm-arrow">→</span>
+        <span class="lm-step">③ JOIN</span><span class="lm-arrow">→</span>
+        <span class="lm-step">④ CASE式</span><span class="lm-arrow">→</span>
+        <span class="lm-step">⑤ サブクエリ</span><span class="lm-arrow">→</span>
+        <span class="lm-step">⑥ UNION</span><span class="lm-arrow">→</span>
+        <span class="lm-step">⑦ WINDOW関数</span><span class="lm-arrow">→</span>
+        <span class="lm-step">⑧ DML・その他</span>
+      </div>
+    </div>
     <div class="cat-grid">
       <button class="cat-card" onclick="startGame('select')">
         <div class="cat-icon">📌</div>
         <div class="cat-name">基礎 SELECT</div>
-        <div class="cat-sub">WHERE / ORDER BY / DISTINCT</div>
+        <div class="cat-sub">条件に合う行・必要な列だけを取り出す、最も基本となる操作。</div>
         <div class="cat-prog"><div class="cat-prog-fill" id="prog-select" style="background:#e67e22; width:0%"></div></div>
         <div class="cat-count" id="count-select">0 / 5問</div>
       </button>
       <button class="cat-card" onclick="startGame('aggregate')">
         <div class="cat-icon">📊</div>
         <div class="cat-name">集計・GROUP BY</div>
-        <div class="cat-sub">COUNT / SUM / HAVING</div>
+        <div class="cat-sub">グループ単位で合計・件数・平均などを集計し、傾向をつかむ。</div>
         <div class="cat-prog"><div class="cat-prog-fill" id="prog-aggregate" style="background:#3498db; width:0%"></div></div>
         <div class="cat-count" id="count-aggregate">0 / 5問</div>
       </button>
       <button class="cat-card" onclick="startGame('join')">
         <div class="cat-icon">🔗</div>
         <div class="cat-name">JOIN</div>
-        <div class="cat-sub">INNER / LEFT / 自己結合</div>
+        <div class="cat-sub">複数のテーブルを繋ぎ合わせて、関連するデータを一緒に取り出す。</div>
         <div class="cat-prog"><div class="cat-prog-fill" id="prog-join" style="background:#27ae60; width:0%"></div></div>
         <div class="cat-count" id="count-join">0 / 4問</div>
       </button>
       <button class="cat-card" onclick="startGame('case')">
         <div class="cat-icon">🔀</div>
         <div class="cat-name">CASE 式</div>
-        <div class="cat-sub">SELECT内 / GROUP BY内</div>
+        <div class="cat-sub">条件によって値を分類・変換する、行ごとのif文のようなもの。</div>
         <div class="cat-prog"><div class="cat-prog-fill" id="prog-case" style="background:#e74c3c; width:0%"></div></div>
         <div class="cat-count" id="count-case">0 / 3問</div>
       </button>
       <button class="cat-card" onclick="startGame('subquery')">
         <div class="cat-icon">🪆</div>
         <div class="cat-name">サブクエリ</div>
-        <div class="cat-sub">IN / EXISTS / 相関</div>
+        <div class="cat-sub">クエリの中に別のクエリを埋め込んで、条件の絞り込みに使う。</div>
         <div class="cat-prog"><div class="cat-prog-fill" id="prog-subquery" style="background:#9b59b6; width:0%"></div></div>
         <div class="cat-count" id="count-subquery">0 / 3問</div>
       </button>
       <button class="cat-card" onclick="startGame('union')">
         <div class="cat-icon">🔀</div>
         <div class="cat-name">UNION</div>
-        <div class="cat-sub">UNION / UNION ALL</div>
+        <div class="cat-sub">形が同じ複数の結果を縦に繋げて、ひとつの一覧にまとめる。</div>
         <div class="cat-prog"><div class="cat-prog-fill" id="prog-union" style="background:#16a085; width:0%"></div></div>
         <div class="cat-count" id="count-union">0 / 3問</div>
       </button>
       <button class="cat-card" onclick="startGame('window')">
         <div class="cat-icon">🪟</div>
         <div class="cat-name">WINDOW 関数</div>
-        <div class="cat-sub">RANK / PARTITION BY</div>
+        <div class="cat-sub">行を保持したまま、グループ内の順位・累計・平均を計算する。</div>
         <div class="cat-prog"><div class="cat-prog-fill" id="prog-window" style="background:#1abc9c; width:0%"></div></div>
-        <div class="cat-count" id="count-window">0 / 2問</div>
+        <div class="cat-count" id="count-window">0 / 5問</div>
       </button>
     </div>
     <button class="cat-card cat-card-wide" onclick="startGame('dml')">
       <div class="cat-icon">✏️</div>
       <div class="cat-name">DML・その他</div>
-      <div class="cat-sub">INSERT / UPDATE / DELETE / UNION / COALESCE</div>
+      <div class="cat-sub">データの登録・更新・削除など、表の中身そのものを変更する。</div>
       <div class="cat-prog"><div class="cat-prog-fill" id="prog-dml" style="background:#f39c12; width:0%"></div></div>
       <div class="cat-count" id="count-dml">0 / 5問</div>
     </button>
@@ -457,7 +484,7 @@ var totalSolved = 0;
 
 // 各カテゴリの進捗（セッション中）
 var catProgress = { select:0, aggregate:0, join:0, case:0, subquery:0, union:0, window:0, dml:0 };
-var catTotal    = { select:5, aggregate:5, join:4, case:3, subquery:3, union:3, window:2, dml:4 };
+var catTotal    = { select:5, aggregate:5, join:4, case:3, subquery:3, union:3, window:5, dml:5 };
 
 // 多解モード：現在の問題で使ったアプローチを記録
 var usedApproachIdx = -1;
@@ -470,7 +497,7 @@ var masterParts = {
     {l:'ORDER', t:'keyword'}, {l:'ASC', t:'keyword'}, {l:'DESC', t:'keyword'},
     {l:'CASE', t:'keyword'}, {l:'WHEN', t:'keyword'}, {l:'THEN', t:'keyword'}, {l:'ELSE', t:'keyword'}, {l:'END', t:'keyword'},
     {l:'UNION', t:'syntax'}, {l:'ALL', t:'keyword'}, {l:'IN', t:'keyword'}, {l:'EXISTS', t:'keyword'}, {l:'NOT', t:'keyword'},
-    {l:'DISTINCT', t:'keyword'}, {l:'OVER', t:'keyword'},
+    {l:'DISTINCT', t:'keyword'}, {l:'OVER', t:'keyword'}, {l:'PARTITION', t:'keyword'},
     {l:'INSERT', t:'syntax'}, {l:'INTO', t:'syntax'}, {l:'VALUES', t:'syntax'},
     {l:'UPDATE', t:'syntax'}, {l:'SET', t:'syntax'}, {l:'DELETE', t:'syntax'},
     {l:'START', t:'keyword'}, {l:'TRANSACTION', t:'keyword'}, {l:'COMMIT', t:'keyword'}, {l:'ROLLBACK', t:'keyword'}
@@ -694,8 +721,16 @@ var quizBank = {
   ],
   // ── WINDOW関数 ──
   window: [
-    { text:"すべての入館履歴について、施設IDと利用額が多い順の順位を出して（RANK()OVER使用）。", answers:[["SELECT","facility_id",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"],["SELECT","facility_id",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
-    { text:"すべての入館履歴について、施設IDと利用額が多い順の順位を出して（RANK()OVER使用）。", answers:[["SELECT","facility_id",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
+    { text:"すべての入館履歴について、施設IDと利用額が多い順の順位を出して（RANK() OVER使用）。",
+      answers:[["SELECT","facility_id",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
+    { text:"すべての入館履歴について、施設IDと利用額と、施設ID内での利用額順位を出して（RANK() OVER PARTITION BY使用）。",
+      answers:[["SELECT","facility_id",",","spent_amount",",","RANK","(",")","OVER","(","PARTITION","BY","facility_id","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
+    { text:"施設IDごとに、入館日順での利用額の累計を出して（SUM() OVER PARTITION BY使用）。",
+      answers:[["SELECT","facility_id",",","visit_date",",","spent_amount",",","SUM","(","spent_amount",")","OVER","(","PARTITION","BY","facility_id","ORDER","BY","visit_date",")","FROM","visitor_logs"]] },
+    { text:"すべての入館履歴について、施設IDと利用額と、全体の平均利用額を一緒に出して（AVG() OVER使用・パーティションなし）。",
+      answers:[["SELECT","facility_id",",","spent_amount",",","AVG","(","spent_amount",")","OVER","(",")","FROM","visitor_logs"]] },
+    { text:"すべての入館履歴について、施設IDと利用額と、同じ施設の利用件数を一緒に出して（COUNT() OVER PARTITION BY使用）。",
+      answers:[["SELECT","facility_id",",","spent_amount",",","COUNT","(","*",")","OVER","(","PARTITION","BY","facility_id",")","FROM","visitor_logs"]] },
   ],
   // ── DML・その他 ──
   dml: [
@@ -747,17 +782,11 @@ var multiBank = {
   },
 };
 
-// ── WINDOW関数の answers を正しく直す ──
-quizBank.window = [
-  { text:"すべての入館履歴について、施設IDと利用額が多い順の順位を出して（RANK() OVER使用）。",
-    answers:[["SELECT","facility_id",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
-  { text:"すべての入館履歴について、施設IDと利用額と、施設ID内での利用額順位を出して（RANK() OVER PARTITION BY使用）。",
-    answers:[["SELECT","facility_id",",","spent_amount",",","RANK","(",")","OVER","(","ORDER","BY","spent_amount","DESC",")","FROM","visitor_logs"]] },
-];
-
-// [修正済み] 以前はOVERトークンの先頭にバッククォートが誤って付与されており、
-// ボタンから入力できる "OVER" と一致しないため WINDOW関数の問題が正解不可能だった。
-// データを修正済み。下の validateQuizData() が今後同種のミスを自動検出する。
+// [修正済み] 以前はWINDOW関数のOVERトークン先頭にバッククォートが誤って付与されており、
+// ボタンから入力できる "OVER" と一致しないため正解不可能だった（データ修正済み）。
+// また、2問目は問題文に「PARTITION BY使用」とあるのに模範解答にPARTITION BYが
+// 含まれていない不整合もあったため修正し、合わせて問題数を2問→5問に増やした。
+// 下の validateQuizData() が今後同種のミスを自動検出する。
 
 var catQuizQueue = {};
 
