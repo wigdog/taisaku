@@ -1,0 +1,3110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>統計検定2級 対策アプリ</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f0f4f8;--card:#fff;--accent:#1d4ed8;--accent2:#7c3aed;
+  --ok:#059669;--ng:#dc2626;--warn:#d97706;
+  --txt:#1e293b;--txt2:#64748b;--bdr:#e2e8f0;
+  --mono:'Courier New',monospace;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh}
+
+/* ===== LAYOUT ===== */
+.app{display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--accent);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.topbar-title{font-size:1rem;font-weight:700;flex:1}
+.topbar-btn{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;transition:.2s}
+.topbar-btn:hover{background:rgba(255,255,255,.35)}
+.main{flex:1;display:flex;gap:0}
+
+/* ===== L表パネル ===== */
+.ltable-panel{width:220px;background:#1e293b;color:#e2e8f0;padding:14px;overflow-y:auto;font-size:12px;flex-shrink:0;transition:.3s}
+.ltable-panel.hidden{width:0;padding:0;overflow:hidden}
+.ltable-title{color:#94a3b8;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;border-bottom:1px solid #334155;padding-bottom:6px}
+.lrow{padding:4px 0;border-bottom:1px solid #334155;line-height:1.5}
+.lrow:last-child{border:none}
+.lnum{color:#60a5fa;font-weight:700;font-family:var(--mono)}
+.lformula{color:#a5b4fc;font-family:var(--mono);font-size:11px;display:block;margin-top:2px}
+
+/* ===== CONTENT ===== */
+.content{flex:1;padding:20px;overflow-y:auto;max-width:820px}
+.screen{display:none;animation:fadeIn .25s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== TOP SCREEN ===== */
+.home-header{text-align:center;margin-bottom:28px}
+.home-header h1{font-size:1.6rem;font-weight:800;color:var(--accent);margin-bottom:4px}
+.home-header p{color:var(--txt2);font-size:.9rem}
+.unit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.unit-card{background:var(--card);border:2px solid var(--bdr);border-radius:12px;padding:16px;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
+.unit-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.unit-card.accent-blue{border-color:#bfdbfe}
+.unit-card.accent-blue:hover{border-color:var(--accent)}
+.unit-card.accent-purple{border-color:#ddd6fe}
+.unit-card.accent-purple:hover{border-color:var(--accent2)}
+.unit-card.accent-green{border-color:#a7f3d0}
+.unit-card.accent-green:hover{border-color:var(--ok)}
+.unit-card.accent-orange{border-color:#fde68a}
+.unit-card.accent-orange:hover{border-color:var(--warn)}
+.unit-card.accent-teal{border-color:#99f6e4}
+.unit-card.accent-teal:hover{border-color:#0d9488}
+.unit-icon{font-size:1.8rem;margin-bottom:6px}
+.unit-name{font-size:.95rem;font-weight:700;margin-bottom:4px}
+.unit-desc{font-size:.78rem;color:var(--txt2);line-height:1.4;margin-bottom:8px}
+.unit-progress{font-size:.75rem;font-weight:600}
+.unit-card.accent-blue .unit-progress{color:var(--accent)}
+.unit-card.accent-purple .unit-progress{color:var(--accent2)}
+.unit-card.accent-green .unit-progress{color:var(--ok)}
+.unit-card.accent-orange .unit-progress{color:var(--warn)}
+.unit-card.accent-teal .unit-progress{color:#0d9488}
+
+/* ===== QUIZ SCREEN ===== */
+.quiz-topbar{background:var(--card);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.quiz-unit-label{font-size:.85rem;font-weight:700;color:var(--accent)}
+.quiz-score{font-size:.9rem;color:var(--txt2)}
+.quiz-score .ok{color:var(--ok);font-weight:700}
+
+.qcard{background:var(--card);border-radius:12px;padding:22px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);border:1px solid var(--bdr)}
+.qtype-badge{display:inline-block;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}
+.qtype-calc{background:#eff6ff;color:#1d4ed8}
+.qtype-graph{background:#fef3c7;color:#92400e}
+.qtype-logic{background:#f0fdf4;color:#065f46}
+.qtype-stat{background:#faf5ff;color:#5b21b6}
+
+.qtext{font-size:1rem;line-height:1.7;margin-bottom:18px}
+
+/* シナリオボックス */
+.scenario{background:#f0f9ff;border-left:4px solid #0ea5e9;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:14px;font-size:.93rem;line-height:1.6}
+.scenario strong{color:#0369a1}
+
+/* グラフ問題のSVGコンテナ */
+.graph-container{background:#fafafa;border:1px solid var(--bdr);border-radius:8px;padding:12px;margin-bottom:14px;text-align:center;overflow-x:auto}
+.graph-container svg{max-width:100%;height:auto}
+
+/* 表 */
+.qtable{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:.88rem}
+.qtable th{background:#1e293b;color:#fff;padding:7px 10px;text-align:center;font-weight:500}
+.qtable td{border:1px solid var(--bdr);padding:6px 10px;text-align:center}
+.qtable tr:nth-child(even) td{background:#f8fafc}
+.qtable td:first-child{text-align:left;background:#f8fafc;font-weight:500}
+.mono-output{background:#f5f5f5;border:1px solid #e0e0e0;border-radius:6px;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.6;margin-bottom:12px;white-space:pre-wrap}
+.excel-table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:.88rem;background:#fff;min-width:600px}
+.excel-table th,.excel-table td{border:1px solid #d1d5db;padding:6px 10px;text-align:right;white-space:nowrap}
+.excel-table th{background:#f3f4f6;text-align:center;font-weight:500;color:#374151;border-bottom:2px solid #9ca3af}
+.excel-table td:first-child{text-align:left;background:#f9fafb}
+
+/* 選択肢 */
+.options{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.opt{background:var(--card);border:2px solid var(--bdr);border-radius:8px;padding:12px 16px;cursor:pointer;font-size:.9rem;line-height:1.5;transition:.15s;text-align:left}
+.opt:hover{border-color:#93c5fd;background:#f0f9ff}
+.opt.selected{border-color:var(--accent);background:#eff6ff}
+.opt.correct{border-color:var(--ok)!important;background:#f0fdf4!important}
+.opt.incorrect{border-color:var(--ng)!important;background:#fef2f2!important}
+
+/* 解説 */
+.explanation{border-radius:10px;padding:16px;margin-bottom:16px;line-height:1.7;font-size:.9rem}
+.explanation.ok{background:#f0fdf4;border:1px solid #6ee7b7}
+.explanation.ng{background:#fef2f2;border:1px solid #fca5a5}
+.exp-title{font-size:1rem;font-weight:700;margin-bottom:10px}
+.exp-steps{background:rgba(255,255,255,.7);border-radius:6px;padding:10px 12px;font-size:.88rem;line-height:1.8}
+.exp-steps .s{margin-bottom:4px}
+.exp-steps .s strong{color:#1d4ed8}
+
+/* 計算ヒント */
+.calc-hint{background:#fffbeb;border:1px dashed #f59e0b;border-radius:6px;padding:8px 12px;font-size:.83rem;margin-bottom:12px;color:#92400e}
+
+/* ボタン */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;border-radius:8px;border:none;cursor:pointer;font-size:.9rem;font-weight:600;transition:.2s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#1e40af}
+.btn-success{background:var(--ok);color:#fff}
+.btn-success:hover{background:#047857}
+.btn-ghost{background:var(--card);color:var(--txt2);border:1px solid var(--bdr)}
+.btn-ghost:hover{background:#f1f5f9}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="topbar">
+  <button class="topbar-btn" id="homeBtn" style="display:none" onclick="goHome()">← ホーム</button>
+  <div class="topbar-title">📊 統計検定2級 対策アプリ</div>
+  <button class="topbar-btn" id="ltableToggle" onclick="toggleLTable()">📋 L表</button>
+</div>
+
+<div class="main">
+<div class="ltable-panel" id="ltablePanel">
+  <div class="ltable-title">L表 早見</div>
+  <div class="lrow"><span class="lnum">L1 平均</span><span class="lformula">x̄ = Σx / n</span></div>
+  <div class="lrow"><span class="lnum">L2 偏差</span><span class="lformula">x - x̄ (Σ=0)</span></div>
+  <div class="lrow"><span class="lnum">L3 分散</span><span class="lformula">s²=Σ(L2²)/n<br>[不偏: /(n-1)]</span></div>
+  <div class="lrow"><span class="lnum">L4 標準偏差</span><span class="lformula">s = √L3</span></div>
+  <div class="lrow"><span class="lnum">L5 z得点</span><span class="lformula">z = L2 / L4</span></div>
+  <div class="lrow"><span class="lnum">L6 共分散</span><span class="lformula">積の平均-(L1x×L1y)</span></div>
+  <div class="lrow"><span class="lnum">L7 相関係数</span><span class="lformula">r = L6/(L4x×L4y)</span></div>
+  <div class="lrow"><span class="lnum">L8 標準誤差</span><span class="lformula">SE=L4/√n<br>[比率:√p(1-p)/n]</span></div>
+  <div class="lrow"><span class="lnum">L9 検定統計量</span><span class="lformula">z/t=(新－元)/L8</span></div>
+  <div class="lrow"><span class="lnum">L10 信頼区間</span><span class="lformula">L1 ± 係数×L8</span></div>
+  <div class="lrow"><span class="lnum">L11 決定係数</span><span class="lformula">R² = L7²</span></div>
+  <div class="lrow"><span class="lnum">L12 二項分布</span><span class="lformula">μ=np, σ²=np(1-p)</span></div>
+  <div class="lrow"><span class="lnum">L13 線形変換</span><span class="lformula">V[aX]=a²V[X]</span></div>
+  <div class="lrow"><span class="lnum">L14 変動係数</span><span class="lformula">CV = L4 / L1</span></div>
+  <div class="lrow"><span class="lnum">L15 ポアソン</span><span class="lformula">P(k)=λ^k·e^-λ/k!<br>μ=λ, σ²=λ</span></div>
+  <div class="lrow"><span class="lnum">L16 χ²統計量</span><span class="lformula">Σ(観-期)²/期</span></div>
+  <div class="lrow"><span class="lnum">L17 2標本SE(平均)</span><span class="lformula">Sp²=((n1-1)s1²+(n2-1)s2²)/(n1+n2-2)<br>SE=√(Sp²(1/n1+1/n2))</span></div>
+  <div class="lrow"><span class="lnum">L18 2標本SE(比率)</span><span class="lformula">SE=√(p̂1(1-p̂1)/n1+p̂2(1-p̂2)/n2)<br>検定:p̂pool=(x1+x2)/(n1+n2)</span></div>
+  <div class="lrow"><span class="lnum">L19 F検定(等分散)</span><span class="lformula">F=s1²/s2²(大/小)<br>df=(n1-1,n2-1)</span></div>
+  <div class="lrow"><span class="lnum">L20 自由度ルール</span><span class="lformula">適合度: k-1(ポアソン:k-2)<br>独立性: (r-1)(c-1)<br>2標本t: n1+n2-2</span></div>
+</div>
+
+<div class="content">
+
+<div class="screen active" id="screenHome">
+  <div class="home-header">
+    <h1>統計検定2級 対策アプリ</h1>
+    <p>過去問パターン準拠 ・ 得点源5ユニット構成</p>
+  </div>
+  <div class="unit-grid">
+    <div class="unit-card accent-blue" onclick="startUnit('graph')">
+      <div class="unit-icon">📊</div>
+      <div class="unit-name">グラフ・図の読み取り</div>
+      <div class="unit-desc">箱ひげ図・ヒストグラム・散布図・コレログラムをSVGで表示。目で見て判断する過去問定番形式</div>
+      <div class="unit-progress">正解: <span id="prog-graph">0</span>問</div>
+    </div>
+    <div class="unit-card accent-purple" onclick="startUnit('prob')">
+      <div class="unit-icon">🎲</div>
+      <div class="unit-name">確率・確率分布</div>
+      <div class="unit-desc">条件付き確率・ベイズの定理・二項分布・正規分布・ポアソン分布。L12〜L15を使って解く</div>
+      <div class="unit-progress">正解: <span id="prog-prob">0</span>問</div>
+    </div>
+    <div class="unit-card accent-green" onclick="startUnit('infer')">
+      <div class="unit-icon">📐</div>
+      <div class="unit-name">推定・検定（本丸）</div>
+      <div class="unit-desc">L8〜L10が軸。信頼区間の計算・サンプルサイズ設計・手法判別・統計量算出と棄却判定まで一気通貫</div>
+      <div class="unit-progress">正解: <span id="prog-infer">0</span>問</div>
+    </div>
+    <div class="unit-card accent-orange" onclick="startUnit('reg')">
+      <div class="unit-icon">📈</div>
+      <div class="unit-name">回帰分析（R出力読み取り）</div>
+      <div class="unit-desc">単回帰・重回帰のR出力を読んで係数の解釈・有意性・決定係数を判断。第5章の検定済み問題群</div>
+      <div class="unit-progress">正解: <span id="prog-reg">0</span>問</div>
+    </div>
+    <div class="unit-card accent-teal" onclick="startUnit('desc')">
+      <div class="unit-icon">🔢</div>
+      <div class="unit-name">記述統計・データ収集</div>
+      <div class="unit-desc">L1〜L7・z得点・標本抽出法・分散分析表読み取り・ラスパイレス/パーシェ指数。正誤判断形式も含む</div>
+      <div class="unit-progress">正解: <span id="prog-desc">0</span>問</div>
+    </div>
+  </div>
+  <p style="text-align:center;font-size:.8rem;color:var(--txt2)">左の「L表」ボタンでチートシートを常時表示できます</p>
+</div>
+
+<div class="screen" id="screenQuiz">
+  <div class="quiz-topbar">
+    <div class="quiz-unit-label" id="quizUnitLabel"></div>
+    <div class="quiz-score">正解 <span class="ok" id="qCorrect">0</span> / <span id="qTotal">0</span>問</div>
+  </div>
+  <div class="qcard">
+    <div id="qBadge" class="qtype-badge"></div>
+    <div class="qtext" id="qText"></div>
+    <div class="options" id="qOptions"></div>
+    <div id="qExp"></div>
+    <div class="btn-group" id="qBtns">
+      <button class="btn btn-primary" id="submitBtn" onclick="submitAnswer()">答え合わせ</button>
+    </div>
+  </div>
+</div>
+
+</div></div></div><script>
+// ===================================================
+// STATE (★ 推定・検定のステップ管理変数を追加)
+// ===================================================
+let state = {
+  unit: null,
+  correct: 0,
+  total: 0,
+  answered: false,
+  selectedIdx: null,
+  question: null,
+  inferStep: 1,
+  inferScenarioData: null,
+  inferTotalSteps: 5
+};
+const UNIT_LABELS = {
+  graph:'📊 グラフ読み取り', prob:'🎲 確率・確率分布',
+  infer:'📐 推定・検定 (実践ステップ型)', reg:'📈 回帰分析', desc:'🔢 記述統計・データ収集'
+};
+
+function goHome(){
+  document.getElementById('screenHome').classList.add('active');
+  document.getElementById('screenQuiz').classList.remove('active');
+  document.getElementById('homeBtn').style.display='none';
+  loadProgress();
+}
+function startUnit(unit){
+  state = {unit, correct:0, total:0, answered:false, selectedIdx:null, question:null, inferStep:1, inferScenarioData:null, inferTotalSteps:5};
+  document.getElementById('screenHome').classList.remove('active');
+  document.getElementById('screenQuiz').classList.add('active');
+  document.getElementById('homeBtn').style.display='';
+  document.getElementById('quizUnitLabel').textContent = UNIT_LABELS[unit];
+  nextQuestion();
+}
+function toggleLTable(){
+  document.getElementById('ltablePanel').classList.toggle('hidden');
+}
+function loadProgress(){
+  ['graph','prob','infer','reg','desc'].forEach(u=>{
+    const el=document.getElementById('prog-'+u);
+    if(el) el.textContent=localStorage.getItem('prog_'+u)||0;
+  });
+}
+function saveProgress(){
+  const key='prog_'+state.unit;
+  const v=parseInt(localStorage.getItem(key)||0)+1;
+  localStorage.setItem(key,v);
+}
+function updateStats(){
+  document.getElementById('qCorrect').textContent=state.correct;
+  document.getElementById('qTotal').textContent=state.total;
+}
+
+// ===================================================
+// QUIZ ENGINE (★ 次のステップへの遷移対応)
+// ===================================================
+function nextQuestion(){
+  // 推定・検定ユニットで最終ステップを超えた場合は、次のシナリオへ
+  if (state.unit === 'infer' && state.inferStep > state.inferTotalSteps) {
+      state.inferStep = 1;
+      state.inferScenarioData = null;
+  }
+  
+  state.answered=false; state.selectedIdx=null; state.total++;
+  const generators = {graph:genGraph, prob:genProb, infer:genInfer, reg:genReg, desc:genDesc};
+  state.question = generators[state.unit]();
+  const q = state.question;
+  document.getElementById('qBadge').className='qtype-badge '+q.badgeClass;
+  document.getElementById('qBadge').textContent=q.badgeText;
+  document.getElementById('qText').innerHTML=q.q;
+  document.getElementById('qOptions').innerHTML=q.opts.map((o,i)=>
+    `<button class="opt" onclick="selectOpt(${i})">${o}</button>`).join('');
+  document.getElementById('qExp').innerHTML='';
+  document.getElementById('qBtns').innerHTML=
+    `<button class="btn btn-primary" onclick="submitAnswer()">答え合わせ</button>`;
+  updateStats();
+}
+function selectOpt(i){
+  if(state.answered) return;
+  state.selectedIdx=i;
+  document.querySelectorAll('.opt').forEach((b,j)=>b.classList.toggle('selected',j===i));
+}
+function submitAnswer(){
+  if(state.selectedIdx===null){alert('選択肢を選んでください');return;}
+  state.answered=true;
+  const isOk = state.selectedIdx===state.question.ansIndex;
+  if(isOk){state.correct++;saveProgress();}
+  document.querySelectorAll('.opt').forEach((b,j)=>{
+    if(j===state.question.ansIndex) b.classList.add('correct');
+    else if(j===state.selectedIdx && !isOk) b.classList.add('incorrect');
+  });
+
+  // ボタンのテキストと解説のタイトルを動的に変更
+  let nextText = "次の問題 →";
+  let expTitle = isOk ? '✅ 正解！' : '❌ 不正解...';
+
+  if (state.unit === 'infer') {
+      if (state.inferStep < state.inferTotalSteps) {
+          nextText = "次のステップへ進む →";
+      }
+      if (!isOk) {
+          expTitle = '❌ 不正解...（正解ルートへ進みます）';
+      }
+  }
+
+  document.getElementById('qExp').innerHTML=`<div class="explanation ${isOk?'ok':'ng'}">
+      <div class="exp-title">${expTitle}</div>
+      <div class="exp-steps">${state.question.exp}</div>
+    </div>`;
+    
+  document.getElementById('qBtns').innerHTML=
+    `<button class="btn btn-success" onclick="nextQuestion()">${nextText}</button>
+     <button class="btn btn-ghost" onclick="goHome()">ホームへ</button>`;
+     
+  // 回答後に次のステップ数を進めておく
+  if (state.unit === 'infer') {
+      state.inferStep++;
+  }
+  updateStats();
+}
+
+// ===================================================
+// HELPERS
+// ===================================================
+function shuffle(arr){return arr.slice().sort(()=>Math.random()-.5)}
+function makeOpts(correct, wrongs){
+  // correctと完全一致するwrongを除外（重複バグの根本対策）
+  const safeWrongs = wrongs.filter(w => w !== correct);
+  // 5択対応: wrongs が4つ以上あれば5択、なければ4択にフォールバック
+  const take = safeWrongs.length >= 4 ? 4 : 3;
+  const all = [correct, ...safeWrongs.slice(0, take)];
+  const shuffled = shuffle(all);
+  return {opts: shuffled, ansIndex: shuffled.indexOf(correct)};
+}
+function rnd(min,max,dec=1){return parseFloat((Math.random()*(max-min)+min).toFixed(dec))}
+function rndInt(min,max){return Math.floor(Math.random()*(max-min+1))+min}
+
+
+// ===================================================
+// UNIT: 推定・検定 (★ 完全新規: 5/4ステップハイブリッド型)
+// ===================================================
+function generateInferScenario() {
+  // 0-2: 既存シナリオ, 3-10: Tier S新規, 11-14: Tier A適合度検定
+  const typeRnd = rndInt(0, 14);
+  let scenarioHTML = "";
+  let steps = [];
+  let totalSteps = 5;
+
+  if (typeRnd === 0) {
+    // 【シナリオ①】1母平均の推定・検定（小標本/t検定）
+    const n = [16, 20, 25][rndInt(0, 2)];
+    const df = n - 1;
+    const tCritMap = {15: 2.131, 19: 2.093, 24: 2.064};
+    const tCrit = tCritMap[df];
+    const mean = rnd(-3.5, -1.5, 1);
+    const sd = rnd(2.5, 4.5, 1);
+    const se = sd / Math.sqrt(n);
+    const tVal = mean / se;
+    const isReject = Math.abs(tVal) > tCrit;
+
+    scenarioHTML = `<div class="scenario"><strong>【シナリオ：対応のあるt検定】</strong><br>あるダイエット薬を${n}人に投与したところ、投与前後の体重差の平均は ${mean} kg、不偏標準偏差は ${sd} kg だった。<br>この薬の効果を検証したい（有意水準5%の両側検定）。</div>`;
+
+    steps.push({
+      stepLabel: "STEP 1 ｜ 仮説を立てる",
+      qText: "この検定の帰無仮説 H₀ として正しいものはどれか？",
+      correct: "投与前後の体重差の母平均は 0 である",
+      wrongs: ["投与前後の体重差の母平均は負である", "薬の効果は統計的に有意である", `標本平均が ${mean} であること`],
+      exp: "<strong>解説:</strong> 帰無仮説（H₀）は「差がない」「効果がない」という状態を仮定します。したがって、「体重差の母平均が0である」が正解です。"
+    });
+
+    steps.push({
+      stepLabel: "STEP 2 ｜ 棄却域を決める",
+      qText: "有意水準5%の両側検定で使う棄却限界値はどれか？",
+      correct: `t₀.₀₂₅(${df}) ≈ ${tCrit}`,
+      wrongs: [`Z = 1.96`, `t₀.₀₅(${df}) ≈ ${(tCrit - 0.35).toFixed(3)}`, `χ²(${df})`],
+      exp: `<strong>解説:</strong> 母分散が未知で不偏標準偏差を用いるため、自由度 ${df} のt分布を使います。両側5%なので、片側2.5%（0.025）の点を見ます。棄却限界値は <strong>${tCrit}</strong> です。`
+    });
+
+    const wrongT1 = (mean / sd).toFixed(3);
+    const wrongSe = (sd / n).toFixed(4);
+    const wrongT3 = (mean / (sd/n)).toFixed(3);
+
+    steps.push({
+      stepLabel: "STEP 3 ｜ 検定統計量を計算する",
+      qText: "標準誤差(SE)と検定統計量(t値)の組み合わせとして正しいものはどれか？",
+      correct: `SE = ${se.toFixed(4)}、t = ${tVal.toFixed(3)}`,
+      wrongs: [
+        `SE = ${sd.toFixed(4)}、t = ${wrongT1}`,
+        `SE = ${se.toFixed(4)}、t = ${Math.abs(tVal).toFixed(3)}`,
+        `SE = ${wrongSe}、t = ${wrongT3}`
+      ],
+      exp: `<strong>解説:</strong><br>・標準誤差(SE) = s / √n = ${sd} / √${n} ≈ ${se.toFixed(4)}<br>・t値 = (標本平均 - 帰無仮説の平均) / SE = (${mean} - 0) / ${se.toFixed(4)} ≈ ${tVal.toFixed(3)}`
+    });
+
+    steps.push({
+      stepLabel: "STEP 4 ｜ 判定する",
+      qText: `算出された |t| = ${Math.abs(tVal).toFixed(3)} と、棄却限界値 ${tCrit} を比べた結論として正しいものはどれか？`,
+      correct: isReject 
+        ? `|t| > ${tCrit} なので帰無仮説を棄却。薬に有意な効果がある。` 
+        : `|t| < ${tCrit} なので帰無仮説を棄却できない。薬に効果があるとは言えない。`,
+      wrongs: isReject
+        ? [`|t| < ${tCrit} なので帰無仮説を棄却できない。`, `t < 0 なので片側で判断すべき`, `p値を別途計算しないと判定できない`]
+        : [`|t| > ${tCrit} なので帰無仮説を棄却。薬に有意な効果がある。`, `t < 0 なので片側で判断すべき`, `p値を別途計算しないと判定できない`],
+      exp: `<strong>解説:</strong> 判定ルール：|t| > 棄却限界値 ならば帰無仮説 H₀ を棄却します。今回は ${Math.abs(tVal).toFixed(3)} ${isReject?'>':'<'} ${tCrit} のため、${isReject?'棄却されます':'棄却できません'}。`
+    });
+
+    const lower = mean - tCrit * se;
+    const upper = mean + tCrit * se;
+    steps.push({
+      stepLabel: "STEP 5 ｜ 信頼区間を求める",
+      qText: "このデータから得られる、体重差の母平均の「95%信頼区間」として正しいものはどれか？",
+      correct: `[${lower.toFixed(2)}, ${upper.toFixed(2)}]`,
+      wrongs: [
+        `[${(mean - 1.96 * se).toFixed(2)}, ${(mean + 1.96 * se).toFixed(2)}]`,
+        `[${lower.toFixed(2)}, ${Math.abs(upper).toFixed(2)}]`,
+        `[${(mean - tCrit * sd).toFixed(2)}, ${(mean + tCrit * sd).toFixed(2)}]`
+      ],
+      exp: `<strong>解説:</strong> 信頼区間は <strong>[標本平均 ± 棄却限界値 × 標準誤差]</strong> で計算できます。<br>${mean} ± (${tCrit} × ${se.toFixed(4)}) = [${lower.toFixed(2)}, ${upper.toFixed(2)}] となります。<br><strong>※ 信頼区間が 0 を跨が${isReject?'ないため「効果あり」':'ぐため「効果なし」'}というSTEP 4の結論と完全に一致します！</strong>`
+    });
+    
+  } else if (typeRnd === 1) {
+    // 【シナリオ②】1母平均の推定・検定（大標本/Z検定）
+    const n = 100;
+    const mean = rnd(500, 520, 1);
+    const sd = rnd(15, 25, 1);
+    const se = sd / 10;
+    const mu0 = 505; 
+    const zCrit = 1.96;
+    const zVal = (mean - mu0) / se;
+    const isReject = Math.abs(zVal) > zCrit;
+
+    scenarioHTML = `<div class="scenario"><strong>【シナリオ：大標本のZ検定】</strong><br>ある工場で製造される部品の重さは、従来平均 ${mu0} g であった。<br>新しい製造ラインから ${n} 個を抽出したところ、平均 ${mean} g、標準偏差 ${sd} g だった。新しいラインの重さは従来と異なるか、有意水準5%で検定したい。</div>`;
+
+    steps.push({
+      stepLabel: "STEP 1 ｜ 仮説を立てる",
+      qText: "この検定の帰無仮説 H₀ として正しいものはどれか？",
+      correct: `新しいラインの母平均は ${mu0} である`,
+      wrongs: [`新しいラインの母平均は ${mean} である`, `従来との差が統計的に有意である`, `新しいラインの母平均は ${mu0} ではない`],
+      exp: `<strong>解説:</strong> 帰無仮説は「変化がない」「従来通りである」と設定します。対立仮説が「${mu0} ではない」になります。`
+    });
+
+    steps.push({
+      stepLabel: "STEP 2 ｜ 棄却域を決める",
+      qText: "大標本（n=100）であるため正規分布で近似する。有意水準5%両側検定の棄却限界値はどれか？",
+      correct: `Z₀.₀₂₅ = 1.96`,
+      wrongs: [`Z₀.₀₅ = 1.64`, `t₀.₀₂₅(99) = 1.984`, `χ²(99) = 128.4`],
+      exp: `<strong>解説:</strong> 大標本（n≧30）の場合、中心極限定理により正規分布で近似できます。両側5%のZ値は <strong>1.96</strong> です（2級最頻出）。`
+    });
+
+    steps.push({
+      stepLabel: "STEP 3 ｜ 検定統計量を計算する",
+      qText: "標準誤差(SE)と検定統計量(Z値)の組み合わせとして正しいものはどれか？",
+      correct: `SE = ${se.toFixed(2)}、Z = ${zVal.toFixed(3)}`,
+      wrongs: [
+        `SE = ${sd.toFixed(2)}、Z = ${((mean - mu0)/sd).toFixed(3)}`,
+        `SE = ${se.toFixed(2)}、Z = ${((mean - 0)/se).toFixed(3)}`,
+        `SE = ${(sd/100).toFixed(4)}、Z = ${((mean - mu0)/(sd/100)).toFixed(3)}`
+      ],
+      exp: `<strong>解説:</strong><br>・標準誤差(SE) = s / √n = ${sd} / 10 = ${se.toFixed(2)}<br>・Z値 = (標本平均 - 帰無仮説の平均) / SE = (${mean} - ${mu0}) / ${se.toFixed(2)} = ${zVal.toFixed(3)}`
+    });
+
+    steps.push({
+      stepLabel: "STEP 4 ｜ 判定する",
+      qText: `|Z| = ${Math.abs(zVal).toFixed(3)} と、棄却限界値 1.96 を比べた結論として正しいものはどれか？`,
+      correct: isReject 
+        ? `|Z| > 1.96 なので帰無仮説を棄却。重さは従来と異なると言える。` 
+        : `|Z| < 1.96 なので帰無仮説を棄却できない。重さが従来と異なるとは言えない。`,
+      wrongs: isReject
+        ? [`|Z| < 1.96 なので帰無仮説を棄却できない。`, `Z > 0 なので片側検定で判断すべき`, `p値が0.05より大きいため棄却されない`]
+        : [`|Z| > 1.96 なので帰無仮説を棄却。重さは従来と異なると言える。`, `Z > 0 なので片側検定で判断すべき`, `p値が0.05より小さいため棄却される`],
+      exp: `<strong>解説:</strong> |Z| と 1.96 を比較します。今回は ${Math.abs(zVal).toFixed(3)} ${isReject?'>':'<'} 1.96 なので、帰無仮説は${isReject?'棄却されます':'棄却できません'}。`
+    });
+
+    const lower = mean - zCrit * se;
+    const upper = mean + zCrit * se;
+    steps.push({
+      stepLabel: "STEP 5 ｜ 信頼区間を求める",
+      qText: "このデータから得られる、新しいラインの母平均の「95%信頼区間」として正しいものはどれか？",
+      correct: `[${lower.toFixed(2)}, ${upper.toFixed(2)}]`,
+      wrongs: [
+        `[${(mean - 1.64 * se).toFixed(2)}, ${(mean + 1.64 * se).toFixed(2)}]`,
+        `[${(mu0 - zCrit * se).toFixed(2)}, ${(mu0 + zCrit * se).toFixed(2)}]`,
+        `[${(mean - zCrit * sd).toFixed(2)}, ${(mean + zCrit * sd).toFixed(2)}]`
+      ],
+      exp: `<strong>解説:</strong> 信頼区間 = <strong>[標本平均 ± 1.96 × 標準誤差]</strong><br>${mean} ± (1.96 × ${se.toFixed(2)}) = [${lower.toFixed(2)}, ${upper.toFixed(2)}]<br><strong>※ 信頼区間が従来の平均 ${mu0} を含んでい${isReject?'ないため「異なる」':'るため「異なるとは言えない」'}というSTEP 4の結論と完全に一致します！</strong>`
+    });
+    
+  } else if (typeRnd === 2) {
+    // 【シナリオ③】カイ二乗検定（クロス表）＝独立性検定 - 4 STEP
+    totalSteps = 4;
+    const a = rndInt(15, 30), b = rndInt(10, 25);
+    const c = rndInt(10, 20), d = rndInt(20, 35);
+    const r1 = a + b, r2 = c + d;
+    const c1 = a + c, c2 = b + d;
+    const N = r1 + r2;
+    
+    const tableHTML = `<table class="qtable" style="max-width:240px;margin:0 auto 12px;background:#fff;">
+      <tr style="background:#f8fafc"><th></th><th>A型</th><th>B型</th><th>計</th></tr>
+      <tr><td><strong>男性</strong></td><td>${a}</td><td>${b}</td><td style="background:#f1f5f9">${r1}</td></tr>
+      <tr><td><strong>女性</strong></td><td>${c}</td><td>${d}</td><td style="background:#f1f5f9">${r2}</td></tr>
+      <tr style="background:#f1f5f9"><td><strong>計</strong></td><td>${c1}</td><td>${c2}</td><td><strong>${N}</strong></td></tr>
+    </table>`;
+
+    scenarioHTML = `<div class="scenario"><strong>【シナリオ：独立性のカイ二乗検定】</strong><br>性別と特定の血液型の割合に関連があるかを調べるため、${N}人を対象に調査を行い、以下のクロス集計表を得た。<br>有意水準5%で独立性の検定を行いたい。<br>${tableHTML}</div>`;
+
+    steps.push({
+      stepLabel: "STEP 1 ｜ 仮説を立てる",
+      qText: "この独立性の検定の帰無仮説 H₀ として正しいものはどれか？",
+      correct: `性別と血液型は独立である`,
+      wrongs: [`性別と血液型には関連がある`, `男性のA型の割合は女性より多い`, `性別と血液型は独立ではない`],
+      exp: `<strong>解説:</strong> 独立性の検定における帰無仮説は、常に「2つの変数間に<strong>関連がない（独立である）</strong>」と設定します。`
+    });
+
+    const df = (2 - 1) * (2 - 1); // = 1
+    const chiCrit = 3.84; // 自由度1, 5%
+
+    steps.push({
+      stepLabel: "STEP 2 ｜ 棄却域を決める",
+      qText: "この分割表の自由度と、有意水準5%の棄却限界値の組み合わせとして正しいものはどれか？（※自由度1の5%点は3.84、自由度2は5.99、自由度3は7.81）",
+      correct: `自由度 1、棄却限界値 3.84`,
+      wrongs: [`自由度 4、棄却限界値 9.49`, `自由度 2、棄却限界値 5.99`, `自由度 3、棄却限界値 7.81`],
+      exp: `<strong>解説:</strong> 分割表の自由度は <strong>(行数 - 1) × (列数 - 1)</strong> で求めます。<br>(2 - 1) × (2 - 1) = <strong>1</strong> となります。自由度1の棄却限界値は 3.84 です。`
+    });
+
+    const e11 = (r1 * c1) / N;
+    const e12 = (r1 * c2) / N;
+    const e21 = (r2 * c1) / N;
+    const e22 = (r2 * c2) / N;
+    const chiVal = Math.pow(a - e11, 2)/e11 + Math.pow(b - e12, 2)/e12 + Math.pow(c - e21, 2)/e21 + Math.pow(d - e22, 2)/e22;
+    const isReject = chiVal > chiCrit;
+
+    steps.push({
+      stepLabel: "STEP 3 ｜ 検定統計量を計算する",
+      qText: "セル(男性, A型)の「期待度数」と、算出される「χ²値」の組み合わせとして最も近いものはどれか？",
+      correct: `期待度数 ≈ ${e11.toFixed(1)}、χ² ≈ ${chiVal.toFixed(2)}`,
+      wrongs: [
+        `期待度数 ≈ ${a.toFixed(1)}、χ² ≈ ${chiVal.toFixed(2)}`,
+        `期待度数 ≈ ${e11.toFixed(1)}、χ² ≈ ${(chiVal/2).toFixed(2)}`,
+        `期待度数 ≈ ${((r1+c1)/2).toFixed(1)}、χ² ≈ ${chiVal.toFixed(2)}`
+      ],
+      exp: `<strong>解説:</strong><br>・期待度数 = (行合計 × 列合計) / 全体合計 = (${r1} × ${c1}) / ${N} = ${e11.toFixed(1)}<br>・χ²値は全セルで Σ(観測 - 期待)² / 期待 を計算し合算したもので、今回は ${chiVal.toFixed(2)} となります。`
+    });
+
+    steps.push({
+      stepLabel: "STEP 4 ｜ 判定する",
+      qText: `算出された χ² = ${chiVal.toFixed(2)} と、棄却限界値 3.84 を比べた結論として正しいものはどれか？`,
+      correct: isReject 
+        ? `χ² > 3.84 なので帰無仮説を棄却。性別と血液型には関連があると言える。` 
+        : `χ² < 3.84 なので帰無仮説を棄却できない。関連があるとは言えない。`,
+      wrongs: isReject
+        ? [`χ² < 3.84 なので帰無仮説を棄却できない。`, `関連の強さを計算しないと判定できない`, `χ²分布は片側のみなので判定を保留する`]
+        : [`χ² > 3.84 なので帰無仮説を棄却。性別と血液型には関連があると言える。`, `関連の強さを計算しないと判定できない`, `χ²分布は片側のみなので判定を保留する`],
+      exp: `<strong>解説:</strong> 判定ルール：χ²値 > 棄却限界値 ならば帰無仮説（独立である）を棄却します。<br>今回は ${chiVal.toFixed(2)} ${isReject?'>':'<'} 3.84 のため、${isReject?'棄却され、「関連がある」':'棄却できず、「関連がない」'}という結論になります。`
+    });
+
+  // ================================================================
+  // 【Tier S: シナリオ④】2標本t検定（等分散仮定・プールした分散）
+  // ================================================================
+  } else if (typeRnd === 3) {
+    totalSteps = 5;
+    const ctxList3 = [
+      { scene:'ある農場で新旧2種類の肥料を別々の区画に投与し、収穫量を比較する実験を行った。', unit:'kg', thing:'収穫量', g1:'新肥料', g2:'旧肥料' },
+      { scene:'同じ研修プログラムをオンラインと対面で実施し、修了後のテスト成績を比較した。', unit:'点', thing:'テスト成績', g1:'オンライン', g2:'対面' },
+      { scene:'工場の新旧2ラインで製造した部品の強度を測定し、平均に差があるか検証したい。', unit:'MPa', thing:'引張強度', g1:'新ライン', g2:'旧ライン' },
+    ];
+    const ctx3 = ctxList3[rndInt(0,2)];
+    const n1_3 = [10,12,15][rndInt(0,2)], n2_3 = [10,12,15][rndInt(0,2)];
+    const df3 = n1_3 + n2_3 - 2;
+    const tCritMap3 = {18:2.101,20:2.086,22:2.074,24:2.064,26:2.056,28:2.048};
+    const tCrit3 = tCritMap3[df3] || 2.086;
+    const mean1_3 = rnd(50,65,1), mean2_3 = rnd(45,58,1);
+    const sd1_3 = rnd(4,8,1), sd2_3 = rnd(4,8,1);
+    const sp2_3 = ((n1_3-1)*sd1_3*sd1_3 + (n2_3-1)*sd2_3*sd2_3) / df3;
+    const se3 = Math.sqrt(sp2_3*(1/n1_3 + 1/n2_3));
+    const tVal3 = (mean1_3 - mean2_3) / se3;
+    const isReject3 = Math.abs(tVal3) > tCrit3;
+    const diff3 = mean1_3 - mean2_3;
+    const seWelch3 = Math.sqrt(sd1_3*sd1_3/n1_3 + sd2_3*sd2_3/n2_3);
+    const tWelch3 = (diff3/seWelch3).toFixed(3);
+    const seSimple3 = Math.sqrt((sd1_3*sd1_3+sd2_3*sd2_3)/2*(1/n1_3+1/n2_3));
+    const tSimple3 = (diff3/seSimple3).toFixed(3);
+    const seBad3 = Math.sqrt(sp2_3/n1_3 + sp2_3/n2_3);
+    const tBad3 = (diff3/seBad3).toFixed(3);
+    scenarioHTML = `<div class="scenario"><strong>【2標本の平均比較（等分散検定）】</strong><br>${ctx3.scene}<br>${ctx3.g1}：n₁=${n1_3}、x̄₁=${mean1_3} ${ctx3.unit}、s₁=${sd1_3}<br>${ctx3.g2}：n₂=${n2_3}、x̄₂=${mean2_3} ${ctx3.unit}、s₂=${sd2_3}<br>2群の母分散は等しいと仮定し、有意水準5%の両側検定を行いたい。</div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ 手法を選ぶ",
+      qText:`2群の独立した標本で、正規母集団・母分散未知・等分散が仮定できる小標本のとき、用いるべき検定統計量はどれか？`,
+      correct:`プールした分散 Sp² を使った2標本t統計量`,
+      wrongs:[
+        `Welchのt統計量を使った2標本検定`,
+        `Z統計量で近似する`,
+        `カイ二乗統計量で2群を比較する`,
+        `差の平均÷差の標準誤差 のt統計量`,
+      ],
+      exp:`<strong>📋 L17（2標本SE・平均）</strong>：等分散が仮定できるときはプールした分散 Sp² を使います。自由度は n₁+n₂−2。Welchのt検定（等分散非仮定）は2級範囲外です。`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ プールした分散を求める",
+      qText:`プールした分散 Sp² の値として正しいものはどれか？`,
+      correct:`Sp² = ((${n1_3}−1)×${sd1_3}² + (${n2_3}−1)×${sd2_3}²) / (${n1_3}+${n2_3}−2) ≈ ${sp2_3.toFixed(3)}`,
+      wrongs:[
+        `Sp² = (${sd1_3}²+${sd2_3}²)/2 ≈ ${((sd1_3*sd1_3+sd2_3*sd2_3)/2).toFixed(3)}`,
+        `Sp² = √(${sd1_3}²+${sd2_3}²) ≈ ${Math.sqrt(sd1_3*sd1_3+sd2_3*sd2_3).toFixed(3)}`,
+        `Sp² = (${sd1_3}+${sd2_3})/2 ≈ ${((sd1_3+sd2_3)/2).toFixed(3)}`,
+        `Sp² = ${sd1_3}²×${sd2_3}²/(${sd1_3}²+${sd2_3}²) ≈ ${(sd1_3*sd1_3*sd2_3*sd2_3/(sd1_3*sd1_3+sd2_3*sd2_3)).toFixed(3)}`,
+      ],
+      exp:`<strong>📋 L17（プールした分散）</strong>：Sp² = ((n₁−1)s₁² + (n₂−1)s₂²)/(n₁+n₂−2)<br>= (${n1_3-1}×${(sd1_3*sd1_3).toFixed(2)} + ${n2_3-1}×${(sd2_3*sd2_3).toFixed(2)}) / ${df3} ≈ <strong>${sp2_3.toFixed(3)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ 検定統計量を計算する",
+      qText:`SEとt値の組み合わせとして正しいものはどれか？`,
+      correct:`SE = √(${sp2_3.toFixed(3)}×(1/${n1_3}+1/${n2_3})) ≈ ${se3.toFixed(3)}、t ≈ ${tVal3.toFixed(3)}`,
+      wrongs:[
+        `SE ≈ ${seWelch3.toFixed(3)}、t ≈ ${tWelch3}`,
+        `SE ≈ ${seSimple3.toFixed(3)}、t ≈ ${tSimple3}`,
+        `SE ≈ ${seBad3.toFixed(3)}、t ≈ ${tBad3}`,
+        `SE ≈ ${(Math.sqrt(sp2_3)/Math.sqrt(n1_3+n2_3)).toFixed(3)}、t ≈ ${(diff3/(Math.sqrt(sp2_3)/Math.sqrt(n1_3+n2_3))).toFixed(3)}`,
+      ],
+      exp:`<strong>📋 L17</strong>：SE = √(Sp²×(1/n₁+1/n₂)) = √(${sp2_3.toFixed(3)}×${(1/n1_3+1/n2_3).toFixed(4)}) ≈ <strong>${se3.toFixed(3)}</strong><br><strong>📋 L9</strong>：t = (x̄₁−x̄₂)/SE = ${diff3.toFixed(2)}/${se3.toFixed(3)} ≈ <strong>${tVal3.toFixed(3)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ 判定する",
+      qText:`自由度${df3}のt分布の両側5%棄却限界値は${tCrit3}。|t|=${Math.abs(tVal3).toFixed(3)}の判定として正しいものはどれか？`,
+      correct:isReject3
+        ?`|t| > ${tCrit3} なので帰無仮説を棄却。2群の母平均は有意に異なる。`
+        :`|t| < ${tCrit3} なので帰無仮説を棄却できない。差があるとは言えない。`,
+      wrongs:isReject3
+        ?[`|t| < ${tCrit3} なので棄却できない。`,`片側検定で判断すべきなのでまだ結論は出せない`,`自由度${df3}の棄却値は1.96`,`プールした分散を使うと常に棄却されやすい`]
+        :[`|t| > ${tCrit3} なので帰無仮説を棄却。2群は異なる。`,`片側検定で判断すべき`,`自由度${df3}の棄却値は1.96`,`差の絶対値${Math.abs(diff3).toFixed(1)}が0より大きいので差がある`],
+      exp:`|t| = ${Math.abs(tVal3).toFixed(3)} ${isReject3?'>':'<'} ${tCrit3}。帰無仮説H₀：μ₁=μ₂ は${isReject3?'棄却されます（差あり）':'棄却できません'}。`
+    });
+    const lower3 = diff3-tCrit3*se3, upper3 = diff3+tCrit3*se3;
+    steps.push({
+      stepLabel:"STEP 5 ｜ 差の95%信頼区間",
+      qText:`μ₁−μ₂ の95%信頼区間として正しいものはどれか？`,
+      correct:`[${lower3.toFixed(2)}, ${upper3.toFixed(2)}]`,
+      wrongs:[
+        `[${(diff3-1.96*se3).toFixed(2)}, ${(diff3+1.96*se3).toFixed(2)}]`,
+        `[${(diff3-tCrit3*seWelch3).toFixed(2)}, ${(diff3+tCrit3*seWelch3).toFixed(2)}]`,
+        `[${(diff3-tCrit3*Math.sqrt(sp2_3)).toFixed(2)}, ${(diff3+tCrit3*Math.sqrt(sp2_3)).toFixed(2)}]`,
+        `[${(mean1_3-tCrit3*se3).toFixed(2)}, ${(mean2_3+tCrit3*se3).toFixed(2)}]`,
+      ],
+      exp:`<strong>📋 L10（信頼区間）の2標本版</strong>：(x̄₁−x̄₂) ± t×SE<br>= ${diff3.toFixed(2)} ± ${tCrit3}×${se3.toFixed(3)} = [<strong>${lower3.toFixed(2)}, ${upper3.toFixed(2)}</strong>]<br><strong>使用したL表：L17→L9→L10</strong>`
+    });
+
+  // ================================================================
+  // 【Tier S: シナリオ⑤】母比率の差の検定・信頼区間
+  // ================================================================
+  } else if (typeRnd === 4) {
+    totalSteps = 5;
+    const ctxList4 = [
+      { scene:'新広告を見たグループと見ていないグループで、購入率に差があるかを調べる。', g1:'広告視聴群', g2:'非視聴群' },
+      { scene:'薬剤投与群と対照群で、症状改善率に有意差があるかを検証した。', g1:'投与群', g2:'対照群' },
+      { scene:'地域AとBで、特定の疾患の有病率が異なるかを調査した。', g1:'地域A', g2:'地域B' },
+    ];
+    const ctx4 = ctxList4[rndInt(0,2)];
+    const n1_4=rndInt(80,150), n2_4=rndInt(80,150);
+    const x1_4=rndInt(25,65), x2_4=rndInt(15,55);
+    const p1h=x1_4/n1_4, p2h=x2_4/n2_4;
+    const ppool4=(x1_4+x2_4)/(n1_4+n2_4);
+    const seTest4=Math.sqrt(ppool4*(1-ppool4)*(1/n1_4+1/n2_4));
+    const seCI4=Math.sqrt(p1h*(1-p1h)/n1_4+p2h*(1-p2h)/n2_4);
+    const zVal4=(p1h-p2h)/seTest4;
+    const isReject4=Math.abs(zVal4)>1.96;
+    const diff4=p1h-p2h;
+    const lower4=diff4-1.96*seCI4, upper4=diff4+1.96*seCI4;
+    scenarioHTML=`<div class="scenario"><strong>【2標本の比率比較】</strong><br>${ctx4.scene}<br>${ctx4.g1}：n₁=${n1_4}、該当人数 x₁=${x1_4}人<br>${ctx4.g2}：n₂=${n2_4}、該当人数 x₂=${x2_4}人<br>有意水準5%の両側検定。</div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ 手法を選ぶ",
+      qText:`2群の独立した比率の差を検定するとき、帰無仮説のもとでの正しいSEの計算式はどれか？`,
+      correct:`SE=√(p̂pool(1−p̂pool)(1/n₁+1/n₂))  ただしp̂pool=(x₁+x₂)/(n₁+n₂)`,
+      wrongs:[
+        `SE=√(p̂₁(1−p̂₁)/n₁+p̂₂(1−p̂₂)/n₂)`,
+        `SE=√(p̂₁(1−p̂₁)+p̂₂(1−p̂₂))/(n₁+n₂)`,
+        `SE=|p̂₁−p̂₂|/√(n₁+n₂)`,
+        `SE=√((p̂₁+p̂₂)(1−p̂₁−p̂₂)/(n₁+n₂))`,
+      ],
+      exp:`<strong>📋 L18（2標本SE・比率）</strong>：検定ではH₀「p₁=p₂=p」を仮定してプール推定します。信頼区間では各群のp̂を使います。この使い分けが重要です。`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ 観測比率とプール比率",
+      qText:`p̂₁・p̂₂・プール推定比率p̂poolの値として正しいものはどれか？`,
+      correct:`p̂₁=${p1h.toFixed(3)}、p̂₂=${p2h.toFixed(3)}、p̂pool=${ppool4.toFixed(3)}`,
+      wrongs:[
+        `p̂₁=${p1h.toFixed(3)}、p̂₂=${p2h.toFixed(3)}、p̂pool=(p̂₁+p̂₂)/2=${((p1h+p2h)/2).toFixed(3)}`,
+        `p̂₁=${(x1_4/(n1_4+n2_4)).toFixed(3)}、p̂₂=${(x2_4/(n1_4+n2_4)).toFixed(3)}`,
+        `p̂₁=${p2h.toFixed(3)}、p̂₂=${p1h.toFixed(3)}、p̂pool=${ppool4.toFixed(3)}`,
+        `p̂₁=${p1h.toFixed(3)}、p̂₂=${p2h.toFixed(3)}、p̂pool=${((x1_4+x2_4)/(n1_4*n2_4)).toFixed(5)}`,
+      ],
+      exp:`p̂₁=x₁/n₁=${x1_4}/${n1_4}=<strong>${p1h.toFixed(3)}</strong>、p̂₂=x₂/n₂=${x2_4}/${n2_4}=<strong>${p2h.toFixed(3)}</strong><br>📋<strong>L18</strong>：p̂pool=(x₁+x₂)/(n₁+n₂)=${x1_4+x2_4}/${n1_4+n2_4}=<strong>${ppool4.toFixed(3)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ 検定統計量を計算する",
+      qText:`検定用SEとZ値の組み合わせとして正しいものはどれか？`,
+      correct:`SE=${seTest4.toFixed(4)}、Z=${zVal4.toFixed(3)}`,
+      wrongs:[
+        `SE=${seCI4.toFixed(4)}、Z=${(diff4/seCI4).toFixed(3)}`,
+        `SE=${seTest4.toFixed(4)}、Z=${Math.abs(zVal4).toFixed(3)}`,
+        `SE=${(seTest4*2).toFixed(4)}、Z=${(zVal4/2).toFixed(3)}`,
+        `SE=${(Math.sqrt((p1h*(1-p1h)+p2h*(1-p2h))/(n1_4+n2_4))).toFixed(4)}、Z=${(diff4/(Math.sqrt((p1h*(1-p1h)+p2h*(1-p2h))/(n1_4+n2_4)))).toFixed(3)}`,
+      ],
+      exp:`<strong>📋 L18（検定用SE）</strong>：SE=√(${ppool4.toFixed(3)}×${(1-ppool4).toFixed(3)}×(1/${n1_4}+1/${n2_4}))=<strong>${seTest4.toFixed(4)}</strong><br><strong>📋 L9</strong>：Z=(p̂₁−p̂₂)/SE=${diff4.toFixed(4)}/${seTest4.toFixed(4)}=<strong>${zVal4.toFixed(3)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ 判定する",
+      qText:`|Z|=${Math.abs(zVal4).toFixed(3)}と棄却限界値1.96の比較結果として正しいものはどれか？`,
+      correct:isReject4
+        ?`|Z|>1.96 なので帰無仮説を棄却。比率に有意差がある。`
+        :`|Z|<1.96 なので帰無仮説を棄却できない。差があるとは言えない。`,
+      wrongs:isReject4
+        ?[`|Z|<1.96 なので棄却できない。`,`片側検定なら棄却できるが両側では不確か`,`Z統計量でなくt統計量を使うべき`,`プール推定をすると自動的に棄却される`]
+        :[`|Z|>1.96 なので帰無仮説を棄却。比率に差がある。`,`p値を別途計算しないと判断できない`,`差${diff4.toFixed(3)}≠0 なので有意差あり`,`片側検定なら1.64で棄却できる`],
+      exp:`|Z|=${Math.abs(zVal4).toFixed(3)} ${isReject4?'>':'<'} 1.96。帰無仮説は${isReject4?'棄却されます。':'棄却できません。'}`
+    });
+    steps.push({
+      stepLabel:"STEP 5 ｜ 差の95%信頼区間",
+      qText:`p₁−p₂の95%信頼区間を求める際に使うSEと結果として正しいものはどれか？`,
+      correct:`信頼区間用SE=${seCI4.toFixed(4)}、[${lower4.toFixed(3)}, ${upper4.toFixed(3)}]`,
+      wrongs:[
+        `SE=${seTest4.toFixed(4)}、[${(diff4-1.96*seTest4).toFixed(3)}, ${(diff4+1.96*seTest4).toFixed(3)}]`,
+        `SE=${seCI4.toFixed(4)}、[${(p1h-1.96*seCI4).toFixed(3)}, ${(p2h+1.96*seCI4).toFixed(3)}]`,
+        `SE=${(seCI4/2).toFixed(4)}、[${(diff4-1.96*seCI4/2).toFixed(3)}, ${(diff4+1.96*seCI4/2).toFixed(3)}]`,
+        `SE=${seCI4.toFixed(4)}、[${(diff4-1.64*seCI4).toFixed(3)}, ${(diff4+1.64*seCI4).toFixed(3)}]`,
+      ],
+      exp:`<strong>📋 L18（CI用SE）</strong>：√(p̂₁(1−p̂₁)/n₁+p̂₂(1−p̂₂)/n₂)=<strong>${seCI4.toFixed(4)}</strong><br><strong>📋 L10</strong>：${diff4.toFixed(4)}±1.96×${seCI4.toFixed(4)}=[<strong>${lower4.toFixed(3)}, ${upper4.toFixed(3)}</strong>]<br><strong>使用したL表：L18→L9→L10</strong>`
+    });
+
+  // ================================================================
+  // 【Tier S: シナリオ⑥】母比率の検定（1標本・正規近似）
+  // ================================================================
+  } else if (typeRnd === 5) {
+    totalSteps = 5;
+    const ctxList5=[
+      {scene:'過去の調査でX社製品の支持率はp₀だった。今回n人に調査したところx人が支持した。支持率が変化したか検証したい。'},
+      {scene:'ある製造ラインの不良品率は従来p₀だった。品質改善後にn個を抜き取りx個の不良品が見つかった。変化したか検証したい。'},
+      {scene:'選挙前の調査では候補者Aの支持率がp₀とされていた。投票日直前にn人へ調査したところx人が支持した。変化したか検証したい。'},
+    ];
+    const ctx5=ctxList5[rndInt(0,2)];
+    const p0_5=[0.3,0.4,0.5,0.6][rndInt(0,3)];
+    const n5=[100,150,200][rndInt(0,2)];
+    const x5=rndInt(Math.floor(n5*(p0_5-0.12)),Math.ceil(n5*(p0_5+0.12)));
+    const phat5=x5/n5;
+    const se5_h0=Math.sqrt(p0_5*(1-p0_5)/n5);
+    const se5_ci=Math.sqrt(phat5*(1-phat5)/n5);
+    const zVal5=(phat5-p0_5)/se5_h0;
+    const isReject5=Math.abs(zVal5)>1.96;
+    const lower5=phat5-1.96*se5_ci, upper5=phat5+1.96*se5_ci;
+    scenarioHTML=`<div class="scenario"><strong>【1標本の比率の検定】</strong><br>${ctx5.scene.replace('p₀',p0_5).replace('n人',n5+'人').replace('n個',n5+'個').replace('x人',x5+'人').replace('x個',x5+'個')}<br>帰無仮説のもとの母比率p₀=${p0_5}、n=${n5}、x=${x5}。有意水準5%両側検定。</div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ 手法を選ぶ",
+      qText:`帰無仮説「母比率p=p₀」の検定で大標本のとき使う検定統計量として正しいものはどれか？`,
+      correct:`Z=(p̂−p₀)/√(p₀(1−p₀)/n)  ← H₀のp₀でSEを計算する`,
+      wrongs:[
+        `Z=(p̂−p₀)/√(p̂(1−p̂)/n)`,
+        `t=(p̂−p₀)/(s/√n)`,
+        `χ²=n(p̂−p₀)²/p₀`,
+        `Z=(p̂−p₀)/√(p₀(1−p₀))`,
+      ],
+      exp:`<strong>📋 L8（SE・比率版）</strong>：H₀:p=p₀のもとではSE=√(p₀(1−p₀)/n)。p̂をSEに使うのは信頼区間のとき（H₀がない）です。`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ SEを計算する",
+      qText:`検定用SEの値として正しいものはどれか？`,
+      correct:`SE=√(${p0_5}×${(1-p0_5).toFixed(2)}/${n5})≈${se5_h0.toFixed(4)}`,
+      wrongs:[
+        `SE=√(${phat5.toFixed(3)}×${(1-phat5).toFixed(3)}/${n5})≈${se5_ci.toFixed(4)}`,
+        `SE=√(${p0_5}×${(1-p0_5).toFixed(2)})≈${Math.sqrt(p0_5*(1-p0_5)).toFixed(4)}`,
+        `SE=${p0_5}×${(1-p0_5).toFixed(2)}/${n5}≈${(p0_5*(1-p0_5)/n5).toFixed(4)}`,
+        `SE=√(${p0_5}/${n5})≈${Math.sqrt(p0_5/n5).toFixed(4)}`,
+      ],
+      exp:`<strong>📋 L8</strong>：SE=√(p₀(1−p₀)/n)=√(${p0_5}×${(1-p0_5).toFixed(2)}/${n5})=<strong>${se5_h0.toFixed(4)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ 検定統計量を計算する",
+      qText:`p̂とZ値の組み合わせとして正しいものはどれか？`,
+      correct:`p̂=${phat5.toFixed(3)}、Z=${zVal5.toFixed(3)}`,
+      wrongs:[
+        `p̂=${phat5.toFixed(3)}、Z=${((phat5-p0_5)/se5_ci).toFixed(3)}`,
+        `p̂=${phat5.toFixed(3)}、Z=${((phat5-p0_5)/Math.sqrt(p0_5*(1-p0_5))).toFixed(3)}`,
+        `p̂=${phat5.toFixed(3)}、Z=${(-zVal5).toFixed(3)}`,
+        `p̂=${phat5.toFixed(3)}、Z=${((phat5-p0_5)*Math.sqrt(n5)/Math.sqrt(p0_5*(1-p0_5))).toFixed(3)}`,
+      ],
+      exp:`p̂=x/n=${x5}/${n5}=<strong>${phat5.toFixed(3)}</strong><br><strong>📋 L9</strong>：Z=(p̂−p₀)/SE=(${phat5.toFixed(3)}−${p0_5})/${se5_h0.toFixed(4)}≈<strong>${zVal5.toFixed(3)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ 判定する",
+      qText:`|Z|=${Math.abs(zVal5).toFixed(3)}と棄却限界値1.96の比較結論として正しいものはどれか？`,
+      correct:isReject5
+        ?`|Z|>1.96 なので帰無仮説を棄却。比率が${p0_5}から変化したと言える。`
+        :`|Z|<1.96 なので帰無仮説を棄却できない。変化があるとは言えない。`,
+      wrongs:isReject5
+        ?[`|Z|<1.96 なので棄却できない。`,`片側検定にすれば棄却できる`,`p̂≠p₀が明らかなので差がある`,`|Z|>1.64なら片側で棄却できるが両側では不確か`]
+        :[`|Z|>1.96 なので帰無仮説を棄却。比率が変化した。`,`p̂=${phat5.toFixed(3)}≠${p0_5}なので差がある`,`片側検定なら1.64未満でも棄却できる`,`標本比率が変わっても母比率が変わるとは限らない`],
+      exp:`|Z|=${Math.abs(zVal5).toFixed(3)} ${isReject5?'>':'<'} 1.96。帰無仮説H₀:p=${p0_5}は${isReject5?'棄却されます（変化あり）':'棄却できません'}。`
+    });
+    steps.push({
+      stepLabel:"STEP 5 ｜ 母比率の95%信頼区間",
+      qText:`母比率pの95%信頼区間を求めるときに使うSEと結果として正しいものはどれか？`,
+      correct:`CI用SE=√(p̂(1−p̂)/n)=${se5_ci.toFixed(4)}、[${lower5.toFixed(3)}, ${upper5.toFixed(3)}]`,
+      wrongs:[
+        `SE=${se5_h0.toFixed(4)}、[${(phat5-1.96*se5_h0).toFixed(3)}, ${(phat5+1.96*se5_h0).toFixed(3)}]`,
+        `SE=${se5_ci.toFixed(4)}、[${(p0_5-1.96*se5_ci).toFixed(3)}, ${(p0_5+1.96*se5_ci).toFixed(3)}]`,
+        `SE=${se5_ci.toFixed(4)}、[${(lower5-0.02).toFixed(3)}, ${(upper5+0.02).toFixed(3)}]`,
+        `SE=${(se5_ci*2).toFixed(4)}、[${(phat5-1.96*se5_ci*2).toFixed(3)}, ${(phat5+1.96*se5_ci*2).toFixed(3)}]`,
+      ],
+      exp:`<strong>📋 L8（CI用SE）</strong>：信頼区間はH₀がないのでp̂を使います。SE=√(p̂(1−p̂)/n)=<strong>${se5_ci.toFixed(4)}</strong><br><strong>📋 L10</strong>：p̂±1.96×SE=${phat5.toFixed(3)}±${(1.96*se5_ci).toFixed(4)}=[<strong>${lower5.toFixed(3)}, ${upper5.toFixed(3)}</strong>]<br><strong>使用したL表：L8→L9→L10</strong>`
+    });
+
+  // ================================================================
+  // 【Tier S: シナリオ⑦】等分散性のF検定
+  // ================================================================
+  } else if (typeRnd === 6) {
+    totalSteps = 4;
+    const ctxList6=[
+      {scene:'工場の2ラインで製造した製品の品質ばらつきを比較するため、それぞれサンプリングし標本分散を計算した。',g1:'ライン1',g2:'ライン2'},
+      {scene:'2種類の教授法でクラスを分け、テストのばらつきを比較した。',g1:'教授法A',g2:'教授法B'},
+      {scene:'2つの投資商品のリターンのばらつき（リスク）を比較する。',g1:'商品X',g2:'商品Y'},
+    ];
+    const ctx6=ctxList6[rndInt(0,2)];
+    const n1_6=rndInt(10,20), n2_6=rndInt(10,20);
+    const df1_6=n1_6-1, df2_6=n2_6-1;
+    const s1_6=rnd(8,15,1), s2_6=rnd(4,7,1);
+    const F6=(s1_6*s1_6)/(s2_6*s2_6);
+    const fCrit6=3.18;
+    const isReject6=F6>fCrit6;
+    scenarioHTML=`<div class="scenario"><strong>【2標本の分散比較（F検定）】</strong><br>${ctx6.scene}<br>${ctx6.g1}：n₁=${n1_6}、s₁=${s1_6}<br>${ctx6.g2}：n₂=${n2_6}、s₂=${s2_6}<br>2群の母分散が等しいか、有意水準5%で検定したい（棄却限界値≈${fCrit6}）。</div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ 手法と仮説を選ぶ",
+      qText:`2群の母分散の等しさを検定するとき、使う検定統計量と帰無仮説の正しい組み合わせはどれか？`,
+      correct:`F=s₁²/s₂²、H₀：σ₁²=σ₂²、F分布に従う`,
+      wrongs:[
+        `t=(s₁²−s₂²)/SE、H₀：σ₁²=σ₂²、t分布`,
+        `Z=(s₁−s₂)/√(s₁²/n₁+s₂²/n₂)、H₀：σ₁=σ₂、正規分布`,
+        `χ²=(n₁−1)s₁²/σ₀²+(n₂−1)s₂²/σ₀²`,
+        `F=(n₁s₁²)/(n₂s₂²)`,
+      ],
+      exp:`<strong>📋 L19（F検定）</strong>：2群の等分散性はF=s₁²/s₂²（大÷小）。自由度は(n₁−1,n₂−1)のF分布。`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ F統計量を計算する",
+      qText:`F統計量の値と自由度の組み合わせとして正しいものはどれか？`,
+      correct:`F=${s1_6}²/${s2_6}²=${F6.toFixed(3)}、自由度(${df1_6},${df2_6})`,
+      wrongs:[
+        `F=${s2_6}²/${s1_6}²=${(1/F6).toFixed(3)}、自由度(${df2_6},${df1_6})`,
+        `F=${s1_6}/${s2_6}=${(s1_6/s2_6).toFixed(3)}、自由度(${df1_6},${df2_6})`,
+        `F=${F6.toFixed(3)}、自由度(${n1_6},${n2_6})`,
+        `F=(${s1_6}²+${s2_6}²)/2=${((s1_6*s1_6+s2_6*s2_6)/2).toFixed(3)}`,
+      ],
+      exp:`<strong>📋 L19</strong>：F=s₁²/s₂²=${(s1_6*s1_6).toFixed(2)}/${(s2_6*s2_6).toFixed(2)}=<strong>${F6.toFixed(3)}</strong><br><strong>📋 L20</strong>：自由度=(n₁−1,n₂−1)=(<strong>${df1_6},${df2_6}</strong>)`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ 判定する",
+      qText:`F=${F6.toFixed(3)}と棄却限界値${fCrit6}の比較結果として正しいものはどれか？`,
+      correct:isReject6
+        ?`F>${fCrit6} なので帰無仮説を棄却。2群の母分散は異なると言える。`
+        :`F<${fCrit6} なので帰無仮説を棄却できない。等分散とみなせる。`,
+      wrongs:isReject6
+        ?[`F<${fCrit6} なので棄却できない。`,`両側なのでF<1/3.18≈0.31またはF>3.18の両条件が必要`,`F値が整数でないので判定できない`,`自由度が異なるので別の棄却値を使うべき`]
+        :[`F>${fCrit6} なので棄却。母分散は異なる。`,`片側のみなのでF<0.31も確認が必要`,`F>1なら必ず棄却される`,`F=${F6.toFixed(3)}>1なので分散に差がある`],
+      exp:`F=${F6.toFixed(3)} ${isReject6?'>':'<'} ${fCrit6}。帰無仮説は${isReject6?'棄却されます。Welchのt検定を検討してください。':'棄却できません。プールt検定が使えます。'}`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ F検定の結果と次のステップ",
+      qText:`F検定で「等分散を棄却できない」だった場合の次の分析として正しいものはどれか？`,
+      correct:`プールした分散Sp²を使った2標本t検定で平均差を検定できる`,
+      wrongs:[
+        `Welchのt検定で平均差を検定する`,
+        `U検定で平均差を検定する`,
+        `平均差の検定は実施しない`,
+        `各群の分散をそのまま使った2標本t検定を行う`,
+      ],
+      exp:`等分散が仮定できる→📋<strong>L17</strong>（プールした分散）を使った2標本t検定へ。<br>等分散が棄却される→Welchのt検定（2級範囲外）。<br><strong>F検定は2標本t検定の前提確認として実施するのが典型的な流れです。</strong><br><strong>使用したL表：L19→L20→L17</strong>`
+    });
+
+  // ================================================================
+  // 【Tier S: シナリオ⑧】母平均の片側t検定
+  // ================================================================
+  } else if (typeRnd === 7) {
+    totalSteps = 5;
+    const n7=[16,20,25][rndInt(0,2)];
+    const df7=n7-1;
+    const t1side={15:1.753,19:1.729,24:1.711};
+    const t2side={15:2.131,19:2.093,24:2.064};
+    const tCrit7=t1side[df7]||1.729;
+    const tCritB7=t2side[df7]||2.093;
+    const mean7=rnd(-3.0,-0.5,1);
+    const sd7=rnd(2.5,5.0,1);
+    const se7=sd7/Math.sqrt(n7);
+    const tVal7=mean7/se7;
+    const isReject7=tVal7<-tCrit7;
+    scenarioHTML=`<div class="scenario"><strong>【片側仮説の検定】</strong><br>同一個体の介入前後の差（介入後−介入前）をn=${n7}名から測定した。差の平均x̄=${mean7}、不偏標準偏差s=${sd7}。<br>対立仮説は「差の母平均μ<0（介入で減少する）」。有意水準5%の片側検定。</div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ 棄却域の方向を選ぶ",
+      qText:`対立仮説「μ<0」（左片側）のとき、棄却域と棄却限界値の組み合わせとして正しいものはどれか？（自由度${df7}：片側5%点≈${tCrit7}、両側5%点≈${tCritB7}）`,
+      correct:`棄却域：t<−${tCrit7}、使うt点：${tCrit7}`,
+      wrongs:[
+        `棄却域：t>${tCrit7}`,
+        `棄却域：|t|>${tCritB7}`,
+        `棄却域：t<−${tCritB7}`,
+        `棄却域：t<−1.96`,
+      ],
+      exp:`片側検定（H₁:μ<0）では棄却域は左端のみ。t<−${tCrit7}。<br>両側5%のt点(${tCritB7})より片側5%のt点(${tCrit7})の方が小さい＝棄却しやすくなります。`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ SEを求める",
+      qText:`SEとして正しいものはどれか？`,
+      correct:`SE=s/√n=${sd7}/√${n7}≈${se7.toFixed(4)}`,
+      wrongs:[
+        `SE=s/n=${sd7}/${n7}≈${(sd7/n7).toFixed(4)}`,
+        `SE=s×√n=${sd7}×${Math.sqrt(n7).toFixed(2)}≈${(sd7*Math.sqrt(n7)).toFixed(4)}`,
+        `SE=1/√n≈${(1/Math.sqrt(n7)).toFixed(4)}`,
+        `SE=s²/n=${(sd7*sd7).toFixed(2)}/${n7}≈${(sd7*sd7/n7).toFixed(4)}`,
+      ],
+      exp:`<strong>📋 L8（SE）</strong>：SE=s/√n=${sd7}/√${n7}≈<strong>${se7.toFixed(4)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ t値を計算する",
+      qText:`t値として正しいものはどれか？`,
+      correct:`t=(x̄−μ₀)/SE=(${mean7}−0)/${se7.toFixed(4)}≈${tVal7.toFixed(3)}`,
+      wrongs:[
+        `t=(μ₀−x̄)/SE=${(-tVal7).toFixed(3)}`,
+        `t=x̄/s=${mean7}/${sd7}=${(mean7/sd7).toFixed(3)}`,
+        `t=(x̄−μ₀)/SE²=${(mean7/(se7*se7)).toFixed(3)}`,
+        `t=x̄×√n/s=${(mean7*Math.sqrt(n7)/sd7).toFixed(3)}`,
+      ],
+      exp:`<strong>📋 L9（検定統計量）</strong>：t=(x̄−μ₀)/SE=(${mean7}−0)/${se7.toFixed(4)}≈<strong>${tVal7.toFixed(3)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ 判定する（片側）",
+      qText:`t=${tVal7.toFixed(3)}、棄却域t<−${tCrit7}で判断した結論として正しいものはどれか？`,
+      correct:isReject7
+        ?`t<−${tCrit7} なので帰無仮説を棄却。差の母平均は0より小さい。`
+        :`t≧−${tCrit7} なので帰無仮説を棄却できない。有意な減少とは言えない。`,
+      wrongs:isReject7
+        ?[`|t|=${Math.abs(tVal7).toFixed(3)}>${tCrit7}のため両側で棄却`,`t<0でも片側では正の棄却域も必要`,`t=${tVal7.toFixed(3)}<${tCrit7}なので棄却できない`,`片側でもt>2.093が必要`]
+        :[`t<−${tCrit7}なので棄却。有意に減少した。`,`|t|>1.96かどうかで判断する`,`t値が負なので自動的に棄却できる`,`片側なのでt>0でも棄却できる`],
+      exp:`棄却域：t<−${tCrit7}。t=${tVal7.toFixed(3)}は${isReject7?'棄却域に入る':'棄却域に入らない'}。<br>帰無仮説を${isReject7?'棄却します。有意な減少あり。':'棄却できません。'}`
+    });
+    const lower7=mean7-tCrit7*se7, upper7=mean7+tCrit7*se7;
+    steps.push({
+      stepLabel:"STEP 5 ｜ 片側検定と信頼区間の対応",
+      qText:`片側5%検定に対応する信頼区間は何%信頼区間か、またその下限の計算式として正しいものはどれか？`,
+      correct:`90%信頼区間。下限=x̄−${tCrit7}×SE≈${lower7.toFixed(3)}`,
+      wrongs:[
+        `95%信頼区間。下限=x̄−${tCritB7}×SE≈${(mean7-tCritB7*se7).toFixed(3)}`,
+        `95%信頼区間。下限=x̄−1.96×SE≈${(mean7-1.96*se7).toFixed(3)}`,
+        `90%信頼区間。下限=x̄−1.645×SE≈${(mean7-1.645*se7).toFixed(3)}`,
+        `99%信頼区間`,
+      ],
+      exp:`有意水準5%の片側検定＝「一方に5%を残す」＝合計10%を残す＝<strong>90%信頼区間</strong>と対応。<br>下限=${mean7}−${tCrit7}×${se7.toFixed(4)}=<strong>${lower7.toFixed(3)}</strong><br><strong>使用したL表：L8→L9→L10</strong>`
+    });
+
+  // ================================================================
+  // 【Tier S: シナリオ⑨】非正規母集団・大標本の信頼区間
+  // ================================================================
+  } else if (typeRnd === 8) {
+    totalSteps = 4;
+    const ctxList8=[
+      {scene:'ある地域の世帯年収の分布は右に大きく歪んでおり、正規分布に従わないことが知られている。',n_val:200,unit:'万円'},
+      {scene:'コールセンターへの問い合わせ件数は日によって大きくばらつき、正規分布でないことが既知である。',n_val:150,unit:'件/日'},
+      {scene:'Webサービスの1日あたりのエラー発生件数は非正規分布であることが知られている。',n_val:180,unit:'件'},
+    ];
+    const ctx8=ctxList8[rndInt(0,2)];
+    const n8=ctx8.n_val;
+    const mean8=rnd(400,600,1), sd8=rnd(80,150,1);
+    const se8=sd8/Math.sqrt(n8);
+    const lower8=mean8-1.96*se8, upper8=mean8+1.96*se8;
+    scenarioHTML=`<div class="scenario"><strong>【大標本の中心極限定理の活用】</strong><br>${ctx8.scene}<br>n=${n8}個（大標本）のデータ：x̄=${mean8} ${ctx8.unit}、s=${sd8}。<br>母平均の95%信頼区間を求めたい。</div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ 手法を選ぶ",
+      qText:`母集団が正規分布でないとき、大標本の場合に使う根拠と検定統計量として正しいものはどれか？`,
+      correct:`中心極限定理によりx̄が正規分布に近づくため、Z統計量を使う`,
+      wrongs:[
+        `t分布を使う`,
+        `母集団が正規でないので信頼区間は構成できない`,
+        `F分布を使う`,
+        `ノンパラメトリック法を使い正規近似は行わない`,
+      ],
+      exp:`<strong>中心極限定理</strong>：母集団の分布形状に関わらず、n が十分大きいとき x̄ は正規分布に近づく。<br>→ Z統計量を使い標準正規分布で近似できます。📋<strong>L8・L9・L10</strong>が適用可能。`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ SEを求める",
+      qText:`母分散が未知のとき、SEの推定値として正しいものはどれか？`,
+      correct:`SE=s/√n=${sd8}/√${n8}≈${se8.toFixed(4)}`,
+      wrongs:[
+        `SE=σ/√n`,
+        `SE=s/n=${sd8}/${n8}≈${(sd8/n8).toFixed(4)}`,
+        `SE=s=${sd8}`,
+        `SE=s²/n=${(sd8*sd8).toFixed(2)}/${n8}≈${(sd8*sd8/n8).toFixed(4)}`,
+      ],
+      exp:`<strong>📋 L8（SE）</strong>：母標準偏差σが未知なのでsで代用。SE=s/√n=${sd8}/√${n8}≈<strong>${se8.toFixed(4)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ 95%信頼区間を求める",
+      qText:`母平均の95%信頼区間として正しいものはどれか？`,
+      correct:`[${lower8.toFixed(2)}, ${upper8.toFixed(2)}]`,
+      wrongs:[
+        `[${(mean8-2.576*se8).toFixed(2)}, ${(mean8+2.576*se8).toFixed(2)}]`,
+        `[${(mean8-1.64*se8).toFixed(2)}, ${(mean8+1.64*se8).toFixed(2)}]`,
+        `[${(mean8-1.96*sd8).toFixed(2)}, ${(mean8+1.96*sd8).toFixed(2)}]`,
+        `[${(mean8-1.96*se8*2).toFixed(2)}, ${(mean8+1.96*se8*2).toFixed(2)}]`,
+      ],
+      exp:`<strong>📋 L10（信頼区間）</strong>：x̄±Z×SE=${mean8}±1.96×${se8.toFixed(4)}=[<strong>${lower8.toFixed(2)}, ${upper8.toFixed(2)}</strong>]`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ 正しい解釈を選ぶ",
+      qText:`「95%信頼区間が[${lower8.toFixed(1)}, ${upper8.toFixed(1)}]である」の正しい解釈はどれか？`,
+      correct:`同じ手順で100回信頼区間を構成すれば、そのうち約95回は区間が母平均を含む`,
+      wrongs:[
+        `母平均がこの区間に入る確率が95%`,
+        `この標本のx̄が真の母平均から±${(1.96*se8).toFixed(2)}以内にある確率が95%`,
+        `標本の95%がこの区間に含まれる`,
+        `区間の幅が95%の精度を意味する`,
+      ],
+      exp:`信頼区間の正しい解釈：<strong>「繰り返せば95%の割合で母平均を捕捉する区間」</strong>です。<br>「母平均がこの区間に入る確率が95%」は誤りです（母平均は確率変数ではない）。<br><strong>使用したL表：L8→L10</strong>`
+    });
+
+  // ================================================================
+  // 【Tier S: シナリオ⑩】標本比率の標本分布（p̂の分布）
+  // ================================================================
+  } else if (typeRnd === 9) {
+    totalSteps = 4;
+    const p9=[0.3,0.4,0.5,0.6,0.7][rndInt(0,4)];
+    const n9=[50,100,200][rndInt(0,2)];
+    const V9=p9*(1-p9)/n9;
+    const SD9=Math.sqrt(V9);
+    const phat_q9=parseFloat((p9+0.05).toFixed(2));
+    const z_q9=(phat_q9-p9)/SD9;
+    const ctxList9=[
+      {scene:`母集団の赤色ボール割合がp=${p9}のとき、n=${n9}個を無作為抽出した。`},
+      {scene:`ある製品の支持率がp=${p9}のとき、n=${n9}人に調査した場合の標本支持率を考える。`},
+    ];
+    const ctx9=ctxList9[rndInt(0,1)];
+    scenarioHTML=`<div class="scenario"><strong>【標本比率の標本分布】</strong><br>${ctx9.scene}<br>母比率p=${p9}、標本サイズn=${n9}。<br>標本比率p̂の期待値・分散・SEと近似分布について考える。</div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ p̂の期待値と分散",
+      qText:`標本比率p̂の期待値E[p̂]と分散V[p̂]として正しいものはどれか？`,
+      correct:`E[p̂]=${p9}、V[p̂]=p(1−p)/n=${V9.toFixed(5)}`,
+      wrongs:[
+        `E[p̂]=p/n=${(p9/n9).toFixed(4)}、V[p̂]=p/n=${(p9/n9).toFixed(4)}`,
+        `E[p̂]=${p9}、V[p̂]=p(1−p)=${(p9*(1-p9)).toFixed(4)}`,
+        `E[p̂]=np=${(n9*p9).toFixed(0)}、V[p̂]=np(1−p)=${(n9*p9*(1-p9)).toFixed(2)}`,
+        `E[p̂]=${p9}、V[p̂]=√(p(1−p)/n)=${SD9.toFixed(4)}`,
+      ],
+      exp:`p̂=X/nはB(n,p)をnで割ったもの。📋<strong>L12</strong>：E[X]=np,V[X]=np(1−p)<br>📋<strong>L13</strong>（線形変換）：E[p̂]=np/n=<strong>${p9}</strong>、V[p̂]=np(1−p)/n²=<strong>${V9.toFixed(5)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ p̂のSEを求める",
+      qText:`標本比率p̂のSE（標準誤差）として正しいものはどれか？`,
+      correct:`SE(p̂)=√(p(1−p)/n)=√${V9.toFixed(5)}≈${SD9.toFixed(4)}`,
+      wrongs:[
+        `SE(p̂)=p(1−p)/n=${V9.toFixed(5)}`,
+        `SE(p̂)=√(p/n)=${Math.sqrt(p9/n9).toFixed(4)}`,
+        `SE(p̂)=p(1−p)/√n=${(p9*(1-p9)/Math.sqrt(n9)).toFixed(4)}`,
+        `SE(p̂)=√(p×(1−p))=${Math.sqrt(p9*(1-p9)).toFixed(4)}`,
+      ],
+      exp:`<strong>📋 L8（SE・比率版）</strong>：SE(p̂)=√(p(1−p)/n)=√(${p9}×${(1-p9).toFixed(2)}/${n9})≈<strong>${SD9.toFixed(4)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ 近似分布の選択",
+      qText:`np=${(n9*p9).toFixed(0)}、n(1−p)=${(n9*(1-p9)).toFixed(0)}のとき、p̂の近似分布として正しいものはどれか？`,
+      correct:`np≧5かつn(1−p)≧5を満たすので、p̂≈N(${p9},${V9.toFixed(5)})と正規近似できる`,
+      wrongs:[
+        `np>0 かつ n(1−p)>0 を確認する`,
+        `n>30 を確認する`,
+        `|p−0.5|<0.1 を確認する`,
+        `Xについてのみ正規近似を適用し、p̂には適用しない`,
+      ],
+      exp:`正規近似の条件：<strong>np≧5かつn(1−p)≧5</strong>（目安）。今回：np=${(n9*p9).toFixed(0)}≧5✓、n(1−p)=${(n9*(1-p9)).toFixed(0)}≧5✓<br>→p̂≈N(${p9},${V9.toFixed(5)})。📋<strong>L8</strong>（SEの公式が正規近似の基礎）`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ 正規化して確率を考える",
+      qText:`p̂≧${phat_q9}となる確率を求めるためのZ値として正しいものはどれか？`,
+      correct:`Z=(${phat_q9}−${p9})/${SD9.toFixed(4)}≈${z_q9.toFixed(3)}`,
+      wrongs:[
+        `Z=(${phat_q9}−${p9})/${V9.toFixed(5)}≈${((phat_q9-p9)/V9).toFixed(3)}`,
+        `Z=${phat_q9}/${SD9.toFixed(4)}≈${(phat_q9/SD9).toFixed(3)}`,
+        `Z=(${p9}−${phat_q9})/${SD9.toFixed(4)}≈${(-z_q9).toFixed(3)}`,
+        `Z=(${phat_q9}−${p9})×√${n9}/√${(p9*(1-p9)).toFixed(2)}≈${((phat_q9-p9)*Math.sqrt(n9)/Math.sqrt(p9*(1-p9))).toFixed(3)}`,
+      ],
+      exp:`<strong>📋 L5→L9の応用</strong>：Z=(p̂−p)/SE=(${phat_q9}−${p9})/${SD9.toFixed(4)}≈<strong>${z_q9.toFixed(3)}</strong><br>このZから標準正規分布表でP(Z≧${z_q9.toFixed(3)})を求めます。<br><strong>使用したL表：L12→L13→L8</strong>`
+    });
+
+  // ================================================================
+  // 【Tier S: シナリオ⑪】必要サンプルサイズの逆算（比率版）
+  // ================================================================
+  } else if (typeRnd === 10) {
+    totalSteps = 4;
+    const E10_pct=[2,3,5][rndInt(0,2)];
+    const E10=E10_pct/100;
+    const p10=[0.3,0.4,0.5,null][rndInt(0,3)];
+    const p10_use=p10!==null?p10:0.5;
+    const n10_exact=(1.96*1.96*p10_use*(1-p10_use))/(E10*E10);
+    const n10_needed=Math.ceil(n10_exact);
+    const n10_w1=Math.ceil((1.64*1.64*p10_use*(1-p10_use))/(E10*E10));
+    const n10_w2=Math.ceil((1.96*1.96*p10_use*(1-p10_use))/((E10/2)*(E10/2)));
+    const n10_w3=Math.ceil((1.96*1.96*p10_use)/(E10*E10));
+    scenarioHTML=`<div class="scenario"><strong>【必要標本サイズの逆算（比率版）】</strong><br>母比率の推定で95%信頼区間の半幅を${E10_pct}%以内に抑えたい。${p10!==null?`事前推定値p₀=${p10}が利用可能。`:'事前情報なし。'}</div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ 公式を選ぶ",
+      qText:`母比率の推定における必要標本サイズnの計算式として正しいものはどれか？`,
+      correct:`n≧Z²×p(1−p)/E²`,
+      wrongs:[
+        `n≧Z²×σ²/E²`,
+        `n≧Z×p(1−p)/E²`,
+        `n≧Z²×p(1−p)/E`,
+        `n≧E²×p(1−p)/Z²`,
+      ],
+      exp:`信頼区間の半幅E=Z×√(p(1−p)/n)をnについて解くと、n≧Z²×p(1−p)/E²。<br>平均の場合はn≧Z²σ²/E²（📋<strong>L8</strong>の応用）。比率版はσ²=p(1−p)を代入した形です。`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ pの値を決める",
+      qText:`${p10!==null?`事前推定値p₀=${p10}が利用可能な場合`:'事前情報がない場合'}のpの選び方として正しいものはどれか？`,
+      correct:p10!==null
+        ?`事前推定値p₀=${p10}をそのまま使う`
+        :`p=0.5を使う`,
+      wrongs:p10!==null
+        ?[`p=0.5を使う`,`p=${(1-p10)}を使う`,`p=(p₀+0.5)/2を使う`,`nが大きくなるpを探す必要があるため未知として解く`]
+        :[`p=0.5以外を使うと計算が複雑になるため、常にp=0.5しか使えない`,`p=1を使う`,`事前情報がなければサンプルサイズは決定できない`,`p=0.3が統計では標準的に使われる`],
+      exp:`p(1−p)はp=0.5のとき最大値0.25をとります。${p10!==null?`事前推定値p₀=${p10}を使います→p(1−p)=${(p10*(1-p10)).toFixed(4)}。`:`事前情報なし→p=0.5を使って最大・保守的推定をします。`}`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ 必要標本サイズを計算する",
+      qText:`n の計算結果として正しいものはどれか？（Z=1.96、E=${E10_pct}%=${E10}、p=${p10_use}）`,
+      correct:`n≧1.96²×${p10_use}×${(1-p10_use).toFixed(2)}/${E10}²=${n10_exact.toFixed(2)}→切り上げてn=${n10_needed}`,
+      wrongs:[
+        `n≧1.64²×${p10_use}×${(1-p10_use).toFixed(2)}/${E10}²→n=${n10_w1}`,
+        `n≧1.96²×${p10_use}×${(1-p10_use).toFixed(2)}/${(E10/2).toFixed(3)}²→n=${n10_w2}`,
+        `n≧1.96²×${p10_use}/${E10}²→n=${n10_w3}`,
+        `n=${n10_exact.toFixed(2)}→切り捨ててn=${n10_needed-1}`,
+      ],
+      exp:`n≧Z²×p(1−p)/E²=${(1.96*1.96).toFixed(4)}×${p10_use}×${(1-p10_use).toFixed(2)}/${(E10*E10).toFixed(6)}=${n10_exact.toFixed(2)}<br>→<strong>切り上げてn=${n10_needed}</strong>（切り捨てると必要精度を満たさない）`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ 結果の解釈",
+      qText:`「n=${n10_needed}で調査する」の正しい解釈はどれか？`,
+      correct:`n=${n10_needed}以上であれば、95%信頼区間の半幅を${E10_pct}%以内に抑えられる`,
+      wrongs:[
+        `n=${n10_needed}で調査すると誤差は常に${E10_pct}%以内に収まる`,
+        `n=${n10_needed}未満では信頼区間を計算できない`,
+        `n=${n10_needed}で調査すると信頼区間の全幅が${E10_pct}%以内になる`,
+        `nを増やすほど信頼区間の幅が広がる`,
+      ],
+      exp:`nを増やすとSE=√(p(1−p)/n)が小さくなり信頼区間が狭くなります（精度向上）。<br>n=${n10_needed}は「95%信頼区間の<strong>半幅</strong>が${E10_pct}%以内」の保証。全幅なら${E10_pct*2}%以内です。<br><strong>使用したL表：L8→L10</strong>`
+    });
+
+  // ================================================================
+  // 【Tier A: シナリオ⑫】カイ二乗適合度検定（一様性）
+  // ================================================================
+  } else if (typeRnd === 11) {
+    totalSteps = 4;
+    const k11=rndInt(4,6);
+    const n11=[60,90,120][rndInt(0,2)];
+    const exp11=n11/k11;
+    let obs11=[]; let rem11=n11;
+    for(let i=0;i<k11-1;i++){
+      const v=Math.max(2,rndInt(Math.floor(rem11/(k11-i)*0.5),Math.ceil(rem11/(k11-i)*1.5)));
+      obs11.push(Math.min(v,rem11-(k11-i-1)*2));
+      rem11-=obs11[obs11.length-1];
+    }
+    obs11.push(rem11);
+    const df11=k11-1;
+    const chi11=obs11.reduce((a,o)=>a+Math.pow(o-exp11,2)/exp11,0);
+    const chi11CritMap={3:7.81,4:9.49,5:11.07};
+    const chi11Crit=chi11CritMap[df11]||9.49;
+    const isReject11=chi11>chi11Crit;
+    const catH11=['A','B','C','D','E','F'].slice(0,k11).map(c=>`<th>カテゴリ${c}</th>`).join('');
+    const obsT11=obs11.map(v=>`<td>${v}</td>`).join('');
+    const expT11=obs11.map(()=>`<td>${exp11}</td>`).join('');
+    const ctx11=['サイコロを'+n11+'回振ったときの各目の出た回数',''+n11+'人に'+k11+'種類の商品から好みを1つ選ばせた結果',''+n11+'件の問い合わせを'+k11+'時間帯別に分類した結果'][rndInt(0,2)];
+    scenarioHTML=`<div class="scenario"><strong>【カイ二乗適合度検定（一様性）】</strong><br>${ctx11}を調べた。各カテゴリが等確率かを有意水準5%で検定したい。<br><table class="qtable" style="max-width:100%;"><tr><th></th>${catH11}<th>合計</th></tr><tr><td><strong>観測</strong></td>${obsT11}<td>${n11}</td></tr><tr><td><strong>期待</strong></td>${expT11}<td>${n11}</td></tr></table></div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ 自由度を求める",
+      qText:`このカイ二乗適合度検定の自由度として正しいものはどれか？`,
+      correct:`df=k−1=${k11}−1=${df11}`,
+      wrongs:[
+        `df=k=${k11}`,
+        `df=k−2=${k11-2}`,
+        `df=(k−1)²=${(k11-1)*(k11-1)}`,
+        `df=n−k=${n11-k11}`,
+      ],
+      exp:`<strong>📋 L20（自由度ルール）</strong>：適合度検定の基本はdf=k−1。k=${k11}なのでdf=<strong>${df11}</strong>。<br>※ポアソン分布を当てはめる場合はλを推定するためk−2になります。`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ 期待度数を確認する",
+      qText:`一様分布（各カテゴリが同確率）という帰無仮説のもとでの期待度数として正しいものはどれか？`,
+      correct:`各カテゴリの期待度数=${n11}/${k11}=${exp11}`,
+      wrongs:[
+        `期待度数=観測度数の平均`,
+        `期待度数=n×前回の観測比率`,
+        `各カテゴリで期待度数は異なる`,
+        `期待度数は観測度数から引いた偏差`,
+      ],
+      exp:`帰無仮説「一様分布」→各カテゴリの確率は1/k=1/${k11}と等しい。<br>期待度数=n×(1/k)=${n11}×(1/${k11})=<strong>${exp11}</strong>（全カテゴリ共通）。📋<strong>L16</strong>の分母に使います。`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ χ²値を計算する",
+      qText:`χ²統計量の値として最も近いものはどれか？`,
+      correct:`χ²=Σ(観−期)²/期≈${chi11.toFixed(2)}`,
+      wrongs:[
+        `χ²=Σ(観−期)/期≈${obs11.reduce((a,o)=>a+(o-exp11)/exp11,0).toFixed(2)}`,
+        `χ²=Σ(観−期)²≈${obs11.reduce((a,o)=>a+Math.pow(o-exp11,2),0).toFixed(2)}`,
+        `χ²=(Σ|観−期|/期)²≈${Math.pow(obs11.reduce((a,o)=>a+Math.abs(o-exp11)/exp11,0),2).toFixed(2)}`,
+        `χ²=Σ(観−期)²/n≈${(obs11.reduce((a,o)=>a+Math.pow(o-exp11,2),0)/n11).toFixed(2)}`,
+      ],
+      exp:`<strong>📋 L16（χ²統計量）</strong>：χ²=Σ(観−期)²/期<br>${obs11.map((o,i)=>`セル${['A','B','C','D','E','F'][i]}:(${o}−${exp11})²/${exp11}=${((o-exp11)*(o-exp11)/exp11).toFixed(3)}`).join(' + ')}<br>=<strong>${chi11.toFixed(2)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ 判定する",
+      qText:`χ²=${chi11.toFixed(2)}と自由度${df11}の棄却限界値${chi11Crit}を比べた結論として正しいものはどれか？`,
+      correct:isReject11
+        ?`χ²>${chi11Crit} なので帰無仮説を棄却。各カテゴリの割合は均等でない。`
+        :`χ²<${chi11Crit} なので帰無仮説を棄却できない。一様分布と矛盾しない。`,
+      wrongs:isReject11
+        ?[`χ²<${chi11Crit}なので棄却できない。`,`χ²は常に正なので${chi11Crit/2}が本来の棄却値`,`自由度${df11}の棄却値は${chi11Crit+2}`,`独立性検定と同じ公式なので別の棄却値が必要`]
+        :[`χ²>${chi11Crit}なので帰無仮説を棄却。均等でない。`,`χ²>0なら必ず棄却される`,`χ²検定は両側なので下限値も必要`,`観測と期待が一致しないので棄却される`],
+      exp:`χ²=${chi11.toFixed(2)} ${isReject11?'>':'<'} ${chi11Crit}（自由度${df11}の5%点）。<br>帰無仮説を${isReject11?'棄却します。各カテゴリの割合に偏りがある。':'棄却できません。一様分布と矛盾しない。'}<br><strong>使用したL表：L16→L20</strong>`
+    });
+
+  // ================================================================
+  // 【Tier A: シナリオ⑬】カイ二乗適合度検定（同等性の検定）
+  // ================================================================
+  } else if (typeRnd === 12) {
+    totalSteps = 4;
+    const k12=rndInt(3,4);
+    const n12=[60,90,120][rndInt(0,2)];
+    const ratioSet12k3=[{p:[0.5,0.3,0.2],label:['A型','B型','O型']},{p:[0.6,0.25,0.15],label:['好き','どちらでも','嫌い']}];
+    const ratioSet12k4=[{p:[0.4,0.3,0.2,0.1],label:['1位','2位','3位','4位']},{p:[0.25,0.25,0.25,0.25],label:['Q1','Q2','Q3','Q4']}];
+    const rs12=k12===3?ratioSet12k3[rndInt(0,1)]:ratioSet12k4[rndInt(0,1)];
+    const ratios12=rs12.p, labels12=rs12.label;
+    const exp12=ratios12.map(r=>r*n12);
+    let obs12=[]; let rem12=n12;
+    for(let i=0;i<k12-1;i++){
+      const base=Math.round(exp12[i]);
+      const v=Math.max(2,base+rndInt(-Math.floor(base*0.3),Math.floor(base*0.3)));
+      obs12.push(Math.min(v,rem12-(k12-i-1)*2));
+      rem12-=obs12[obs12.length-1];
+    }
+    obs12.push(rem12);
+    const df12=k12-1;
+    const chi12=obs12.reduce((a,o,i)=>a+Math.pow(o-exp12[i],2)/exp12[i],0);
+    const chi12CritMap={2:5.99,3:7.81};
+    const chi12Crit=chi12CritMap[df12]||7.81;
+    const isReject12=chi12>chi12Crit;
+    const tableRows12=labels12.map((l,i)=>`<tr><td>${l}</td><td>${obs12[i]}</td><td>${exp12[i].toFixed(1)}</td><td>${obs12[i]-exp12[i]>=0?'+':''}${(obs12[i]-exp12[i]).toFixed(0)}</td></tr>`).join('');
+    scenarioHTML=`<div class="scenario"><strong>【カイ二乗適合度検定（既知の比率への当てはめ）】</strong><br>過去のデータでは${labels12.map((l,i)=>`${l}=${(ratios12[i]*100)}%`).join('、')}だった。今回n=${n12}人を新たに調査した。現在の分布は過去と変化したか、有意水準5%で検定したい。<br><table class="qtable" style="max-width:380px;"><tr><th>カテゴリ</th><th>観測度数</th><th>期待度数</th><th>差(観−期)</th></tr>${tableRows12}</table></div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ 期待度数の計算方法を確認する",
+      qText:`過去の比率が与えられているとき、各カテゴリの期待度数の正しい計算式はどれか？`,
+      correct:`期待度数=n×帰無仮説で仮定した比率`,
+      wrongs:[
+        `期待度数=n×観測比率`,
+        `期待度数=n/k`,
+        `期待度数は検定後に計算する`,
+        `期待度数=観測度数の平均値${(n12/k12).toFixed(1)}`,
+      ],
+      exp:`<strong>同等性の検定</strong>：帰無仮説「現在の比率は過去の比率と等しい」。<br>期待度数=n×p₀（p₀：帰無仮説の比率）。例：「${labels12[0]}」の期待度数=${n12}×${ratios12[0]}=<strong>${exp12[0].toFixed(1)}</strong><br>📋<strong>L16</strong>の分母に使います。`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ 自由度を求める",
+      qText:`この適合度検定の自由度として正しいものはどれか？`,
+      correct:`df=k−1=${k12-1}`,
+      wrongs:[
+        `df=k−2=${k12-2}`,
+        `df=k=${k12}`,
+        `df=n−1=${n12-1}`,
+        `df=(k−1)²=${(k12-1)*(k12-1)}`,
+      ],
+      exp:`<strong>📋 L20（自由度ルール）</strong>：比率が外部から与えられる（推定しない）場合→df=k−1=<strong>${k12-1}</strong>。<br>もし比率の中のパラメータをデータから推定していればdf=k−1−m（ポアソンはk−2）。`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ χ²値を計算する",
+      qText:`算出されるχ²値として最も近いものはどれか？`,
+      correct:`χ²≈${chi12.toFixed(2)}`,
+      wrongs:[
+        `χ²≈${(chi12*1.5).toFixed(2)}`,
+        `χ²≈${Math.abs(obs12.reduce((a,o,i)=>a+(o-exp12[i]),0)).toFixed(2)}`,
+        `χ²≈${obs12.reduce((a,o,i)=>a+Math.pow(o-exp12[i],2),0).toFixed(2)}`,
+        `χ²≈${(chi12/k12).toFixed(2)}`,
+      ],
+      exp:`<strong>📋 L16</strong>：χ²=Σ(観−期)²/期<br>${obs12.map((o,i)=>`(${o}−${exp12[i].toFixed(1)})²/${exp12[i].toFixed(1)}=${((o-exp12[i])*(o-exp12[i])/exp12[i]).toFixed(3)}`).join(' + ')}<br>=<strong>${chi12.toFixed(2)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ 判定する",
+      qText:`χ²=${chi12.toFixed(2)}と自由度${df12}の棄却限界値${chi12Crit}を比べた結論として正しいものはどれか？`,
+      correct:isReject12
+        ?`χ²>${chi12Crit} なので帰無仮説を棄却。現在の比率は過去の比率と異なる。`
+        :`χ²<${chi12Crit} なので帰無仮説を棄却できない。過去の比率と一致すると矛盾しない。`,
+      wrongs:isReject12
+        ?[`χ²<${chi12Crit}なので棄却できない。`,`観測≠期待のセルがあれば必ず棄却`,`自由度${df12}の5%点は${chi12Crit+2}`,`独立性検定の棄却限界値を使うべき`]
+        :[`χ²>${chi12Crit}なので帰無仮説を棄却。比率が異なる。`,`期待と観測に差がある以上、比率が変化したと言える`,`自由度${df12}の5%点は${chi12Crit-2}`,`サンプル数を増やせば必ず棄却される`],
+      exp:`χ²=${chi12.toFixed(2)} ${isReject12?'>':'<'} ${chi12Crit}（自由度${df12}の5%点）。<br>帰無仮説を${isReject12?'棄却します。':'棄却できません。'}<br><strong>使用したL表：L16→L20</strong>`
+    });
+
+  // ================================================================
+  // 【Tier A: シナリオ⑭】ポアソン分布の当てはめ（自由度k−2）
+  // ================================================================
+  } else if (typeRnd === 13) {
+    totalSteps = 5;
+    const lambda14=[1.5,2.0,2.5,3.0][rndInt(0,3)];
+    const n14=[80,100,120][rndInt(0,2)];
+    const k14=5;
+    function pois14(lam,kv){let p=Math.exp(-lam);for(let i=0;i<kv;i++)p*=lam/(i+1);return p;}
+    const probs14=[];
+    for(let i=0;i<k14-1;i++)probs14.push(pois14(lambda14,i));
+    probs14.push(1-probs14.reduce((a,b)=>a+b,0));
+    const exp14_true=probs14.map(p=>p*n14);
+    let obs14=exp14_true.map(e=>Math.max(1,Math.round(e+rndInt(-Math.floor(Math.sqrt(e)),Math.floor(Math.sqrt(e))))));
+    const s14=obs14.reduce((a,b)=>a+b,0);
+    obs14[obs14.length-1]+=n14-s14;
+    if(obs14[obs14.length-1]<1)obs14[obs14.length-1]=1;
+    const lhat14=obs14.reduce((a,o,i)=>a+o*(i<k14-1?i:k14-1),0)/n14;
+    const probs14f=[];
+    for(let i=0;i<k14-1;i++)probs14f.push(pois14(lhat14,i));
+    probs14f.push(1-probs14f.reduce((a,b)=>a+b,0));
+    const exp14f=probs14f.map(p=>p*n14);
+    const df14=k14-2;
+    const chi14=obs14.reduce((a,o,i)=>a+Math.pow(o-exp14f[i],2)/Math.max(exp14f[i],0.001),0);
+    const chi14Crit=7.81;
+    const isReject14=chi14>chi14Crit;
+    const rl14=['0件','1件','2件','3件','4件以上'];
+    const tbl14=`<table class="qtable" style="max-width:100%;"><tr><th>件数</th>${rl14.map(l=>`<th>${l}</th>`).join('')}<th>合計</th></tr><tr><td><strong>観測</strong></td>${obs14.map(o=>`<td>${o}</td>`).join('')}<td>${n14}</td></tr></table>`;
+    const ctx14=['1日あたりの交通事故発生件数を'+n14+'日間記録した。','1時間あたりのシステムエラー件数を'+n14+'時間分観測した。','1日の問い合わせ件数を'+n14+'日記録した。'][rndInt(0,2)];
+    scenarioHTML=`<div class="scenario"><strong>【ポアソン分布の当てはめ検定】</strong><br>${ctx14}<br>ポアソン分布Po(λ)に従うか検定したい。λは標本データから推定する。<br>${tbl14}</div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ λ（ポアソン平均）を推定する",
+      qText:`観測データからポアソン分布のパラメータλを推定する式として正しいものはどれか？（「4件以上」は4件として計算）`,
+      correct:`λ̂==Σ(件数×度数)/n≈${lhat14.toFixed(3)}`,
+      wrongs:[
+        `λ̂=k=${k14}`,
+        `λ̂=最頻値の件数`,
+        `λ̂=n/k=${n14}/${k14}=${(n14/k14).toFixed(1)}`,
+        `λ̂=中央値のカテゴリの件数`,
+      ],
+      exp:`<strong>📋 L15（ポアソン分布）</strong>：ポアソン分布の平均はλ。<br>λ̂=Σ(件数×観測度数)/n=(0×${obs14[0]}+1×${obs14[1]}+2×${obs14[2]}+3×${obs14[3]}+4×${obs14[4]})/${n14}≈<strong>${lhat14.toFixed(3)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ 期待度数を計算する",
+      qText:`λ̂≈${lhat14.toFixed(2)}を使ったポアソン分布で「0件」の期待度数として正しいものはどれか？`,
+      correct:`${n14}×e^(−${lhat14.toFixed(2)})≈${exp14f[0].toFixed(1)}`,
+      wrongs:[
+        `${n14}×${lhat14.toFixed(2)}≈${(n14*lhat14).toFixed(1)}`,
+        `${n14}/${k14}=${(n14/k14).toFixed(1)}`,
+        `${n14}×e^(−${lhat14.toFixed(2)})×${lhat14.toFixed(2)}≈${exp14f[1].toFixed(1)}`,
+        `${obs14[0]}`,
+      ],
+      exp:`<strong>📋 L15</strong>：P(X=0)=e^(−λ)×λ^0/0!=e^(−${lhat14.toFixed(2)})<br>期待度数=${n14}×e^(−${lhat14.toFixed(2)})≈<strong>${exp14f[0].toFixed(1)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ 自由度を決める（重要ルール）",
+      qText:`ポアソン分布の当てはめ検定の自由度として正しいものはどれか？（カテゴリ数k=${k14}、推定パラメータ数：λの1個）`,
+      correct:`df=k−1−1=${k14}−2=${df14}`,
+      wrongs:[
+        `df=k−1=${k14-1}`,
+        `df=k−3=${k14-3}`,
+        `df=k=${k14}`,
+        `df=n−k=${n14-k14}`,
+      ],
+      exp:`<strong>📋 L20（自由度ルール・重要）</strong>：適合度検定の基本はdf=k−1。<br>データからパラメータをm個推定した場合→df=k−1−m。<br>ポアソン分布はλの1個→df=${k14}−1−1=<strong>${df14}</strong>（k−2）。<br>※正規分布を当てはめる場合はμ・σの2個推定→df=k−3。`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ χ²値を計算する",
+      qText:`算出されるχ²値として最も近いものはどれか？（λ̂推定後の期待度数を使用）`,
+      correct:`χ²≈${chi14.toFixed(2)}`,
+      wrongs:[
+        `χ²≈${(chi14*1.5).toFixed(2)}`,
+        `χ²≈${obs14.reduce((a,o,i)=>a+Math.pow(o-exp14_true[i],2)/Math.max(exp14_true[i],0.001),0).toFixed(2)}`,
+        `χ²≈${(chi14/df14).toFixed(2)}`,
+        `χ²≈${obs14.reduce((a,o,i)=>a+Math.pow(o-exp14f[i],2),0).toFixed(2)}`,
+      ],
+      exp:`<strong>📋 L16</strong>：χ²=Σ(観−期)²/期（λ̂推定後の期待度数を使用）≈<strong>${chi14.toFixed(2)}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 5 ｜ 判定する",
+      qText:`χ²=${chi14.toFixed(2)}と自由度${df14}の棄却限界値（5%点：${chi14Crit}）を比べた結論として正しいものはどれか？`,
+      correct:isReject14
+        ?`χ²>${chi14Crit} なので帰無仮説を棄却。`
+        :`χ²<${chi14Crit} なので帰無仮説を棄却できない。ポアソン分布と矛盾しない。`,
+      wrongs:isReject14
+        ?[`自由度k−1=${df14+1}の棄却限界値9.49と比べて判定すべき`,`χ²<${chi14Crit}なので棄却できない。`,`ポアソン分布は離散型なのでカイ二乗検定は使えない`,`λ推定値が真の値と違うのでこのχ²値は使えない`]
+        :[`自由度k−1=${df14+1}の棄却限界値9.49と比べると${chi14.toFixed(2)}>9.49なので棄却`,`χ²>${chi14Crit}なので棄却。`,`λ̂推定値が使えているのでポアソン分布は棄却される`,`χ²値が正なので必ず棄却される`],
+      exp:`χ²=${chi14.toFixed(2)} ${isReject14?'>':'<'} ${chi14Crit}（自由度${df14}=k−2の5%点）。<br>帰無仮説を${isReject14?'棄却します。':'棄却できません。'}<br><strong>自由度はk−2=${df14}です（λ推定の分だけ減少）。</strong><br><strong>使用したL表：L15→L16→L20</strong>`
+    });
+
+  // ================================================================
+  // 【Tier A: シナリオ⑮】カイ二乗検定の手法判別（横断問い）
+  // ================================================================
+  } else {
+    totalSteps = 4;
+    const krow15=rndInt(2,3), kcol15=rndInt(2,3);
+    const df15_indep=(krow15-1)*(kcol15-1);
+    const k15_cats=rndInt(3,5);
+    const df15_good=k15_cats-1;
+    const df15_pois=k15_cats-2;
+    const n15=rndInt(80,150);
+    scenarioHTML=`<div class="scenario"><strong>【カイ二乗検定の手法判別】</strong><br>以下の3つの研究目的に対して、適切な検定の手法と自由度を考える。<br><strong>研究A</strong>：${n15}人を「性別（男/女）×職種（${kcol15}種類）」のクロス集計し、両者の関連を検定する。<br><strong>研究B</strong>：${k15_cats}種類の選択肢から一つ選ばせ、各選択肢の選択率が等しいかを検定する（n=${n15}）。<br><strong>研究C</strong>：1日あたりの来客数がポアソン分布に従うかを適合度検定する（${k15_cats}カテゴリ、λはデータから推定）。</div>`;
+    steps.push({
+      stepLabel:"STEP 1 ｜ 手法の判別（研究Aの検定手法）",
+      qText:`研究A（性別×職種のクロス集計）に適切な検定手法と帰無仮説の組み合わせはどれか？`,
+      correct:`独立性の検定。H₀：「性別と職種は独立である」`,
+      wrongs:[
+        `適合度検定`,
+        `適合度検定`,
+        `2標本t検定`,
+        `F検定`,
+      ],
+      exp:`<strong>独立性の検定</strong>：2つのカテゴリ変数の関連を調べる。クロス集計表を使う。<br>H₀「2変数は独立」→期待度数=(行合計×列合計)/全体合計。<br>📋<strong>L16</strong>（χ²統計量）を使う。📋<strong>L20</strong>の自由度：(行数−1)×(列数−1)。`
+    });
+    steps.push({
+      stepLabel:"STEP 2 ｜ 自由度の計算（3つの比較）",
+      qText:`研究A（${krow15}行×${kcol15}列）・研究B（k=${k15_cats}の一様性）・研究C（k=${k15_cats}のポアソン当てはめ）の自由度の組み合わせとして正しいものはどれか？`,
+      correct:`研究A:(${krow15}−1)×(${kcol15}−1)=${df15_indep}、研究B:${k15_cats}−1=${df15_good}、研究C:${k15_cats}−2=${df15_pois}`,
+      wrongs:[
+        `研究A:${krow15}×${kcol15}=${krow15*kcol15}、研究B:${k15_cats}、研究C:${k15_cats}−1=${df15_good}`,
+        `研究A:(${krow15}−1)×(${kcol15}−1)=${df15_indep}、研究B:${k15_cats}−2=${df15_pois}、研究C:${k15_cats}−1=${df15_good}`,
+        `研究A:${krow15}+${kcol15}−2=${krow15+kcol15-2}、研究B:${k15_cats}−1=${df15_good}、研究C:${k15_cats}−2=${df15_pois}`,
+        `研究A・B・Cすべてn−1=${n15-1}`,
+      ],
+      exp:`<strong>📋 L20（自由度ルール一覧）</strong>：<br>・独立性検定：(行数−1)×(列数−1)=(${krow15}−1)×(${kcol15}−1)=<strong>${df15_indep}</strong><br>・適合度検定（比率外部与え）：k−1=${k15_cats}−1=<strong>${df15_good}</strong><br>・ポアソン当てはめ（λ推定）：k−2=${k15_cats}−2=<strong>${df15_pois}</strong>`
+    });
+    steps.push({
+      stepLabel:"STEP 3 ｜ 期待度数の計算方法の違い",
+      qText:`「独立性の検定」と「適合度検定（一様性）」の期待度数の計算式の正しい組み合わせはどれか？`,
+      correct:`独立性：(行合計×列合計)/全体合計  |  一様性：全体合計/カテゴリ数`,
+      wrongs:[
+        `独立性：全体合計/セル数  |  一様性：(行合計×列合計)/全体合計`,
+        `独立性・一様性ともに：全体合計/カテゴリ数`,
+        `独立性：行合計×列合計  |  一様性：全体合計/カテゴリ数`,
+        `独立性：行合計/全体合計  |  一様性：列合計/全体合計`,
+      ],
+      exp:`<strong>独立性</strong>：H₀「独立」のもとP(行i,列j)=P(行i)×P(列j)→期待度数=(行合計×列合計)/全体合計<br><strong>一様性の適合度検定</strong>：H₀「各カテゴリ同確率」→期待度数=全体合計/カテゴリ数<br>📋<strong>L16</strong>の分母に使います。`
+    });
+    steps.push({
+      stepLabel:"STEP 4 ｜ 研究Cの判定まとめ",
+      qText:`研究C（ポアソン当てはめ、自由度${df15_pois}）で「データのχ²値が7.2」だった場合の判定として正しいものはどれか？（自由度3→5%点:7.81、自由度2→5%点:5.99）`,
+      correct:`自由度${df15_pois}の5%点を使って判定する。${df15_pois===3?'7.2<7.81 なので帰無仮説を棄却できない。':'7.2>5.99 なので帰無仮説を棄却。'}`,
+      wrongs:[
+        `自由度k−1=${df15_good}の5%点と比べる`,
+        `χ²値が7.2>5.99なので常に棄却される`,
+        `ポアソン分布は離散型なのでカイ二乗近似は使えない`,
+        `データからλを推定しているためχ²統計量は信頼できない`,
+      ],
+      exp:`📋<strong>L20</strong>：研究Cの自由度=k−2=${df15_pois}。<br>${df15_pois===3?`自由度3の5%点=7.81。7.2<7.81→帰無仮説（ポアソン分布に従う）を棄却できない。`:`自由度2の5%点=5.99。7.2>5.99→帰無仮説（ポアソン分布に従う）を棄却。`}<br><strong>自由度の計算が判定を左右する重要ポイントです。</strong><br><strong>使用したL表：L16→L20</strong>`
+    });
+  }
+
+  state.inferScenarioData = { scenarioHTML, steps };
+
+  state.inferTotalSteps = totalSteps;
+}
+
+function genInfer() {
+  if (!state.inferScenarioData) {
+    generateInferScenario();
+  }
+
+  const d = state.inferScenarioData;
+  const currentStepData = d.steps[state.inferStep - 1];
+
+  // 以前のステップの正解ルートを画面上部に表示する（即時リカバリ直列型）
+  let historyHTML = "";
+  for (let i = 0; i < state.inferStep - 1; i++) {
+    const past = d.steps[i];
+    historyHTML += `<div style="opacity:0.65; margin-bottom:16px; border-bottom:1px dashed #cbd5e1; padding-bottom:12px; pointer-events:none;">
+        <div style="display:inline-block;background:#64748b;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:bold;margin-bottom:6px;">${past.stepLabel} 済</div>
+        <p style="font-size:0.9rem; margin-bottom:8px;">${past.qText}</p>
+        <div class="opt correct" style="padding:8px 12px; margin-bottom:8px;">${past.correct}</div>
+        <div style="background:#f1f5f9; padding:8px; border-radius:6px; font-size:0.8rem; color:#475569;">${past.exp}</div>
+      </div>`;
+  }
+
+  // 現在のステップの問題文
+  const qText = `${d.scenarioHTML}
+    ${historyHTML}
+    <div style="margin-top:10px;">
+      <div style="display:inline-block;background:#1d4ed8;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.8rem;font-weight:bold;margin-bottom:8px;">${currentStepData.stepLabel}</div>
+      <p style="font-weight:bold;">${currentStepData.qText}</p>
+    </div>`;
+
+  const {opts, ansIndex} = makeOpts(currentStepData.correct, currentStepData.wrongs);
+
+  return {
+    badgeClass: 'qtype-calc',
+    badgeText: `実践 STEP ${state.inferStep} / ${state.inferTotalSteps}`,
+    q: qText,
+    opts,
+    ansIndex,
+    exp: currentStepData.exp
+  };
+}
+
+
+// ===================================================
+// 他のユニット（既存コード完全維持・変更なし）
+// ===================================================
+
+// =====================================================================
+// グラフ問題：Gemini型（長文シナリオ＋本格SVG）全8種類
+// 既存6種類は破棄し完全刷新
+// =====================================================================
+function genGraph(){
+  const type = rndInt(0, 7);
+  if(type===0) return genOutlierTrap();
+  if(type===1) return genTimeSeriesCompare();
+  if(type===2) return genBoxplotAdvanced();
+  if(type===3) return genScatterLayered();
+  if(type===4) return genHistCompare();
+  if(type===5) return genCorrelogramAdvanced();
+  if(type===6) return genRegressionResidual();
+  return genScatterMatrix();
+}
+
+// ─── ヘルパー：グラフ共通スタイル文字列 ──────────────────────────────
+function graphWrap(svgHtml){
+  return `<div style="overflow-x:auto;margin:14px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center">${svgHtml}</div>`;
+}
+
+// ─── 問題1: 外れ値による見かけ上の相関（トラップ）───────────────────
+function genOutlierTrap(){
+  const scenarios = [
+    { ctx:'ある地方自治体の健康推進課が、管内住民の生活習慣と健康状態の関係を長期追跡調査した。本調査では無作為に抽出された住民の日常活動量と各種健康診断数値を記録している。以下の散布図はその結果を可視化したものである。', lx:'1日あたり平均歩数', ly:'総合健康指標スコア' },
+    { ctx:'精密機器製造メーカーの品質管理本部が、新規製造ラインの炉内温度と製品耐久度の因果関係を検証する解析タスクを立ち上げた。過去3ヶ月のデータをサンプリングしたプロットは以下の通りである。', lx:'炉内設定温度（℃）', ly:'製品耐久度限界値' },
+    { ctx:'総合ECプラットフォームのデータサイエンスチームが、有料会員の月間滞在時間と年間購買金額の構造をプロットした。特定層のアクティブユーザーを抽出した結果は以下の通りである。', lx:'月間平均アプリ滞在時間（分）', ly:'年間総購買金額（千円）' },
+  ];
+  const sc = scenarios[rndInt(0, 2)];
+  const W=320, H=260, PL=38, PR=18, PT=18, PB=42;
+  let dots='';
+  for(let i=0;i<32;i++){
+    const x=32+Math.random()*28, y=30+Math.random()*28;
+    const cx=PL+(W-PL-PR)*x/100, cy=PT+(H-PT-PB)*(1-y/100);
+    dots+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="#1d4ed8" opacity="0.72"/>`;
+  }
+  const ocx=PL+(W-PL-PR)*0.89, ocy=PT+(H-PT-PB)*0.12;
+  dots+=`<circle cx="${ocx.toFixed(1)}" cy="${ocy.toFixed(1)}" r="7" fill="#dc2626" stroke="#fff" stroke-width="2"/>`;
+  dots+=`<text x="${(ocx-36).toFixed(1)}" y="${(ocy+20).toFixed(1)}" font-size="11" fill="#dc2626" font-weight="bold">観測値M</text>`;
+  const axes=`<line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="#334155" stroke-width="1.5"/>
+    <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="#334155" stroke-width="1.5"/>
+    <text x="${(PL+(W-PL-PR)/2).toFixed(0)}" y="${H-6}" text-anchor="middle" font-size="10" fill="#64748b">${sc.lx}</text>
+    <text x="11" y="${(PT+(H-PT-PB)/2).toFixed(0)}" text-anchor="middle" font-size="10" fill="#64748b" transform="rotate(-90 11 ${(PT+(H-PT-PB)/2).toFixed(0)})">${sc.ly}</text>`;
+  const svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="background:#fff;max-width:100%">${axes}${dots}</svg>`;
+
+  const correct='観測値Mを除外して相関係数を再計算すると相関係数の絶対値は大幅に減少してほぼ0に近づく。データ全体の正の相関はこの1点が引き起こした「見かけ上の相関（擬相関）」である';
+  const wrongs=[
+    '観測値Mは右上に位置しているが、最小二乗法による回帰直線の傾きや切片の決定に対して数学的な影響を与えることはない',
+    '観測値MをデータセットからI除外すると、決定係数（R²）は必ず大きくなり、モデルの当てはまりが改善される',
+    '観測値Mを除外すると変数Xの標本平均および変数Yの標本平均はともに上昇する傾向を示す',
+  ];
+  const {opts,ansIndex}=makeOpts(correct,wrongs);
+  return {
+    badgeClass:'qtype-graph',badgeText:'本番級グラフ — 外れ値',
+    q:`<p style="font-size:.88rem;color:#334155;margin-bottom:10px;line-height:1.65;text-indent:1em">${sc.ctx}</p>
+       ${graphWrap(svg)}
+       <p>上図の<strong>赤点「観測値M」</strong>が統計量・回帰分析に与える影響について、<strong>最も適切な記述を1つ選べ。</strong></p>`,
+    opts,ansIndex,
+    exp:`<div class="s"><strong>外れ値が生み出す「見かけ上の相関（擬相関）」— 2級頻出トラップ</strong></div>
+         <div class="s">青点の塊だけを見ると完全に<strong>無相関（丸い散らばり）</strong>ですが、右上の観測値Mが全体のトレンドを右上がりに引き寄せ、正の相関が「見かけ上」発生します。</div>
+         <div class="s">✅ 正解：<strong>Mを除くと相関係数はほぼ0に激減</strong>します。</div>
+         <div class="s">❌ 誤り2：外れ値1点は回帰直線を強く引き寄せます（影響は絶大）。</div>
+         <div class="s">❌ 誤り3：Mを含むと「無理やり直線に合わせた形」でR²が見かけ上高くなるため、Mを除くとR²は必ずしも改善しません。</div>
+         <div class="s">❌ 誤り4：右上のMを除くと平均は<strong>下がります</strong>（MがX・Yの平均を上に引き上げていたため）。</div>`
+  };
+}
+
+// ─── 問題2: 時系列2画面比較（分布の変化）──────────────────────────────
+function genTimeSeriesCompare(){
+  const scenarios=[
+    {ctx:'ある追跡研究では、同一コホートを第Ⅰ期（プログラム導入前）と第Ⅱ期（10年後）の2時点で継続的に計測した。2時点それぞれの散布図を比較し、変数間の構造変化を分析する。',l1:'【第Ⅰ期】導入前',l2:'【第Ⅱ期】10年後追跡'},
+    {ctx:'製造ラインの品質改善プロジェクトの前後で、製品の2つの品質指標の関係構造がどのように変化したかを散布図で比較する。各点は製品1ロットを表している。',l1:'【改善前】',l2:'【改善後】'},
+  ];
+  const sc=scenarios[rndInt(0,1)];
+  const W=155,H=145,P=16;
+  let d1='',d2='';
+  for(let i=0;i<24;i++){
+    const base=18+Math.random()*38;
+    const x1=base+(Math.random()-0.5)*22, y1=base+(Math.random()-0.5)*26;
+    const cx1=P+(W-2*P)*(Math.min(Math.max(x1,2),78)/80);
+    const cy1=H-P-(H-2*P)*(Math.min(Math.max(y1,2),78)/80);
+    d1+=`<circle cx="${cx1.toFixed(1)}" cy="${cy1.toFixed(1)}" r="3.5" fill="#64748b" opacity="0.68"/>`;
+    const x2=base+24+(Math.random()-0.5)*6, y2=base+20+(Math.random()-0.5)*6;
+    const cx2=P+(W-2*P)*(Math.min(Math.max(x2,2),100)/100);
+    const cy2=H-P-(H-2*P)*(Math.min(Math.max(y2,2),100)/100);
+    d2+=`<circle cx="${cx2.toFixed(1)}" cy="${cy2.toFixed(1)}" r="3.5" fill="#7c3aed" opacity="0.78"/>`;
+  }
+  const ax=`<line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="#94a3b8" stroke-width="1.2"/>
+    <line x1="${P}" y1="${P}" x2="${P}" y2="${H-P}" stroke="#94a3b8" stroke-width="1.2"/>`;
+  const svg1=`<svg viewBox="0 0 ${W} ${H}" style="width:140px;background:#fff;border:1px solid #e2e8f0" xmlns="http://www.w3.org/2000/svg">${ax}${d1}</svg>`;
+  const svg2=`<svg viewBox="0 0 ${W} ${H}" style="width:140px;background:#fff;border:1px solid #e2e8f0" xmlns="http://www.w3.org/2000/svg">${ax}${d2}</svg>`;
+  const html=`<div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap;padding:8px 0">
+    <div style="text-align:center"><div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:5px">${sc.l1}</div>${svg1}</div>
+    <div style="text-align:center"><div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:5px">${sc.l2}</div>${svg2}</div>
+  </div>`;
+
+  const correct='第Ⅱ期では双方の変数の標本平均がともに上昇し、かつデータの分布が直線状に収束した。正の相関係数は1に近い値へと強まり、r₁ < r₂ の関係が成立している';
+  const wrongs=[
+    '第Ⅱ期は第Ⅰ期に比べデータのばらつき（条件付き標準偏差）が大きく拡大しており、r₁ > r₂ の関係が成立する',
+    'プロット全体がX軸（横軸）の正の方向のみに平行移動しており、Y軸方向の平均的構造や相関の性質には変化が見られない',
+    '第Ⅰ期と第Ⅱ期で相関係数の符号が逆転しており、変数間の因果関係の向きが180度変化したと結論づけられる',
+  ];
+  const {opts,ansIndex}=makeOpts(correct,wrongs);
+  return {
+    badgeClass:'qtype-graph',badgeText:'本番級グラフ — 時系列比較',
+    q:`<p style="font-size:.88rem;color:#334155;margin-bottom:10px;line-height:1.65;text-indent:1em">${sc.ctx}</p>
+       ${graphWrap(html)}
+       <p>第Ⅰ期と第Ⅱ期の散布図を比較した記述として、<strong>最も適切なものを1つ選べ。</strong></p>`,
+    opts,ansIndex,
+    exp:`<div class="s"><strong>2画面並列：分布の変化を読む</strong></div>
+         <div class="s">第Ⅱ期はプロット全体が右上（X・Yともに大きい方向）へシフト → <strong>双方の平均が上昇</strong>。</div>
+         <div class="s">第Ⅱ期の点は細い直線状に密集 → <strong>ばらつきが収束し、相関が強化（r → 1）</strong>。</div>
+         <div class="s">❌ 誤り1：ばらつきは<strong>縮小</strong>（拡大ではない）。r₁ < r₂ です。</div>
+         <div class="s">❌ 誤り2：Y軸方向にも平均が上昇しており、相関の強さも変化しています。</div>
+         <div class="s">❌ 誤り3：相関の符号（正の相関）は変わっておらず、逆転はしていません。</div>`
+  };
+}
+
+// ─── 問題3: 多群箱ひげ図の精密読み取り（過去問2017年問1型）──────────────
+function genBoxplotAdvanced(){
+  const scenarios=[
+    {ctx:'総務省の通信利用動向調査に基づき、47都道府県を対象にPC・スマートフォン・タブレット端末の世帯普及率（保有世帯の割合）を調査した。下図はその箱ひげ図である。',groups:['PC','スマートフォン','タブレット','TV'],unit:'%'},
+    {ctx:'農林水産省が実施した農業経営体調査において、4地域（北海道・東北・関東・九州）の農業経営体の経営耕地面積分布を比較した箱ひげ図が以下の通りである。',groups:['北海道','東北','関東','九州'],unit:'ha'},
+  ];
+  const sc=scenarios[rndInt(0,1)];
+  const W=400,H=200,PL=48,PR=16,PT=18,PB=36;
+  const k=sc.groups.length;
+  const stats=sc.groups.map((_,gi)=>{
+    const base=20+gi*12+rndInt(-5,5);
+    const q1=base+rndInt(2,8), q3=q1+rndInt(12,28);
+    const med=q1+rndInt(4,q3-q1-3);
+    const mn=Math.max(0,q1-rndInt(4,15)), mx=q3+rndInt(5,20);
+    // たまに外れ値
+    const outlier=Math.random()>0.6?mx+rndInt(5,18):null;
+    return {q1,med,q3,mn,mx:outlier?mx:mx,outlier};
+  });
+  const allVals=[...stats.map(s=>[s.mn,s.mx,s.outlier].filter(Boolean)).flat()];
+  const vMin=Math.min(...allVals)-5, vMax=Math.max(...allVals)+5;
+  const sy=v=>PT+(H-PT-PB)*(1-(v-vMin)/(vMax-vMin));
+  const gW=(W-PL-PR)/k;
+  let boxes='',yticks='';
+  stats.forEach((s,i)=>{
+    const cx=PL+gW*i+gW/2, bw=gW*0.38;
+    boxes+=`<line x1="${cx}" y1="${sy(s.mn)}" x2="${cx}" y2="${sy(s.q1)}" stroke="#475569" stroke-width="1.5"/>
+      <line x1="${cx-bw/2}" y1="${sy(s.mn)}" x2="${cx+bw/2}" y2="${sy(s.mn)}" stroke="#475569" stroke-width="1.5"/>
+      <rect x="${cx-bw/2}" y="${sy(s.q3)}" width="${bw}" height="${sy(s.q1)-sy(s.q3)}" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="1.5"/>
+      <line x1="${cx-bw/2}" y1="${sy(s.med)}" x2="${cx+bw/2}" y2="${sy(s.med)}" stroke="#dc2626" stroke-width="2.5"/>
+      <line x1="${cx}" y1="${sy(s.q3)}" x2="${cx}" y2="${sy(s.mx)}" stroke="#475569" stroke-width="1.5"/>
+      <line x1="${cx-bw/2}" y1="${sy(s.mx)}" x2="${cx+bw/2}" y2="${sy(s.mx)}" stroke="#475569" stroke-width="1.5"/>`;
+    if(s.outlier) boxes+=`<circle cx="${cx}" cy="${sy(s.outlier)}" r="4" fill="none" stroke="#dc2626" stroke-width="1.5"/>`;
+    boxes+=`<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="11" fill="#334155">${sc.groups[i]}</text>`;
+  });
+  for(let v=Math.ceil(vMin/10)*10;v<=vMax;v+=10){
+    yticks+=`<line x1="${PL-4}" y1="${sy(v)}" x2="${PL}" y2="${sy(v)}" stroke="#94a3b8" stroke-width="1"/>
+      <text x="${PL-6}" y="${sy(v)+3}" text-anchor="end" font-size="9" fill="#94a3b8">${v}</text>`;
+  }
+  yticks+=`<text x="10" y="${(PT+(H-PT-PB)/2).toFixed(0)}" text-anchor="middle" font-size="9" fill="#94a3b8" transform="rotate(-90 10 ${(PT+(H-PT-PB)/2).toFixed(0)})">${sc.unit}</text>`;
+  yticks+=`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="#94a3b8" stroke-width="1"/>`;
+  const svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="background:#fff;max-width:100%">${yticks}${boxes}</svg>`;
+
+  // 問題タイプをランダムに3択
+  const qType=rndInt(0,2);
+  if(qType===0){
+    // 中央値が最大の群
+    const maxMedIdx=stats.reduce((mi,s,i,a)=>s.med>a[mi].med?i:mi,0);
+    const correct=`${sc.groups[maxMedIdx]}`;
+    const others=sc.groups.map((g,i)=>i!==maxMedIdx?`${g}`:null).filter(Boolean);
+    const wrongs=[...others.slice(0,2),'すべての群の中央値は同程度で差はない'];
+    const {opts,ansIndex}=makeOpts(correct,wrongs);
+    return {
+      badgeClass:'qtype-graph',badgeText:'本番級グラフ — 箱ひげ図',
+      q:`<p style="font-size:.88rem;color:#334155;margin-bottom:10px;line-height:1.65;text-indent:1em">${sc.ctx}</p>
+         ${graphWrap(svg)}
+         <p>上図の箱ひげ図に関する記述として、<strong>中央値が最も大きい群はどれか。</strong></p>`,
+      opts,ansIndex,
+      exp:`<div class="s"><strong>箱ひげ図の読み取り：中央値＝箱の中の赤い横線</strong></div>
+           ${sc.groups.map((g,i)=>`<div class="s">${g}の中央値 ≈ ${stats[i].med}${sc.unit}</div>`).join('')}
+           <div class="s">→ 最大は <strong>${sc.groups[maxMedIdx]}</strong></div>`
+    };
+  } else if(qType===1){
+    // IQRが最大の群
+    const iqrs=stats.map(s=>s.q3-s.q1);
+    const maxIdx=iqrs.reduce((mi,v,i,a)=>v>a[mi]?i:mi,0);
+    const correct=`${sc.groups[maxIdx]}`;
+    const wrongs=sc.groups.map((g,i)=>i!==maxIdx?`${g}`:null).filter(Boolean)
+      .slice(0,2).concat(['IQRはすべての群で同じである']);
+    const {opts,ansIndex}=makeOpts(correct,wrongs);
+    return {
+      badgeClass:'qtype-graph',badgeText:'本番級グラフ — 箱ひげ図',
+      q:`<p style="font-size:.88rem;color:#334155;margin-bottom:10px;line-height:1.65;text-indent:1em">${sc.ctx}</p>
+         ${graphWrap(svg)}
+         <p>上図から、<strong>四分位範囲が最も大きい群</strong>はどれか。</p>`,
+      opts,ansIndex,
+      exp:`<div class="s"><strong>IQR = Q3（箱の上辺）− Q1（箱の下辺）= 箱の高さ</strong></div>
+           ${sc.groups.map((g,i)=>`<div class="s">${g}: ${stats[i].q3} - ${stats[i].q1} = <strong>${iqrs[i]}${sc.unit}</strong></div>`).join('')}
+           <div class="s">→ 最大は <strong>${sc.groups[maxIdx]}</strong></div>`
+    };
+  } else {
+    // 外れ値が存在するかの判断
+    const hasOutlier=stats.find(s=>s.outlier);
+    const outlierGroup=hasOutlier?sc.groups[stats.indexOf(hasOutlier)]:null;
+    const correct=outlierGroup
+      ?`${outlierGroup}に外れ値が存在する。外れ値はヒゲの端を超えて離れた点として表示される`
+      :'このデータでは外れ値は検出されていない。すべての点はヒゲの範囲内に収まっている';
+    const wrongs=outlierGroup
+      ?[`すべての群に外れ値が存在する`,`外れ値は箱の中に含まれる`,`外れ値がある場合は中央値ではなく平均値で代表値を示す`]
+      :[`外れ値はすべての群に存在している`,`ヒゲの端の点はすべて外れ値として扱われる`,`外れ値の有無は標準偏差の大きさで判断する`];
+    const {opts,ansIndex}=makeOpts(correct,wrongs);
+    return {
+      badgeClass:'qtype-graph',badgeText:'本番級グラフ — 箱ひげ図',
+      q:`<p style="font-size:.88rem;color:#334155;margin-bottom:10px;line-height:1.65;text-indent:1em">${sc.ctx}</p>
+         ${graphWrap(svg)}
+         <p>箱ひげ図における<strong>外れ値の有無と表示方法</strong>について、最も適切な記述を選べ。</p>`,
+      opts,ansIndex,
+      exp:`<div class="s"><strong>箱ひげ図の外れ値の定義</strong></div>
+           <div class="s">外れ値 = Q1 − 1.5×IQR より小さい点、または Q3 + 1.5×IQR より大きい点。</div>
+           <div class="s">箱ひげ図では外れ値を<strong>○（丸印）</strong>で個別プロット、ヒゲは外れ値を除いた最小・最大値まで伸ばします。</div>
+           <div class="s">${correct}</div>`
+    };
+  }
+}
+
+// ─── 問題4: 散布図の精密データ読み取り（層別・回帰直線付き）──────────────
+function genScatterLayered(){
+  const scenarios=[
+    {ctx:'コーヒー業界の市場分析チームが、1991年から2015年までの各年における世界総生産量（100万袋）とコーヒー小売価格（米ドル/ポンド）の散布図を作成した。各点は1年分のデータを表す。なお、単回帰分析を実施し回帰直線を実線で書き加えた。',lx:'世界総生産量（100万袋）',ly:'小売価格（米ドル/ポンド）'},
+    {ctx:'ある自動車メーカーの研究部門が、車両の重量（kg）と燃費（km/L）の関係を分析するため、国内販売車種50モデルのデータをプロットした。男女別の傾向を確認するため2グループに層別し、それぞれの回帰直線を描画している。',lx:'車両重量（kg）',ly:'燃費（km/L）'},
+  ];
+  const sc=scenarios[rndInt(0,1)];
+  const W=320,H=240,PL=42,PR=18,PT=18,PB=42;
+  const n=25;
+  // 負の相関（生産量↑→価格↓）
+  const pts=Array.from({length:n},(_,i)=>{
+    const x=85+i*2.8+( Math.random()-0.5)*8;
+    const y=18-i*0.28+(Math.random()-0.5)*2.8;
+    return {x,y};
+  });
+  const xMin=80,xMax=155,yMin=4,yMax=20;
+  const px=x=>PL+(W-PL-PR)*(x-xMin)/(xMax-xMin);
+  const py=y=>PT+(H-PT-PB)*(1-(y-yMin)/(yMax-yMin));
+  // 回帰直線のx1→x2
+  const rx1=xMin, rx2=xMax;
+  const ry1=18-(rx1-85)*0.28*0.9, ry2=18-(rx2-85)*0.28*0.9;
+  let dots=pts.map(p=>`<circle cx="${px(p.x).toFixed(1)}" cy="${py(p.y).toFixed(1)}" r="4" fill="#1d4ed8" opacity="0.7"/>`).join('');
+  dots+=`<line x1="${px(rx1).toFixed(1)}" y1="${py(ry1).toFixed(1)}" x2="${px(rx2).toFixed(1)}" y2="${py(ry2).toFixed(1)}" stroke="#dc2626" stroke-width="2" stroke-dasharray="5,3"/>`;
+  let xticks='',yticks='';
+  for(let v=90;v<=150;v+=20){
+    xticks+=`<line x1="${px(v)}" y1="${H-PB}" x2="${px(v)}" y2="${H-PB+4}" stroke="#94a3b8" stroke-width="1"/>
+      <text x="${px(v)}" y="${H-PB+14}" text-anchor="middle" font-size="9" fill="#64748b">${v}</text>`;
+  }
+  for(let v=6;v<=18;v+=4){
+    yticks+=`<line x1="${PL-4}" y1="${py(v)}" x2="${PL}" y2="${py(v)}" stroke="#94a3b8" stroke-width="1"/>
+      <text x="${PL-6}" y="${py(v)+3}" text-anchor="end" font-size="9" fill="#64748b">${v}</text>`;
+  }
+  const axes=`<line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="#334155" stroke-width="1.5"/>
+    <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="#334155" stroke-width="1.5"/>
+    <text x="${(PL+(W-PL-PR)/2).toFixed(0)}" y="${H-5}" text-anchor="middle" font-size="10" fill="#64748b">${sc.lx}</text>
+    <text x="11" y="${(PT+(H-PT-PB)/2).toFixed(0)}" text-anchor="middle" font-size="10" fill="#64748b" transform="rotate(-90 11 ${(PT+(H-PT-PB)/2).toFixed(0)})">${sc.ly}</text>`;
+  const svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="background:#fff;max-width:100%">${axes}${xticks}${yticks}${dots}</svg>`;
+
+  const correct='散布図全体から負の相関が読み取れ、相関係数は約 −0.8 程度である。回帰直線（赤い破線）の傾きが負であることからも確認できる';
+  const wrongs=[
+    '散布図全体から正の相関が読み取れ、相関係数は約 +0.8 程度である。右肩上がりのトレンドが存在する',
+    '相関係数は0に近く、2変数間にはほぼ線形関係が認められない。回帰直線を引くことは意味がない',
+    '散布図のパターンから、相関係数は約 −0.3 の弱い負の相関と読み取れる',
+  ];
+  const {opts,ansIndex}=makeOpts(correct,wrongs);
+  return {
+    badgeClass:'qtype-graph',badgeText:'本番級グラフ — 散布図精密読取',
+    q:`<p style="font-size:.88rem;color:#334155;margin-bottom:10px;line-height:1.65;text-indent:1em">${sc.ctx}</p>
+       ${graphWrap(svg)}
+       <p>上図の散布図から読み取れる2変数の関係について、<strong>最も適切な記述を選べ。</strong></p>`,
+    opts,ansIndex,
+    exp:`<div class="s"><strong>散布図の読み取り：傾き・強さ・方向</strong></div>
+         <div class="s">点群が<strong>右下がり</strong>に分布 → <strong>負の相関</strong>（生産量が多いと価格が下がる傾向）。</div>
+         <div class="s">点がある程度直線に沿っている → 相関係数の絶対値は大きい（弱い相関ではない）。</div>
+         <div class="s">回帰直線（赤い破線）の傾きが負 → 負の相関を裏付ける。</div>
+         <div class="s">→ 相関係数 r ≈ <strong>−0.8 程度の強い負の相関</strong>と読み取れます。</div>`
+  };
+}
+
+// ─── 問題5: ヒストグラム2群比較（形状・歪度・代表値の関係）──────────────
+function genHistCompare(){
+  const scenarios=[
+    {ctx:'ある都道府県の農業経営体調査において、農家の経営耕地面積（ha）の分布を2つの地域（平野部・山間部）に分けてヒストグラムで示した。それぞれの分布から代表値の関係を読み取る。',g1:'平野部',g2:'山間部'},
+    {ctx:'製造業の工場Aと工場Bにおける製品の重量（g）の度数分布を比較した。2つのヒストグラムを並べて示す。どちらが右歪みか、また平均・中央値・最頻値の大小関係を読み取れ。',g1:'工場A',g2:'工場B'},
+  ];
+  const sc=scenarios[rndInt(0,1)];
+  // 右歪み（大きな値に裾が伸びる）と左歪みを比較
+  const type1={freqs:[28,22,16,10,7,4,2,1],name:'右裾が長い（右歪み）',rel:'最頻値 < 中央値 < 平均値'};
+  const type2={freqs:[1,3,6,10,16,24,30,22],name:'左裾が長い（左歪み）',rel:'平均値 < 中央値 < 最頻値'};
+  const W=170,H=140,PL=28,PB=28,PT=12,PR=8;
+  function drawHist(freqs,color){
+    const maxF=Math.max(...freqs), bw=(W-PL-PR)/freqs.length;
+    let bars='';
+    freqs.forEach((f,i)=>{
+      const x=PL+bw*i, bh=(H-PB-PT)*f/maxF, y=H-PB-bh;
+      bars+=`<rect x="${(x+1).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw-2).toFixed(1)}" height="${bh.toFixed(1)}" fill="${color}" stroke="#fff" stroke-width="0.5" opacity="0.85"/>`;
+    });
+    bars+=`<line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="#334155" stroke-width="1.2"/>
+      <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="#334155" stroke-width="1.2"/>`;
+    return bars;
+  }
+  const svg1=`<svg viewBox="0 0 ${W} ${H}" style="width:155px;background:#fff;border:1px solid #e2e8f0" xmlns="http://www.w3.org/2000/svg">${drawHist(type1.freqs,'#93c5fd')}</svg>`;
+  const svg2=`<svg viewBox="0 0 ${W} ${H}" style="width:155px;background:#fff;border:1px solid #e2e8f0" xmlns="http://www.w3.org/2000/svg">${drawHist(type2.freqs,'#a78bfa')}</svg>`;
+  const html=`<div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;padding:8px 0">
+    <div style="text-align:center"><div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:4px">${sc.g1}</div>${svg1}</div>
+    <div style="text-align:center"><div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:4px">${sc.g2}</div>${svg2}</div>
+  </div>`;
+
+  const correct=`${sc.g1}は${type1.name}で「${type1.rel}」となる。${sc.g2}は${type2.name}で「${type2.rel}」となる`;
+  const wrongs=[
+    `${sc.g1}は左裾が長い分布で「平均値 < 中央値 < 最頻値」、${sc.g2}は右裾が長い分布で「最頻値 < 中央値 < 平均値」となる`,
+    `両方の分布とも対称であるため、平均値＝中央値＝最頻値の関係が成立する`,
+    `${sc.g1}では平均値＝中央値＝最頻値が成立し、${sc.g2}は右裾が長い分布である`,
+  ];
+  const {opts,ansIndex}=makeOpts(correct,wrongs);
+  return {
+    badgeClass:'qtype-graph',badgeText:'本番級グラフ — ヒストグラム比較',
+    q:`<p style="font-size:.88rem;color:#334155;margin-bottom:10px;line-height:1.65;text-indent:1em">${sc.ctx}</p>
+       ${graphWrap(html)}
+       <p>2つのヒストグラムの分布の形状と、<strong>平均値・中央値・最頻値の大小関係</strong>の組み合わせとして最も適切なものを選べ。</p>`,
+    opts,ansIndex,
+    exp:`<div class="s"><strong>歪みと代表値の関係（頻出！）</strong></div>
+         <div class="s"><strong>右歪み（右裾が長い）:</strong> 大きな値の外れ値が平均を右に引っ張る → 最頻値 &lt; 中央値 &lt; 平均値</div>
+         <div class="s"><strong>左歪み（左裾が長い）:</strong> 小さな値の外れ値が平均を左に引っ張る → 平均値 &lt; 中央値 &lt; 最頻値</div>
+         <div class="s">青（${sc.g1}）は右に尾が伸びる → <strong>右歪み</strong> → 最頻値 &lt; 中央値 &lt; 平均値</div>
+         <div class="s">紫（${sc.g2}）は左に尾が伸びる → <strong>左歪み</strong> → 平均値 &lt; 中央値 &lt; 最頻値</div>`
+  };
+}
+
+// ─── 問題6: コレログラム精密読み取り（過去問2017年問3型）──────────────────
+function genCorrelogramAdvanced(){
+  const scenarios=[
+    {ctx:'観光庁の統計データを用い、アジアからの訪日外客数（千人）の月次時系列データ（2013年1月〜2015年12月）に対して自己相関関数（ACF）を計算し、コレログラム（自己相関係数のラグ別プロット）を作成した。以下の図から時系列の特性を読み取れ。',label:'訪日外客数（アジア計）のACF'},
+    {ctx:'気象庁の月次気温データ（1990〜2022年）に対し、自己相関関数（ACF）を計算した。以下のコレログラムから、このデータが持つ時系列の特性を正しく読み取れ。',label:'月次平均気温のACF'},
+  ];
+  const sc=scenarios[rndInt(0,1)];
+  const patterns=[
+    {name:'季節性（周期12ヶ月）',vals:Array.from({length:24},(_,i)=>i===0?1:i===11?0.78:i===12?0.72:i===23?0.61:(Math.random()-0.5)*0.2),exp:'ラグ12と24で高い正の自己相関 → 12ヶ月周期の季節変動が存在する'},
+    {name:'ARモデル的な指数減衰',vals:Array.from({length:24},(_,i)=>Math.pow(0.75,i)),exp:'ラグが増えるにつれ指数的に滑らかに減衰 → AR（自己回帰）モデルの特徴'},
+    {name:'ホワイトノイズ（無相関）',vals:Array.from({length:24},()=>(Math.random()-0.5)*0.18),exp:'すべてのラグでほぼ0 → 自己相関なし（ホワイトノイズ）'},
+  ];
+  const pt=patterns[rndInt(0,2)];
+  const W=340,H=160,PL=36,PB=32,PT=14,PR=12;
+  const lags=24, mcy=PT+(H-PT-PB)/2;
+  const bw=(W-PL-PR)/lags;
+  let bars='',xlabels='';
+  pt.vals.forEach((v,i)=>{
+    const cx=PL+bw*i+bw/2;
+    const bh=(H-PT-PB)/2*Math.abs(v);
+    const y=v>=0?mcy-bh:mcy;
+    bars+=`<rect x="${(cx-bw*0.35).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw*0.7).toFixed(1)}" height="${bh.toFixed(1)}" fill="${v>=0?'#3b82f6':'#ef4444'}" opacity="0.82"/>`;
+    if(i===0||i===5||i===11||i===12||i===17||i===23)
+      xlabels+=`<text x="${cx.toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#64748b">${i+1}</text>`;
+  });
+  // 信頼区間ライン（±0.2程度）
+  const ciY_u=mcy-(H-PT-PB)/2*0.22, ciY_l=mcy+(H-PT-PB)/2*0.22;
+  const grid=`<line x1="${PL}" y1="${mcy}" x2="${W-PR}" y2="${mcy}" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="${PL}" y1="${ciY_u}" x2="${W-PR}" y2="${ciY_u}" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="3,3"/>
+    <line x1="${PL}" y1="${ciY_l}" x2="${W-PR}" y2="${ciY_l}" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="3,3"/>
+    <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="#94a3b8" stroke-width="1"/>
+    <text x="${PL-4}" y="${PT+4}" text-anchor="end" font-size="9" fill="#94a3b8">1.0</text>
+    <text x="${PL-4}" y="${mcy+3}" text-anchor="end" font-size="9" fill="#94a3b8">0.0</text>
+    <text x="${PL-4}" y="${H-PB}" text-anchor="end" font-size="9" fill="#94a3b8">-1.0</text>
+    <text x="${(PL+(W-PL-PR)/2).toFixed(0)}" y="${H-2}" text-anchor="middle" font-size="9" fill="#64748b">ラグ</text>`;
+  const svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="background:#fff;max-width:100%">${grid}${bars}${xlabels}</svg>`;
+
+  const others=patterns.filter(p=>p.name!==pt.name);
+  const correct=`${pt.name}の特徴が見られる。${pt.exp}`;
+  const wrongs=[
+    `${others[0].name}の特徴が見られる。${others[0].exp}`,
+    `${others[1].name}の特徴が見られる。${others[1].exp}`,
+    'MAモデル（移動平均モデル）の特徴が見られる。あるラグを境に自己相関が急にゼロに切断される（裁断性）',
+  ];
+  const {opts,ansIndex}=makeOpts(correct,wrongs);
+  return {
+    badgeClass:'qtype-graph',badgeText:'本番級グラフ — コレログラム',
+    q:`<p style="font-size:.88rem;color:#334155;margin-bottom:10px;line-height:1.65;text-indent:1em">${sc.ctx}</p>
+       ${graphWrap(svg)}
+       <p>上のコレログラムから読み取れる時系列の特性として、<strong>最も適切な記述を選べ。</strong></p>`,
+    opts,ansIndex,
+    exp:`<div class="s"><strong>コレログラムの読み方</strong></div>
+         <div class="s">・<strong>季節性：</strong>ラグ12・24など一定間隔で高い値が現れる</div>
+         <div class="s">・<strong>ARモデル：</strong>ラグが増えるにつれ指数的に滑らかに減衰</div>
+         <div class="s">・<strong>MAモデル：</strong>あるラグで急に0に切断（裁断性）</div>
+         <div class="s">・<strong>ホワイトノイズ：</strong>すべてのラグで破線（信頼区間）内</div>
+         <div class="s">このデータは <strong>${pt.name}</strong> → ${pt.exp}</div>`
+  };
+}
+
+// ─── 問題7: 残差プロットの読み取り（回帰診断）────────────────────────────
+function genRegressionResidual(){
+  const scenarios=[
+    {ctx:'コーヒー価格と世界生産量のデータに対して単回帰分析を実施した。モデルの妥当性を検証するため、横軸に予測値（Fitted Values）、縦軸に残差（Residuals）をプロットした残差プロットを作成した。',lx:'予測値（Fitted Values）',ly:'残差（Residuals）'},
+    {ctx:'ある企業の売上高を広告費で回帰分析した結果の残差プロットを示す。回帰診断として、このプロットから線形回帰の前提仮定が満たされているかを判断する。',lx:'予測値',ly:'残差'},
+  ];
+  const sc=scenarios[rndInt(0,1)];
+  const residualType=rndInt(0,2); // 0:良好, 1:非線形(曲線パターン), 2:不等分散
+  const W=320,H=220,PL=42,PR=18,PT=18,PB=42;
+  let pts='';
+  if(residualType===0){
+    // 良好：ランダム散布
+    for(let i=0;i<28;i++){
+      const x=15+Math.random()*70, y=(Math.random()-0.5)*30;
+      const cx=PL+(W-PL-PR)*x/100, cy=PT+(H-PT-PB)*(1-((y+40)/80));
+      pts+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="#1d4ed8" opacity="0.7"/>`;
+    }
+  } else if(residualType===1){
+    // 非線形：U字型
+    for(let i=0;i<28;i++){
+      const x=5+i*3.2, y=(x-50)*(x-50)/70 - 15 + (Math.random()-0.5)*6;
+      const cx=PL+(W-PL-PR)*x/100, cy=PT+(H-PT-PB)*(1-((y+40)/80));
+      pts+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="#1d4ed8" opacity="0.7"/>`;
+    }
+  } else {
+    // 不等分散：ファンネル型（右に広がる）
+    for(let i=0;i<28;i++){
+      const x=5+i*3.2, spread=x*0.35;
+      const y=(Math.random()-0.5)*spread;
+      const cx=PL+(W-PL-PR)*x/100, cy=PT+(H-PT-PB)*(1-((y+40)/80));
+      pts+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="#1d4ed8" opacity="0.7"/>`;
+    }
+  }
+  // ゼロ水平線
+  const zeroY=PT+(H-PT-PB)*(1-40/80);
+  let ticks='';
+  for(let v=-30;v<=30;v+=15){
+    const cy=PT+(H-PT-PB)*(1-((v+40)/80));
+    ticks+=`<line x1="${PL-4}" y1="${cy}" x2="${PL}" y2="${cy}" stroke="#94a3b8" stroke-width="1"/>
+      <text x="${PL-6}" y="${cy+3}" text-anchor="end" font-size="9" fill="#94a3b8">${v}</text>`;
+  }
+  const axes=`<line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="#334155" stroke-width="1.5"/>
+    <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="#334155" stroke-width="1.5"/>
+    <line x1="${PL}" y1="${zeroY.toFixed(1)}" x2="${W-PR}" y2="${zeroY.toFixed(1)}" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="4,3"/>
+    <text x="${(PL+(W-PL-PR)/2).toFixed(0)}" y="${H-5}" text-anchor="middle" font-size="10" fill="#64748b">${sc.lx}</text>
+    <text x="11" y="${(PT+(H-PT-PB)/2).toFixed(0)}" text-anchor="middle" font-size="10" fill="#64748b" transform="rotate(-90 11 ${(PT+(H-PT-PB)/2).toFixed(0)})">${sc.ly}</text>`;
+  const svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="background:#fff;max-width:100%">${axes}${ticks}${pts}</svg>`;
+
+  const descriptions=[
+    {label:'良好',c:'残差がゼロ付近にランダムに散らばっており、特定のパターンが見られない。線形回帰の等分散・独立性の仮定が満たされていると判断できる',w1:'残差がU字型のパターンを示しており、線形モデルでは説明できない非線形な構造がデータに存在することを示唆している',w2:'予測値が大きくなるにつれ残差の散らばりが拡大するファンネル型（じょうご型）が見られる。これは不等分散（ヘテロセダスティシティ）の問題を示す'},
+    {label:'非線形パターン',c:'残差がU字型（曲線状）のパターンを示しており、線形モデルでは捉えられていない非線形な構造がデータに存在することを示唆している。変数変換や多項式回帰の検討が必要',w1:'残差がゼロ付近にランダムに散らばっており、回帰診断上の問題は見られない',w2:'予測値が大きくなるにつれ残差の散らばりが拡大しており、不等分散（ヘテロセダスティシティ）の問題を示している'},
+    {label:'不等分散（ファンネル型）',c:'予測値が大きくなるにつれ残差の散らばりが拡大する「ファンネル型（じょうご型）」のパターンを示している。これは不等分散（ヘテロセダスティシティ）の問題であり、対数変換などが検討される',w1:'残差がランダムに散らばっており、等分散・独立性の仮定が満たされていると診断できる',w2:'U字型のカーブを描いており、説明変数を追加して多変量解析を行えばこのパターンは消える'},
+  ];
+  const desc=descriptions[residualType];
+  const {opts,ansIndex}=makeOpts(desc.c,[desc.w1,desc.w2,'残差の絶対値の平均がゼロでないため、回帰係数の推定値に系統的なバイアスが存在する']);
+  return {
+    badgeClass:'qtype-graph',badgeText:'本番級グラフ — 残差プロット',
+    q:`<p style="font-size:.88rem;color:#334155;margin-bottom:10px;line-height:1.65;text-indent:1em">${sc.ctx}</p>
+       ${graphWrap(svg)}
+       <p>上の残差プロットから読み取れる診断として、<strong>最も適切な記述を選べ。</strong></p>`,
+    opts,ansIndex,
+    exp:`<div class="s"><strong>残差プロットの読み方（回帰診断）</strong></div>
+         <div class="s">・<strong>理想（仮定が満たされる）:</strong> 残差がゼロ付近にランダムに散らばる（無パターン）</div>
+         <div class="s">・<strong>U字・逆U字型:</strong> 非線形構造あり → 変数変換・多項式回帰を検討</div>
+         <div class="s">・<strong>ファンネル型（右に広がる）:</strong> 不等分散（ヘテロセダスティシティ）あり → 対数変換などを検討</div>
+         <div class="s">このプロットの診断：<strong>${desc.label}</strong></div>
+         <div class="s">${desc.c}</div>`
+  };
+}
+
+// ─── 問題8: 散布図行列（相関行列の視覚的読み取り）────────────────────────
+function genScatterMatrix(){
+  const scenarios=[
+    {ctx:'世界83カ国の1000人あたり自動車保有台数を地域別にまとめた要約統計量と分析に基づき、「平均」「最小値」「最大値」「標準偏差」の4変数間の相関を散布図行列で可視化した。以下の図から変数間の関係を読み取れ。',vars:['平均','最大値','標準偏差','最小値']},
+    {ctx:'学生の学業パフォーマンス分析において、学習時間・模試スコア・出席率・最終成績の4変数について、n=80名のデータに基づく散布図行列を作成した。対角線上には各変数のヒストグラムを配置している。',vars:['学習時間','模試スコア','出席率','最終成績']},
+  ];
+  const sc=scenarios[rndInt(0,1)];
+  const vars=sc.vars;
+  const k=vars.length;
+  const cellSize=74, margin=2, totalSize=cellSize*k+margin*(k-1);
+  const W=totalSize+30, H=totalSize+30, PL=28, PT=22;
+  // 各セルの相関を設定（上三角と対角は色表示のみ）
+  const corrs=[[1,0.92,-0.15,0.88],[0.92,1,-0.20,0.81],[-0.15,-0.20,1,-0.22],[0.88,0.81,-0.22,1]];
+  let cells='',rowLabels='',colLabels='';
+  for(let r=0;r<k;r++){
+    for(let c=0;c<k;c++){
+      const cx0=PL+c*(cellSize+margin), cy0=PT+r*(cellSize+margin);
+      if(r===c){
+        // 対角：変数名
+        cells+=`<rect x="${cx0}" y="${cy0}" width="${cellSize}" height="${cellSize}" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="0.8"/>
+          <text x="${cx0+cellSize/2}" y="${cy0+cellSize/2+4}" text-anchor="middle" font-size="10" font-weight="700" fill="#1d4ed8">${vars[r]}</text>`;
+      } else {
+        const rval=corrs[r][c];
+        const absR=Math.abs(rval);
+        const isPos=rval>0;
+        const alpha=0.15+absR*0.65;
+        const fill=isPos?`rgba(29,78,216,${alpha.toFixed(2)})`:`rgba(220,38,38,${alpha.toFixed(2)})`;
+        cells+=`<rect x="${cx0}" y="${cy0}" width="${cellSize}" height="${cellSize}" fill="${fill}" stroke="#e2e8f0" stroke-width="0.8"/>`;
+        // 点を少し描く
+        const n=12;
+        for(let i=0;i<n;i++){
+          const px=(Math.random()*0.7+0.15)*cellSize+cx0;
+          const ofs=(Math.random()-0.5)*0.4;
+          const py=isPos?(0.15+i/n*0.7)*cellSize+cy0+ofs*cellSize/2:(0.85-i/n*0.7)*cellSize+cy0+ofs*cellSize/2;
+          const pySafe=Math.min(Math.max(py,cy0+4),cy0+cellSize-4);
+          cells+=`<circle cx="${px.toFixed(1)}" cy="${pySafe.toFixed(1)}" r="2.5" fill="#fff" opacity="0.7"/>`;
+        }
+        cells+=`<text x="${cx0+cellSize/2}" y="${cy0+cellSize-6}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">r=${rval.toFixed(2)}</text>`;
+      }
+    }
+    rowLabels+=`<text x="${PL-3}" y="${PT+r*(cellSize+margin)+cellSize/2+4}" text-anchor="end" font-size="9" fill="#64748b">${vars[r]}</text>`;
+    colLabels+=`<text x="${PL+r*(cellSize+margin)+cellSize/2}" y="${PT-5}" text-anchor="middle" font-size="9" fill="#64748b">${vars[r]}</text>`;
+  }
+  const svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="background:#fff;max-width:100%">${rowLabels}${colLabels}${cells}</svg>`;
+
+  const correct=`「${vars[0]}」と「${vars[1]}」の間には強い正の相関があり、一方「${vars[2]}」との相関は弱い負の値を示している`;
+  const wrongs=[
+    `すべての変数ペアに強い正の相関が存在する。行列全体が濃い青色で埋まっており、任意の2変数を取り出しても r > 0.7 となる`,
+    `「${vars[0]}」と「${vars[3]}」の相関係数は負であり、一方の変数が増加すると他方は減少する傾向がある`,
+    `散布図行列の対角線上には各変数の散布図が描かれており、変数の分布を直接確認できる`,
+  ];
+  const {opts,ansIndex}=makeOpts(correct,wrongs);
+  return {
+    badgeClass:'qtype-graph',badgeText:'本番級グラフ — 散布図行列',
+    q:`<p style="font-size:.88rem;color:#334155;margin-bottom:10px;line-height:1.65;text-indent:1em">${sc.ctx}</p>
+       ${graphWrap(svg)}
+       <p>上の散布図行列から読み取れる変数間の関係として、<strong>最も適切な記述を選べ。</strong></p>`,
+    opts,ansIndex,
+    exp:`<div class="s"><strong>散布図行列の読み取り方</strong></div>
+         <div class="s">・対角線上：変数名（または各変数のヒストグラム）</div>
+         <div class="s">・各セル：2変数の散布図＋相関係数 r の値</div>
+         <div class="s">・<strong>青（濃いほど強い正の相関）、赤（濃いほど強い負の相関）</strong></div>
+         <div class="s">「${vars[0]}」と「${vars[1]}」: r=0.92 → <strong>非常に強い正の相関</strong></div>
+         <div class="s">「${vars[0]}〜${vars[3]}」と「${vars[2]}」: r≈−0.15〜−0.22 → <strong>弱い負の相関（ほぼ無相関）</strong></div>
+         <div class="s">❌ 誤り2：すべてが強い正の相関ではありません（${vars[2]}との相関は弱い負）。</div>
+         <div class="s">❌ 誤り3：「${vars[0]}」と「${vars[3]}」の r=0.88 は強い<strong>正の相関</strong>です。</div>`
+  };
+}
+
+// =====================================================================
+// 確率・確率分布：過去問準拠レベル 全8種類（既存5種破棄・完全刷新）
+// 参照：2017年6月/11月、2018年11月、2019年6月/11月 公式問題集
+// =====================================================================
+function genProb(){
+  const type = rndInt(0, 7);
+  if(type===0) return genProb_LinearTransform();
+  if(type===1) return genProb_BinomialRatio();
+  if(type===2) return genProb_SampleMeanDist();
+  if(type===3) return genProb_Geometric();
+  if(type===4) return genProb_Bayes();
+  if(type===5) return genProb_Skewness();
+  if(type===6) return genProb_Estimator();
+  return genProb_NormalCalc();
+}
+
+// ─── 過去問型1: 確率変数の線形変換 Y=a+bX+U（2018年11月 問8型）────────────
+function genProb_LinearTransform(){
+  const a = parseFloat((Math.random()*0.6+0.1).toFixed(2)); // 0.1〜0.7
+  const b = rndInt(2,4);
+  // U〜N(0,1)、X=実数定数
+  const xVal = parseFloat((Math.random()*1.4-0.7).toFixed(2)); // -0.7〜0.7
+  // Y = a + b*x + U → E[Y] = a+bx, V[Y] = b²（Uの分散=1）
+  const eY = parseFloat((a + b*xVal).toFixed(4));
+  const vY = b*b; // b²×V[U] = b²×1
+  // P(Y≥0) = P(U ≥ -eY) = P(Z ≥ -eY) = Φ(eY) ← N(eY, b²) を標準化
+  // Y〜N(a+bx, b²)、標準化: (Y-(a+bx))/b = U/b〜N(0,1)でないのでb=σ
+  // P(Y≥0) = P((Y-eY)/b ≥ (0-eY)/b) = P(Z ≥ -eY/b) = Φ(eY/b)
+  const zForP = parseFloat((eY/b).toFixed(4));
+
+  // 問いタイプ：P(Y≥0)=0.95となるxを求める（2018年11月問8(1)の形式）
+  // P(Y≥0)=0.95 → (0-(a+bx))/b = -1.645 → a+bx = 1.645b → x = (1.645b-a)/b
+  const target = 0.95;
+  const zTarget = 1.645; // 上側5%点
+  const xAnswer = parseFloat(((zTarget*b - a)/b).toFixed(4));
+
+  const correct = `x = ${xAnswer}`;
+  const wrongs = [
+    `x = ${parseFloat(((1.96*b-a)/b).toFixed(4))}`,
+    `x = ${parseFloat(((-zTarget*b-a)/b).toFixed(4))}`,
+    `x = ${parseFloat(((zTarget-a)/b).toFixed(4))}`,
+  ];
+  const {opts,ansIndex} = makeOpts(correct, wrongs);
+  return {
+    badgeClass:'qtype-calc', badgeText:'確率変数の変換',
+    q:`<p>確率変数 U は平均 0、分散 1 の正規分布に従う。x を実数定数とし、</p>
+       <p style="text-align:center;font-size:1.05rem;margin:12px 0"><strong>Y = ${a} + ${b}x + U</strong></p>
+       <p>と定める。<strong>P(Y ≥ 0) = 0.95</strong> となる x として最も適切なものはどれか。</p>`,
+    opts, ansIndex,
+    exp:`<div class="s"><strong>手順：線形変換後の分布を標準化する</strong></div>
+         <div class="s">Y = ${a} + ${b}x + U は N(${a}+${b}x, 1²) ではなく N(${a}+${b}x, ${b}²) に従う（Uを${b}倍しているため分散=${b}²=${vY}）</div>
+         <div class="s">P(Y ≥ 0) = P((Y-(${a}+${b}x))/${b} ≥ (0-(${a}+${b}x))/${b}) = P(Z ≥ -(${a}+${b}x)/${b}) = 0.95</div>
+         <div class="s">P(Z ≥ -z) = 0.95 → z = 1.645 → (${a}+${b}x)/${b} = 1.645</div>
+         <div class="s">→ ${a}+${b}x = ${(1.645*b).toFixed(3)} → x = <strong>${xAnswer}</strong></div>`
+  };
+}
+
+// ─── 過去問型2: 二項分布の確率比（2018年11月 問9型）──────────────────────
+function genProb_BinomialRatio(){
+  const n = rndInt(5,9); // 試行回数
+  // P(X=x+1)/P(X=x) = (n-x)/(x+1) × p/(1-p) の形
+  // p = 1/6（サイコロの目2以下）= 2/6 = 1/3
+  const p_num = rndInt(1,3), p_den = rndInt(p_num+1, p_num+4);
+  const p = p_num/p_den;
+  // P(X=x+1)/P(X=x) = (n-x)p / ((x+1)(1-p)) = (-x+a)/(2x+b) の形に整理
+  // = (n-x)*p_num / ((x+1)*(p_den-p_num))
+  const a_coef = n * p_num; // 分子: (n-x)p_num = -p_num*x + n*p_num
+  const b_coef = p_den - p_num; // 分母係数
+  // P(X=x+1)/P(X=x) = (n*p_num - p_num*x) / ((p_den-p_num)*(x+1))
+  // = (-p_num*x + n*p_num) / ((p_den-p_num)*x + (p_den-p_num))
+
+  // P(X=x)が最大となるx
+  // Maximumは (n+1)p - 1 ≤ x ≤ (n+1)p のnp付近
+  const modeApprox = (n+1)*p;
+  const xMode = Math.floor(modeApprox);
+  const xMode2 = Number.isInteger(modeApprox) ? modeApprox-1 : xMode;
+
+  const correct = `x = ${xMode2}`;
+  const wrongs = [
+    `x = ${xMode2+1}`,
+    `x = ${Math.round(n*p)}`,
+    `x = ${xMode2-1 >= 0 ? xMode2-1 : xMode2+2}`,
+  ];
+  const {opts,ansIndex} = makeOpts(correct, wrongs);
+  return {
+    badgeClass:'qtype-calc', badgeText:'二項分布の最頻値',
+    q:`<p>1から6の目が等しい確率で出るサイコロを <strong>${n} 回</strong> 投げるとき、${p_den}以下の目が出る確率を p = ${p_num}/${p_den} とする。${p_den}以下の目が出る回数を X とするとき、</p>
+       <p style="text-align:center;margin:10px 0"><strong>P(X = x+1) / P(X = x) = (${n}−x)×${p_num} / {(x+1)×${p_den-p_num}}</strong></p>
+       <p>となる。<strong>P(X = x) が最大となる x</strong>として最も適切なものはどれか。</p>`,
+    opts, ansIndex,
+    exp:`<div class="s"><strong>二項分布の最頻値の求め方</strong></div>
+         <div class="s">P(X=x+1)/P(X=x) ≥ 1 のとき P は増加している → この比が 1 を下回る最小の x が最頻値。</div>
+         <div class="s">(${n}-x)×${p_num} / ((x+1)×${p_den-p_num}) ≥ 1</div>
+         <div class="s">${n*p_num} - ${p_num}x ≥ ${p_den-p_num}x + ${p_den-p_num}</div>
+         <div class="s">x ≤ (${n*p_num - (p_den-p_num)}) / ${p_den} = ${((n*p_num-(p_den-p_num))/p_den).toFixed(3)}</div>
+         <div class="s">→ 比が 1 以上となる最大の整数 x = <strong>${xMode2}</strong>（最頻値）</div>`
+  };
+}
+
+// ─── 過去問型3: 標本平均の期待値・分散（2017年6月 問9/問10、2019年11月 問12型）
+function genProb_SampleMeanDist(){
+  const qType = rndInt(0,1);
+  if(qType === 0){
+    // 確率変数の和・差の分散（2017年6月 問9(1)型）
+    // X〜N(0,σ₁²), Y〜N(0,σ₂²), U=X+Y, V=X-Y, 相関係数は？
+    const s1 = rndInt(2,5), s2 = rndInt(2,5);
+    const s1sq = s1*s1, s2sq = s2*s2;
+    // Cov(U,V) = Cov(X+Y, X-Y) = V[X] - V[Y] = σ₁²-σ₂²
+    // V[U] = σ₁²+σ₂², V[V] = σ₁²+σ₂²
+    // r(U,V) = (σ₁²-σ₂²)/(σ₁²+σ₂²)
+    const covUV = s1sq - s2sq;
+    const varU = s1sq + s2sq, varV = s1sq + s2sq;
+    const r_correct = `(σ₁²−σ₂²)/(σ₁²+σ₂²) = (${s1sq}−${s2sq})/(${s1sq}+${s2sq}) = ${covUV}/${varU} = ${(covUV/varU).toFixed(4)}`;
+    const wrongs = [
+      `(σ₁²+σ₂²)/(σ₁²+σ₂²) = 1`,
+      `0`,
+      `(σ₁²−σ₂²)/(σ₁²−σ₂²) = 1`,
+    ];
+    const {opts,ansIndex} = makeOpts(r_correct, wrongs);
+    return {
+      badgeClass:'qtype-calc', badgeText:'確率変数の和・差',
+      q:`<p>確率変数 X は平均 0、分散 σ₁² = <strong>${s1sq}</strong> の正規分布に従い、確率変数 Y は平均 0、分散 σ₂² = <strong>${s2sq}</strong> の正規分布に従うとする。X と Y は互いに<strong>独立</strong>である。</p>
+         <p>U = X + Y, V = X − Y とおくとき、<strong>U と V の相関係数</strong>として正しいものはどれか。</p>`,
+      opts, ansIndex,
+      exp:`<div class="s"><strong>手順：共分散 → 相関係数</strong></div>
+           <div class="s">Cov(U,V) = Cov(X+Y, X−Y) = V[X] − V[Y] = ${s1sq} − ${s2sq} = ${covUV}</div>
+           <div class="s">V[U] = V[X]+V[Y] = ${s1sq}+${s2sq} = ${varU}、V[V] = ${varV}（同じ）</div>
+           <div class="s">r(U,V) = Cov(U,V) / √(V[U]×V[V]) = ${covUV} / ${varU} = <strong>${(covUV/varU).toFixed(4)}</strong></div>
+           <div class="s">※ σ₁ = σ₂ のとき r = 0 （直交する）— 重要な特殊ケース</div>`
+    };
+  } else {
+    // 標本平均の分散（2017年6月 問10型：E[X̄], V[X̄]の穴埋め）
+    const mu = rndInt(40,80), sigma2 = rndInt(4,25);
+    const n = [4,9,16,25][rndInt(0,3)];
+    const vXbar = sigma2/n;
+    const correct = `E[X̄] = μ = ${mu}、V[X̄] = σ²/n = ${sigma2}/${n} = ${vXbar}`;
+    const wrongs = [
+      `E[X̄] = μ/n = ${mu}/${n} = ${(mu/n).toFixed(2)}、V[X̄] = σ²/n = ${vXbar}`,
+      `E[X̄] = μ = ${mu}、V[X̄] = σ² = ${sigma2}`,
+      `E[X̄] = μ = ${mu}、V[X̄] = σ²/n² = ${sigma2}/${n*n} = ${(sigma2/(n*n)).toFixed(4)}`,
+    ];
+    const {opts,ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc', badgeText:'標本平均の分布',
+      q:`<p>確率変数 X₁, X₂, …, X<sub>n</sub> は互いに独立で、期待値 <strong>μ = ${mu}</strong>、分散 <strong>σ² = ${sigma2}</strong> であるとする。標本平均を</p>
+         <p style="text-align:center;margin:10px 0">X̄ = (1/n)Σ Xᵢ &nbsp;</p>
+         <p>とするとき、<strong>X̄ の期待値と分散</strong>の組み合わせとして正しいものはどれか。</p>`,
+      opts, ansIndex,
+      exp:`<div class="s"><strong>標本平均の期待値・分散（中心極限定理の基礎）</strong></div>
+           <div class="s">E[X̄] = E[(X₁+…+Xₙ)/n] = nμ/n = <strong>μ = ${mu}</strong>（不偏性）</div>
+           <div class="s">V[X̄] = V[(X₁+…+Xₙ)/n] = nσ²/n² = <strong>σ²/n = ${sigma2}/${n} = ${vXbar}</strong></div>
+           <div class="s">標準誤差 SE = σ/√n = √${sigma2}/√${n} = ${(Math.sqrt(sigma2/n)).toFixed(4)}</div>`
+    };
+  }
+}
+
+// ─── 過去問型4: 幾何分布・訪問調査（2019年6月 問10型）──────────────────────
+function genProb_Geometric(){
+  const p = [0.2, 0.3, 0.4][rndInt(0,2)]; // 在宅確率
+  const k = rndInt(2,5); // 「k軒目で初めて」
+  // P(X=k) = (1-p)^(k-1) × p
+  const qPow = Math.pow(1-p, k-1);
+  const prob = qPow * p;
+  const qType = rndInt(0,2);
+  if(qType === 0){
+    // P(X=k) の計算
+    const correct = `${prob.toFixed(4)}`;
+    const wrongs = [
+      `${(Math.pow(1-p,k)*p).toFixed(4)}`,
+      `${(Math.pow(p,k-1)*(1-p)).toFixed(4)}`,
+      `${(p*k).toFixed(4)}`,
+    ];
+    const {opts,ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc', badgeText:'幾何分布',
+      q:`<p>訪問調査において、各訪問で調査対象者が在宅している確率は <strong>${p}</strong> であり、各訪問は独立とする。</p>
+         <p><strong>${k} 軒目で初めて</strong>在宅者に会える確率はいくらか。</p>`,
+      opts, ansIndex,
+      exp:`<div class="s"><strong>幾何分布 P(X=k) = (1−p)^(k−1) × p</strong></div>
+           <div class="s">最初の k−1 軒で不在（確率 1−p = ${(1-p).toFixed(1)}）、k 軒目で在宅（確率 p = ${p}）</div>
+           <div class="s">P(X=${k}) = ${(1-p).toFixed(1)}^${k-1} × ${p} = ${qPow.toFixed(4)} × ${p} = <strong>${prob.toFixed(4)}</strong></div>
+           <div class="s">幾何分布の期待値 = 1/p = 1/${p} = <strong>${(1/p).toFixed(1)} 軒</strong></div>`
+    };
+  } else if(qType === 1){
+    // 期待値・分布の名前（前段の訪問調査シナリオを継続）
+    const expVal = 1/p;
+    const correct = `期待値 ${expVal.toFixed(1)} 軒、幾何分布`;
+    const wrongs = [
+      `期待値 ${(1/(1-p)).toFixed(1)} 軒、幾何分布`,
+      `期待値 ${expVal.toFixed(1)} 軒、負の二項分布`,
+      `期待値 ${(p*10).toFixed(1)} 軒、ポアソン分布`,
+    ];
+    const {opts,ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-stat', badgeText:'幾何分布',
+      q:`<div class="scenario">在宅確率が <strong>${p}</strong> の訪問調査を続けている。「初めて在宅者に会うまでに要した訪問数 X」を確率変数とする。</div><p>X が従う<strong>確率分布の名称</strong>と、<strong>X の期待値</strong>の組み合わせとして正しいものはどれか。</p>`,
+      opts, ansIndex,
+      exp:`<div class="s"><strong>幾何分布の特徴</strong></div>
+           <div class="s">「最初の成功まで」の試行回数 → <strong>幾何分布</strong></div>
+           <div class="s">期待値 = 1/p = 1/${p} = <strong>${expVal.toFixed(1)}</strong></div>
+           <div class="s">分散 = (1−p)/p² = ${(1-p).toFixed(1)}/${p*p} = ${((1-p)/(p*p)).toFixed(2)}</div>`
+    };
+  } else {
+    // 「初めて在宅者に会うまで n軒以上かかる」確率
+    const n_thresh = rndInt(3,6);
+    // P(X ≥ n) = (1-p)^(n-1)
+    const probN = Math.pow(1-p, n_thresh-1);
+    const correct = `${probN.toFixed(4)}`;
+    const wrongs = [
+      `${Math.pow(1-p,n_thresh).toFixed(4)}`,
+      `${(1-probN).toFixed(4)}`,
+      `${(p*Math.pow(1-p,n_thresh-1)).toFixed(4)}`,
+    ];
+    const {opts,ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc', badgeText:'幾何分布',
+      q:`<p>在宅確率が <strong>${p}</strong> の訪問調査で、初めて在宅者に会うまでの訪問数を X とする。<strong>${n_thresh} 軒以上訪問することになる確率</strong> P(X ≥ ${n_thresh}) はいくらか。</p>`,
+      opts, ansIndex,
+      exp:`<div class="s"><strong>P(X ≥ n) の求め方</strong></div>
+           <div class="s">P(X ≥ n) = 「最初の n−1 軒がすべて不在」= (1−p)^(n−1)</div>
+           <div class="s">= ${(1-p).toFixed(1)}^${n_thresh-1} = <strong>${probN.toFixed(4)}</strong></div>`
+    };
+  }
+}
+
+// ─── 過去問型5: ベイズの定理（工場・検査の定番型）────────────────────────
+function genProb_Bayes(){
+  const scenarios = [
+    {ctx:'ある加工工場では、3つの漁港X・Y・Zから仕入れた貝を加工している。X・Y・Zからの仕入れ割合はそれぞれ40%・30%・30%、各漁港からの貝に規格外品が混入している割合は10%・5%・2%である。',
+     names:['X','Y','Z'], prods:[0.4,0.3,0.3], defRates:[0.10,0.05,0.02], item:'規格外品'},
+    {ctx:'精密部品工場では、ラインA・B・Cが全生産量の60%・25%・15%を担っている。各ラインの不良品率はそれぞれ1%・3%・5%である。',
+     names:['A','B','C'], prods:[0.6,0.25,0.15], defRates:[0.01,0.03,0.05], item:'不良品'},
+  ];
+  const sc = scenarios[rndInt(0,1)];
+  const pDef = sc.prods.reduce((s,p,i)=>s+p*sc.defRates[i],0);
+  const pXgivenDef = sc.prods[0]*sc.defRates[0]/pDef;
+  const qType = rndInt(0,1);
+  if(qType===0){
+    // P(規格外品) を求める（全確率の公式）
+    const correct = `${pDef.toFixed(4)}`;
+    const wrongs = [
+      `${sc.defRates[0]}`,
+      `${(sc.defRates.reduce((s,r)=>s+r,0)/3).toFixed(4)}`,
+      `${(sc.prods[0]*sc.defRates[0]).toFixed(4)}`,
+    ];
+    const {opts,ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc', badgeText:'全確率の公式',
+      q:`<p style="text-indent:1em">${sc.ctx}</p>
+         <p>無作為に1個取り出したとき、それが<strong>「${sc.item}」である確率</strong>はいくらか。</p>`,
+      opts, ansIndex,
+      exp:`<div class="s"><strong>全確率の公式: P(B) = Σ P(Aᵢ)×P(B|Aᵢ)</strong></div>
+           ${sc.names.map((n,i)=>`<div class="s">${n}: ${sc.prods[i]} × ${sc.defRates[i]} = ${(sc.prods[i]*sc.defRates[i]).toFixed(4)}</div>`).join('')}
+           <div class="s">合計 = <strong>${pDef.toFixed(4)}</strong></div>`
+    };
+  } else {
+    // ベイズの定理：P(X|規格外品)
+    const correct = `${pXgivenDef.toFixed(4)}`;
+    const wrongs = [
+      `${sc.defRates[0]}`,
+      `${(sc.prods[0]*sc.defRates[0]).toFixed(4)}`,
+      `${sc.prods[0]}`,
+    ];
+    const {opts,ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc', badgeText:'ベイズの定理',
+      q:`<p style="text-indent:1em">${sc.ctx}</p>
+         <p>取り出した1個が<strong>「${sc.item}」だった</strong>とき、それが<strong>ライン${sc.names[0]}から生産されたものである確率</strong>はいくらか。</p>`,
+      opts, ansIndex,
+      exp:`<div class="s"><strong>ベイズの定理: P(A|B) = P(A)P(B|A) / P(B)</strong></div>
+           <div class="s">P(${sc.item}) = ${pDef.toFixed(4)}（全確率の公式より）</div>
+           <div class="s">P(${sc.names[0]}|${sc.item}) = P(${sc.names[0]})×P(${sc.item}|${sc.names[0]}) / P(${sc.item})</div>
+           <div class="s">= ${sc.prods[0]} × ${sc.defRates[0]} / ${pDef.toFixed(4)} = ${(sc.prods[0]*sc.defRates[0]).toFixed(4)} / ${pDef.toFixed(4)} = <strong>${pXgivenDef.toFixed(4)}</strong></div>`
+    };
+  }
+}
+
+// ─── 過去問型6: 歪度・尖度の正誤判断（2019年11月 問11型）──────────────────
+function genProb_Skewness(){
+  // 記述I〜IIIの正誤判断（過去問そのままの形式）
+  const sets = [
+    {
+      stmts:[
+        {t:'分布の平均が正であるとき、歪度は正の値をとる', ok:false, reason:'歪度は分布の非対称性を表す指標で、平均の正負とは独立。例えば平均が正でも対称分布（歪度=0）は存在する'},
+        {t:'右に裾が長い分布のとき、歪度は負の値をとる', ok:false, reason:'右裾が長い（右歪み）分布の歪度は正。左裾が長い（左歪み）が負'},
+        {t:'分布が多峰（峰の数が2個以上）であるとき、歪度は0となる', ok:false, reason:'多峰性と歪度は別の概念。多峰でも歪度≠0のケースは多い'},
+      ],
+      answer:'I・II・IIIはすべて誤り'
+    },
+    {
+      stmts:[
+        {t:'右に裾が長い（右歪みの）分布では、平均値 > 中央値 > 最頻値の関係が成立しやすい', ok:true, reason:'右の外れ値が平均を引き上げるため'},
+        {t:'左に裾が長い分布のとき、歪度は負の値をとる', ok:true, reason:'左歪み分布の歪度 < 0 は定義通り'},
+        {t:'正規分布の歪度は1である', ok:false, reason:'正規分布の歪度は0（完全対称）'},
+      ],
+      answer:'IとIIのみ正しい'
+    },
+    {
+      stmts:[
+        {t:'尖度が3より大きいとき（超過尖度>0）、分布の裾は正規分布より厚い（裾が重い）', ok:true, reason:'正規分布の尖度=3を基準に、超過尖度>0が裾の重さを示す'},
+        {t:'正規分布の尖度は0である', ok:false, reason:'正規分布の尖度は3（超過尖度が0）。尖度そのものは3'},
+        {t:'歪度が0の分布は必ず正規分布である', ok:false, reason:'歪度=0でも非正規分布は存在する（対称な一様分布など）'},
+      ],
+      answer:'Iのみ正しい'
+    },
+  ];
+  const set = sets[rndInt(0,2)];
+  const shuffledStmts = shuffle(set.stmts.slice());
+  const _labels = ['I','II','III'];
+  const _okLabels = shuffledStmts.map((s,i)=>s.ok?_labels[i]:null).filter(Boolean);
+  const dynamicAnswer = _okLabels.length===0?'I・II・IIIはすべて誤り':
+    _okLabels.length===3?'I・II・IIIはすべて正しい':
+    _okLabels.length===1?`${_okLabels[0]}のみ正しい`:`${_okLabels.join('と')}のみ正しい`;
+  const stmtHTML = shuffledStmts.map((s,i)=>
+    `<div style="margin:8px 0;padding:8px 12px;background:#f8fafc;border-left:3px solid #94a3b8;border-radius:0 6px 6px 0;font-size:.9rem">
+      <strong style="color:#1d4ed8">${_labels[i]}.</strong> ${s.t}
+    </div>`).join('');
+  const wrongs = ['I・II・IIIはすべて正しい','IとIIのみ正しい','Iのみ正しい','IIのみ正しい','IIIのみ正しい','IとIIIのみ正しい','IIとIIIのみ正しい','I・II・IIIはすべて誤り']
+    .filter(w=>w!==dynamicAnswer).slice(0,3);
+  const {opts,ansIndex} = makeOpts(dynamicAnswer, wrongs);
+  return {
+    badgeClass:'qtype-logic', badgeText:'歪度・尖度の正誤判断',
+    q:`<div class="scenario">あるデータ分析チームが、複数のデータセットの分布の形状を歪度・尖度を用いて評価する研修を行っている。次の記述 I〜III は、歪度・尖度についての説明である。</div>
+       ${stmtHTML}
+       <p style="margin-top:12px">記述 I〜III に関して、<strong>最も適切なものを1つ選べ。</strong></p>`,
+    opts, ansIndex,
+    exp:`<div class="s"><strong>歪度・尖度のポイント</strong></div>
+         ${shuffledStmts.map((s,i)=>`<div class="s"><strong>${_labels[i]}:</strong> ${s.ok?'✅ 正しい':'❌ 誤り'} — ${s.reason}</div>`).join('')}
+         <div class="s">→ 正解: <strong>${dynamicAnswer}</strong></div>
+         <div class="s">【覚え方】右歪み=歪度＋、左歪み=歪度−、正規分布=歪度0・尖度3</div>`
+  };
+}
+
+// ─── 過去問型7: 推定量の不偏性・一致性（2019年11月 問12型）──────────────────
+function genProb_Estimator(){
+  // μ̂₁ = (X₁+Xₙ)/2 と μ̂₂ = 1/(n-2) × Σ(i=2 to n-1) Xᵢ の性質を問う
+  const n = rndInt(6,12);
+  const stmts_sets = [
+    {
+      ctx:`μ̂₁ = (X₁ + X<sub>n</sub>) / 2、μ̂₂ = 1/(n−2) × Σ(i=2 to n-1) Xᵢとして定義される2つの推定量を考える。`,
+      stmts:[
+        {t:'μ̂₁ は μ の不偏推定量である', ok:true,  reason:`E[μ̂₁] = (E[X₁]+E[Xₙ])/2 = (μ+μ)/2 = μ → 不偏`},
+        {t:'μ̂₁ は μ の一致推定量である', ok:false, reason:`μ̂₁ は X₁ と Xₙ の2点のみを使うため、n→∞でも分散は σ²/2 に収束し、μ に確率収束しない`},
+        {t:'μ̂₂ は μ の不偏推定量である', ok:true,  reason:`E[μ̂₂] = 1/(n-2) × (n-2)μ = μ → 不偏`},
+        {t:'μ̂₂ は μ の一致推定量である', ok:true,  reason:`分散 = σ²/(n-2) → n→∞で0 → 一致性あり`},
+      ],
+      answer:'I・III・IVが正しい（IIのみ誤り）'
+    },
+    {
+      ctx:`確率変数 X₁,…,Xₙが互いに独立に平均μ、分散σ²の正規分布に従うとき、以下の推定量の性質を問う。`,
+      stmts:[
+        {t:'標本平均 X̄ は μ の不偏推定量である', ok:true, reason:'E[X̄]=μ → 不偏'},
+        {t:'標本分散 s²（n-1で割るもの）は σ² の不偏推定量である', ok:true, reason:'定義上 E[s²]=σ² → 不偏（n-1で割るのが不偏推定量の理由）'},
+        {t:'n で割る分散 m²=Σ(Xᵢ-X̄)²/n は σ² の不偏推定量である', ok:false, reason:'E[m²]= (n-1)σ²/n ≠ σ² → 不偏でない（過小推定）'},
+      ],
+      answer:'IとIIのみ正しい'
+    },
+  ];
+  const set = stmts_sets[rndInt(0,1)];
+  const shuffledStmts = shuffle(set.stmts.slice());
+  const _labels = ['I','II','III','IV'].slice(0, shuffledStmts.length);
+  const _okLabels = shuffledStmts.map((s,i)=>s.ok?_labels[i]:null).filter(Boolean);
+  const dynamicAnswer = _okLabels.length===0?`${_labels.join('・')}はすべて誤り`:
+    _okLabels.length===shuffledStmts.length?`${_labels.join('・')}はすべて正しい`:
+    _okLabels.length===1?`${_okLabels[0]}のみ正しい`:`${_okLabels.join('と')}のみ正しい`;
+  const stmtHTML = shuffledStmts.map((s,i)=>
+    `<div style="margin:6px 0;padding:8px 12px;background:#f8fafc;border-left:3px solid #94a3b8;border-radius:0 6px 6px 0;font-size:.88rem">
+      <strong style="color:#1d4ed8">${_labels[i]}.</strong> ${s.t}
+    </div>`).join('');
+  const allChoices = _labels.length===4
+    ? ['I・II・III・IVはすべて正しい','I・II・III・IVはすべて誤り','Iのみ正しい','IIのみ正しい','IIIのみ正しい','IVのみ正しい','IとIIのみ正しい','IIIとIVのみ正しい','IとIIIのみ正しい','I・III・IVのみ正しい']
+    : ['I・II・IIIはすべて正しい','I・II・IIIはすべて誤り','Iのみ正しい','IIのみ正しい','IIIのみ正しい','IとIIのみ正しい','IとIIIのみ正しい','IIとIIIのみ正しい'];
+  const wrongs = allChoices.filter(w=>w!==dynamicAnswer).slice(0,3);
+  const {opts,ansIndex} = makeOpts(dynamicAnswer, wrongs);
+  return {
+    badgeClass:'qtype-logic', badgeText:'推定量の性質（不偏・一致）',
+    q:`<p style="text-indent:1em">${set.ctx}</p>
+       ${stmtHTML}
+       <p style="margin-top:12px">記述に関して<strong>最も適切なものを選べ。</strong></p>`,
+    opts, ansIndex,
+    exp:`<div class="s"><strong>不偏性 vs 一致性</strong></div>
+         <div class="s">・<strong>不偏性:</strong> E[θ̂]=θ（サンプルサイズに関わらず期待値が真値に等しい）</div>
+         <div class="s">・<strong>一致性:</strong> n→∞ で θ̂ が θ に確率収束（分散→0が十分条件）</div>
+         ${shuffledStmts.map((s,i)=>`<div class="s"><strong>${_labels[i]}:</strong> ${s.ok?'✅ 正しい':'❌ 誤り'} — ${s.reason}</div>`).join('')}`
+  };
+}
+
+// ─── 過去問型8: 正規分布の確率計算（2019年6月 問11、2018年問8の応用）──────
+function genProb_NormalCalc(){
+  const qType = rndInt(0,2);
+  if(qType===0){
+    // P(-a < X < b) の計算（正規分布表活用型）
+    const mu = rndInt(2,5)*10, sigma = rndInt(1,3)*5;
+    const z1 = rndInt(1,2); // 下側 μ-z₁σ
+    const z2 = rndInt(1,2); // 上側 μ+z₂σ
+    // P(μ-z₁σ < X < μ+z₂σ) = Φ(z₂) - (1-Φ(z₁)) の正規分布表値
+    const tableVals = {1: 0.1587, 1.5: 0.0668, 2: 0.0228};
+    const p1 = tableVals[z1] || 0.1587;
+    const p2 = tableVals[z2] || 0.1587;
+    const prob = 1 - p1 - p2;
+    const lo = mu - z1*sigma, hi = mu + z2*sigma;
+    const correct = `${prob.toFixed(4)}`;
+    const wrongs = [
+      `${(p1+p2).toFixed(4)}`,
+      `${(1-p1).toFixed(4)}`,
+      `${(1-2*Math.min(p1,p2)).toFixed(4)}`,
+    ];
+    const {opts,ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc', badgeText:'正規分布の確率',
+      q:`<p>確率変数 X が平均 <strong>μ = ${mu}</strong>、分散 <strong>σ² = ${sigma*sigma}</strong> の正規分布に従うとする。</p>
+         <p><strong>P(${lo} &lt; X &lt; ${hi})</strong> を求めよ。</p>
+         <p style="font-size:.85rem;color:#64748b;margin-top:6px"></p>`,
+      opts, ansIndex,
+      exp:`<div class="s"><strong>手順：標準化 → 正規分布表</strong></div>
+           <div class="s">Z₁ = (${lo} − ${mu}) / ${sigma} = −${z1}、Z₂ = (${hi} − ${mu}) / ${sigma} = ${z2}</div>
+           <div class="s">P(${lo} < X < ${hi}) = P(−${z1} < Z < ${z2}) = 1 − P(Z ≤ −${z1}) − P(Z ≥ ${z2})</div>
+           <div class="s">= 1 − ${p1} − ${p2} = <strong>${prob.toFixed(4)}</strong></div>`
+    };
+  } else if(qType===1){
+    // 必要サンプルサイズ設計（2017年6月 問11、2019年6月 問14型）
+    const cv = rndInt(3,5)*0.1; // 変動係数
+    const E = rndInt(4,6)*0.01; // 許容誤差（相対）
+    // 95%CI: x̄ ± 1.96×σ/√n、相対誤差 E = 1.96×CV/√n より n=(1.96×CV/E)²
+    const n_req = Math.ceil(Math.pow(1.96*cv/E, 2));
+    const correct = `n = ${n_req}`;
+    const wrongs = [
+      `n = ${Math.ceil(Math.pow(1.645*cv/E,2))}を使用）`,
+      `n = ${Math.ceil(Math.pow(1.96*cv/E,1))}`,
+      `n = ${Math.ceil(Math.pow(1.96/E,2))}`,
+    ];
+    const {opts,ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc', badgeText:'必要サンプルサイズ',
+      q:`<p>ある都道府県で喫茶店の年間売上高の母平均を推定する。過去の調査から変動係数は <strong>${cv}</strong> と分かっている。</p>
+         <p>95%の確率で相対誤差を <strong>±${E*100}%以内</strong>に抑えるための<strong>最低限必要なサンプルサイズ n</strong> はいくらか。</p>`,
+      opts, ansIndex,
+      exp:`<div class="s"><strong>相対誤差を指定したサンプルサイズ設計</strong></div>
+           <div class="s">95%CI: x̄ ± 1.96×σ/√n、相対誤差 = (1.96×σ/√n) / μ = 1.96×CV/√n ≤ E</div>
+           <div class="s">√n ≥ 1.96×CV/E → n ≥ (1.96×${cv}/${E})² = ${((1.96*cv/E)**2).toFixed(2)}</div>
+           <div class="s">切り上げて <strong>n = ${n_req}</strong></div>`
+    };
+  } else {
+    // カイ二乗分布・F分布との関係（2017年11月 問9型）
+    const n1 = rndInt(10,20), n2 = rndInt(10,20);
+    const df1 = n1-1, df2 = n2-1;
+    // W_n = X₁²+…+Xₙ² → カイ二乗分布(n)
+    // Z/√(W/n) → t分布(n)
+    // (W₁/m₁)/(W₂/m₂) → F分布(m₁,m₂)
+    const correct = `カイ二乗、t、F — 順にχ²(n)、t(n)、F(m₁,m₂) に従う`;
+    const wrongs = [
+      `ポアソン、カイ二乗、t`,
+      `カイ二乗、F、t`,
+      `二項、t、F`,
+    ];
+    const {opts,ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-logic', badgeText:'標本分布の識別',
+      q:`<p>確率変数 Z₁, Z₂, …, Zₙ が互いに独立に標準正規分布 N(0,1) に従うとき、</p>
+         <p style="margin:8px 0;padding:10px 14px;background:#f0f9ff;border-radius:6px;font-size:.93rem">
+           W = Z₁² + Z₂² + ⋯ + Zₙ² は自由度 n の <strong></strong> 分布に従う。<br>
+           また N(0,1) に従う Z が W と独立であれば、<strong>Z / √(W/n)</strong> は自由度 n の <strong></strong> 分布に従う。<br>
+           さらに W₁〜χ²(m₁)、W₂〜χ²(m₂) が独立なら <strong>(W₁/m₁)/(W₂/m₂)</strong> は自由度 (m₁, m₂) の <strong></strong> 分布に従う。
+         </p>
+         <p>〜に当てはまる分布名の組み合わせとして正しいものはどれか。</p>`,
+      opts, ansIndex,
+      exp:`<div class="s"><strong>統計的推測で使う3つの標本分布の導出関係</strong></div>
+           <div class="s">・<strong>χ²分布:</strong> 独立な標準正規変数の<strong>二乗和</strong> → χ²(n)</div>
+           <div class="s">・<strong>t分布:</strong> N(0,1) / √(χ²(n)/n) → t(n)（母分散未知の検定に使用）</div>
+           <div class="s">・<strong>F分布:</strong> (χ²(m₁)/m₁) / (χ²(m₂)/m₂) → F(m₁,m₂)（等分散検定・分散分析に使用）</div>
+           <div class="s">→ （ア）<strong>カイ二乗</strong>、（イ）<strong>t</strong>、（ウ）<strong>F</strong></div>`
+    };
+  }
+}
+
+function genReg(){
+  // 既存TYPE0-5（単回帰4種+重回帰1種、type内部で分岐）に加え
+  // 新規5パターン（多重共線性・ダミー変数・分散分析表・残差診断・予測区間）を追加
+  const r = Math.random();
+  if (r < 0.64) {
+    // 既存ロジックそのまま（type 0〜5を均等に使う）
+  } else if (r < 0.71) {
+    return genReg_VIF();
+  } else if (r < 0.78) {
+    return genReg_Dummy();
+  } else if (r < 0.85) {
+    return genReg_ANOVA();
+  } else if (r < 0.93) {
+    return genReg_Residual();
+  } else {
+    return genReg_PredictionInterval();
+  }
+  // 問題タイプを均等に選択（0〜5の6種類）
+  const type = rndInt(0, 5);
+
+  // ─── 共通：モデルパラメータ生成 ───────────────────────────
+  // 数値を毎回変えることで、選択肢が偶然一致しないよう設計
+  const b0 = rnd(10, 40, 2);          // 切片（10〜40でバラつかせる）
+  const b1 = rnd(0.3, 3.5, 2);        // 傾き（正の値のみ）
+  const b1_neg = -rnd(0.3, 3.5, 2);   // 負の傾きパターン用
+  const se1 = rnd(0.08, 0.30, 3);     // X の標準誤差
+  const t1 = parseFloat((b1 / se1).toFixed(2));
+  const r2 = rnd(0.40, 0.82, 4);
+  const adjR2 = parseFloat((r2 - rnd(0.010, 0.035, 4)).toFixed(4));
+  const df = rndInt(18, 45);
+  const resSE = rnd(1.5, 5.0, 2);
+  const pVal = t1 > 2.5 ? '0.00022' : (t1 > 2.0 ? '0.0183' : '0.0724');
+  const sigMark = t1 > 2.5 ? '***' : (t1 > 2.0 ? '*' : '');
+  const isSig = t1 > 2.0; // 有意かどうか
+
+  // ─── シナリオ選択（問題に現実感を持たせる） ────────────────
+  const scenarios = [
+    { name:'マーケティング', xLabel:'広告費(万円)', yLabel:'売上(百万円)' },
+    { name:'教育',         xLabel:'学習時間(h)',  yLabel:'テスト点数(点)' },
+    { name:'気象',         xLabel:'気温(℃)',      yLabel:'電力消費量(GWh)' },
+    { name:'不動産',       xLabel:'築年数(年)',    yLabel:'賃料(万円/月)' },
+  ];
+  const sc = scenarios[rndInt(0, scenarios.length - 1)];
+
+  const outputText =
+`Coefficients:
+                 Estimate Std. Error t value Pr(>|t|)
+(Intercept)      ${b0.toFixed(2)}     2.14     ${(b0/2.14).toFixed(2)}   < 2e-16 ***
+${sc.xLabel.padEnd(16)} ${b1.toFixed(2)}     ${se1.toFixed(3)}    ${t1.toFixed(2)}   ${pVal} ${sigMark}
+---
+Residual standard error: ${resSE} on ${df} degrees of freedom
+Multiple R-squared:  ${r2.toFixed(4)},  Adjusted R-squared: ${adjR2.toFixed(4)}
+F-statistic: ${(t1*t1).toFixed(2)} on 1 and ${df} DF,  p-value: ${pVal}`;
+
+  // ─── TYPE 0: 予測値の計算 ───────────────────────────────────
+  if (type === 0) {
+    const xIn = rndInt(5, 20);
+    const pred = parseFloat((b0 + b1 * xIn).toFixed(2));
+    // ダミー：4種類の「よくある間違い」から3つ選ぶ（correctと重複しない保証）
+    const wrongCandidates = [
+      { val: parseFloat((b1 * xIn).toFixed(2)),      label: `切片を足し忘れ: ${b1.toFixed(2)}×${xIn}` },
+      { val: parseFloat((b0 + b1).toFixed(2)),        label: `X=1を代入: ${b0.toFixed(2)}+${b1.toFixed(2)}` },
+      { val: parseFloat((b0 + se1 * xIn).toFixed(2)),label: `傾きでなくSEを使用: ${b0.toFixed(2)}+${se1.toFixed(3)}×${xIn}` },
+      { val: parseFloat((b0 * b1 + xIn).toFixed(2)), label: `切片×傾き+X: 計算式誤り` },
+    ].filter(w => w.val !== pred); // correctと同値になるものを除外
+    const wrongs = wrongCandidates.slice(0, 3).map(w => `${w.val}`);
+    const correct = `${pred}`;
+    const {opts, ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc', badgeText:'回帰分析 — 予測値',
+      q: `<div class="mono-output">${outputText}</div>
+          <p>${sc.name}データの単回帰分析。<strong>${sc.xLabel} = ${xIn}</strong> のときの <strong>${sc.yLabel} の予測値</strong>を求めよ。</p>`,
+      opts, ansIndex,
+      exp: `<div class="s"><strong>回帰方程式: Ŷ = 切片 + 傾き × X</strong></div>
+            <div class="s">= ${b0.toFixed(2)} + ${b1.toFixed(2)} × ${xIn} = <strong>${pred}</strong></div>
+            <div class="s">Estimate列の1行目(Intercept)が切片、2行目が傾きです。</div>`
+    };
+  }
+
+  // ─── TYPE 1: 決定係数 R² の解釈 ────────────────────────────
+  if (type === 1) {
+    const pct = (r2 * 100).toFixed(1);
+    const wrongPct1 = ((1 - r2) * 100).toFixed(1); // 残差の割合と混同
+    const wrongPct2 = (Math.sqrt(r2) * 100).toFixed(1); // 相関係数rと混同
+    const correct = `${sc.yLabel}の全変動のうち ${pct}% をこのモデルが説明している`;
+    const wrongs = [
+      `${sc.xLabel}の全変動のうち ${pct}% が${sc.yLabel}によって説明される`,
+      `残差が ${pct}% であり、モデルの説明力は乏しい`,
+      `${sc.xLabel}と${sc.yLabel}の相関係数は ${wrongPct2}% である`,
+    ];
+    const {opts, ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-stat', badgeText:'回帰分析 — 決定係数',
+      q: `<div class="mono-output">${outputText}</div>
+          <p><strong>Multiple R-squared: ${r2.toFixed(4)}</strong> の意味として正しいものはどれか。</p>`,
+      opts, ansIndex,
+      exp: `<div class="s"><strong>決定係数 R² の定義 (L11)</strong></div>
+            <div class="s">R² = 回帰で説明された変動 ÷ 全変動</div>
+            <div class="s">→ <strong>${sc.yLabel}の変動の ${pct}% を、${sc.xLabel}で説明できている</strong></div>
+            <div class="s">残りの ${wrongPct1}% は残差（説明できない変動）です。</div>`
+    };
+  }
+
+  // ─── TYPE 2: 傾きの解釈 ────────────────────────────────────
+  if (type === 2) {
+    const correct = `${sc.xLabel}が 1 単位増加すると、${sc.yLabel}は平均して ${b1.toFixed(2)} 増加する`;
+    const wrongs = [
+      `${sc.xLabel}が 1 単位増加すると、${sc.yLabel}は平均して ${b0.toFixed(2)} 増加する`,
+      `${sc.yLabel}が 1 単位増加すると、${sc.xLabel}が ${b1.toFixed(2)} 増加する`,
+      `${sc.xLabel}が ${b1.toFixed(2)} 単位増加したとき、${sc.yLabel}はちょうど 1 増加する`,
+    ];
+    const {opts, ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-stat', badgeText:'回帰分析 — 係数の解釈',
+      q: `<div class="mono-output">${outputText}</div>
+          <p>${sc.xLabel}の係数 <strong>Estimate: ${b1.toFixed(2)}</strong> の正しい解釈はどれか。</p>`,
+      opts, ansIndex,
+      exp: `<div class="s"><strong>偏回帰係数の定義</strong></div>
+            <div class="s">「説明変数が <strong>1 単位</strong> 変化したとき、目的変数が平均して <strong>何単位</strong> 変化するか」</div>
+            <div class="s">→ ${sc.xLabel}が 1 増えると ${sc.yLabel}は平均 <strong>${b1.toFixed(2)} 増加</strong></div>`
+    };
+  }
+
+  // ─── TYPE 3: 係数のt検定（有意性判定）────────────────────────
+  if (type === 3) {
+    const sigText = isSig ? '棄却される（有意）' : '棄却されない（有意でない）';
+    const correct = `H₀「${sc.xLabel}の係数 = 0」を検定。p値 = ${pVal} は有意水準0.05より${isSig ? '小さい' : '大きい'}ため、H₀は${sigText}`;
+    const wrongs = [
+      `H₀「${sc.xLabel}の係数 = 0」を検定。p値 = ${pVal} は有意水準0.05より${isSig ? '小さい' : '大きい'}ため、H₀は${isSig ? '棄却されない' : '棄却される'}`,
+      `H₀「${sc.yLabel}の平均 = 0」を検定。p値 = ${pVal} のためH₀は${sigText}`,
+      `H₀「${sc.xLabel}の係数 ≠ 0」を検定。p値 = ${pVal} のためH₀は${sigText}`,
+    ];
+    const {opts, ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-logic', badgeText:'回帰分析 — 係数の検定',
+      q: `<div class="mono-output">${outputText}</div>
+          <p><strong>${sc.xLabel}の行の Pr(&gt;|t|) = ${pVal}</strong> を用いた「回帰係数のt検定」の結論として正しいものはどれか。</p>`,
+      opts, ansIndex,
+      exp: `<div class="s"><strong>回帰係数のt検定の流れ</strong></div>
+            <div class="s">① H₀：係数 = 0（その変数はYの予測に役立たない）</div>
+            <div class="s">② p値 ${pVal} と α=0.05 を比較</div>
+            <div class="s">③ p値 ${isSig ? '< 0.05 → H₀棄却 → ' + sc.xLabel + 'は有意な説明変数' : '> 0.05 → H₀棄却できず → 有意な証拠なし'}</div>`
+    };
+  }
+
+  // ─── TYPE 4: Adjusted R² vs R² の違い ──────────────────────
+  if (type === 4) {
+    const diff = parseFloat((r2 - adjR2).toFixed(4));
+    const correct = `Adjusted R²は説明変数の個数によるペナルティを加えたR²で、R²より常に小さくなる。これは正常であり計算ミスではない`;
+    const wrongs = [
+      `R²とAdjusted R²が異なるのは、サンプルサイズが不足しているためである`,
+      `Adjusted R²は常にR²と等しくなるべきで、差 ${diff} は計算上の誤りである`,
+      `Adjusted R²がR²より小さいことは、このモデルの説明変数が多すぎることを直接意味する`,
+    ];
+    const {opts, ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-stat', badgeText:'回帰分析 — 自由度調整済R²',
+      q: `<div class="mono-output">${outputText}</div>
+          <p><strong>Multiple R-squared: ${r2.toFixed(4)}</strong> と <strong>Adjusted R-squared: ${adjR2.toFixed(4)}</strong> の関係について正しいものはどれか。</p>`,
+      opts, ansIndex,
+      exp: `<div class="s"><strong>Adjusted R²（自由度調整済み決定係数）</strong></div>
+            <div class="s">・R²は説明変数を増やすほど必ず上がる（過学習リスク）</div>
+            <div class="s">・Adjusted R²は変数追加によるペナルティを考慮 → R²以下になるのが<strong>正常</strong></div>
+            <div class="s">・モデル比較にはAdjusted R²を使うのが原則</div>`
+    };
+  }
+
+  // ─── TYPE 5: 重回帰 — 偏回帰係数の「他変数を固定」解釈 ─────
+  // 別のシナリオ（3変数）を使用
+  const b2 = rnd(0.2, 2.0, 2);
+  const b3 = -rnd(0.1, 1.5, 2);
+  const multiOutput =
+`Coefficients:
+                 Estimate Std. Error t value Pr(>|t|)
+(Intercept)      ${b0.toFixed(2)}     3.21     ${(b0/3.21).toFixed(2)}   < 2e-16 ***
+広告費(万円)     ${b1.toFixed(2)}     ${se1.toFixed(3)}    ${t1.toFixed(2)}   0.0041 **
+店舗面積(m²)     ${b2.toFixed(2)}     0.142    ${(b2/0.142).toFixed(2)}   0.0012 **
+競合店舗数       ${b3.toFixed(2)}     0.318   ${(b3/0.318).toFixed(2)}   0.0289 *
+---
+Residual standard error: ${resSE} on ${rndInt(40,80)} degrees of freedom
+Multiple R-squared:  ${r2.toFixed(4)},  Adjusted R-squared: ${adjR2.toFixed(4)}`;
+
+  const correct = `店舗面積と競合店舗数を一定に保った状態で、広告費が 1万円 増加すると売上は平均 ${b1.toFixed(2)} 増加する`;
+  const wrongs = [
+    `広告費だけを考えると、1万円増加につき売上は平均 ${b1.toFixed(2)} 増加する`,
+    `広告費の係数 ${b1.toFixed(2)} は、3変数すべてが同時に 1 単位増加したときの売上変化量を表す`,
+    `広告費・店舗面積・競合店舗数の合計効果が ${(b1+b2+b3).toFixed(2)} であることを示す`,
+  ];
+  const {opts, ansIndex} = makeOpts(correct, wrongs);
+  return {
+    badgeClass:'qtype-stat', badgeText:'回帰分析 — 偏回帰係数',
+    q: `<div class="mono-output">${multiOutput}</div>
+        <p>重回帰分析の結果。<strong>広告費の偏回帰係数 ${b1.toFixed(2)}</strong> の正しい解釈はどれか。</p>`,
+    opts, ansIndex,
+    exp: `<div class="s"><strong>重回帰の偏回帰係数＝「他の変数を固定したときの効果」</strong></div>
+          <div class="s">→ 店舗面積・競合店舗数を<strong>一定に保ちながら</strong>広告費だけを 1 増やしたときに売上が平均 <strong>${b1.toFixed(2)} 変化</strong></div>
+          <div class="s">単回帰の係数とは異なります（他変数の影響を取り除いた「純粋な効果」）</div>`
+  };
+}
+
+// ─── 新規① 多重共線性（VIF・相関行列の判断）─────────────────────────
+function genReg_VIF(){
+  const scenarios = [
+    { desc:'中古マンション価格(万円)を分析。説明変数: 築年数・床面積・最寄駅徒歩分', vars:['築年数','床面積','最寄駅徒歩分'] },
+    { desc:'従業員の年収(万円)を分析。説明変数: 勤続年数・年齢・役職レベル', vars:['勤続年数','年齢','役職レベル'] },
+  ];
+  const sc = scenarios[rndInt(0, scenarios.length-1)];
+  // 2変数の間に強い相関（多重共線性の疑い）を仕込む
+  const corrHigh = parseFloat(rnd(0.85, 0.97, 3).toFixed(3));
+  const vifHigh = parseFloat((1/(1-corrHigh*corrHigh)).toFixed(2));
+  const corrLow = parseFloat(rnd(0.05, 0.25, 3).toFixed(3));
+
+  const corrTableHTML = `<table style="width:100%;border-collapse:collapse;font-size:.88rem;margin:12px 0">
+      <tr style="background:#1e293b;color:#fff"><th style="padding:7px 10px"></th><th style="padding:7px 10px">${sc.vars[0]}</th><th style="padding:7px 10px">${sc.vars[1]}</th><th style="padding:7px 10px">${sc.vars[2]}</th></tr>
+      <tr style="background:#f8fafc"><td style="padding:6px 10px;font-weight:600">${sc.vars[0]}</td><td style="padding:6px 10px;text-align:center">1.000</td><td style="padding:6px 10px;text-align:center;color:#dc2626;font-weight:700">${corrHigh.toFixed(3)}</td><td style="padding:6px 10px;text-align:center">${corrLow.toFixed(3)}</td></tr>
+      <tr><td style="padding:6px 10px;font-weight:600">${sc.vars[1]}</td><td style="padding:6px 10px;text-align:center;color:#dc2626;font-weight:700">${corrHigh.toFixed(3)}</td><td style="padding:6px 10px;text-align:center">1.000</td><td style="padding:6px 10px;text-align:center">${(corrLow+0.05).toFixed(3)}</td></tr>
+      <tr style="background:#f8fafc"><td style="padding:6px 10px;font-weight:600">${sc.vars[2]}</td><td style="padding:6px 10px;text-align:center">${corrLow.toFixed(3)}</td><td style="padding:6px 10px;text-align:center">${(corrLow+0.05).toFixed(3)}</td><td style="padding:6px 10px;text-align:center">1.000</td></tr>
+    </table>`;
+
+  const correct = `${sc.vars[0]}と${sc.vars[1]}の相関係数が${corrHigh.toFixed(3)}と非常に高く、多重共線性が疑われる。VIF ≈ 1/(1−r²) = ${vifHigh} となり、目安の10を超えるため、片方の変数を除外するなどの対処が必要`;
+  const wrongs = [
+    `すべての変数間の相関係数が1.000に近いため、このモデルは決定係数R²が極端に低くなる`,
+    `${sc.vars[0]}と${sc.vars[1]}の相関が高いのは望ましい状態で、両方の変数をそのまま使うことでモデルの予測精度が向上する`,
+    `相関行列の対角成分が1.000であることが多重共線性の証拠であり、対角成分を除外する必要がある`,
+  ];
+  const {opts, ansIndex} = makeOpts(correct, wrongs);
+  return {
+    badgeClass:'qtype-logic', badgeText:'回帰分析 — 多重共線性',
+    q: `<p>${sc.desc}。重回帰分析を行う前に、説明変数間の相関行列を確認した。</p>
+        ${corrTableHTML}
+        <p>この相関行列から読み取れる<strong>多重共線性</strong>に関する記述として、最も適切なものはどれか。</p>`,
+    opts, ansIndex,
+    exp: `<div class="s"><strong>多重共線性（マルチコ）の判定</strong></div>
+          <div class="s">説明変数同士の相関が高い（|r|が0.8〜0.9以上）→ 多重共線性の疑い</div>
+          <div class="s">VIF（分散拡大要因）= 1/(1−r²) = 1/(1−${corrHigh.toFixed(3)}²) ≈ <strong>${vifHigh}</strong></div>
+          <div class="s">VIFの目安：<strong>10以上</strong>で多重共線性が強いと判断（5以上で注意）</div>
+          <div class="s">対処：相関の高い変数の片方を除外、主成分分析などで合成変数を作る</div>`
+  };
+}
+
+// ─── 新規② ダミー変数を用いた回帰 ─────────────────────────────────
+function genReg_Dummy(){
+  const scenarios = [
+    { desc:'中古車の販売価格(万円)を分析。説明変数: 走行距離(万km)、ハイブリッド車ダミー(1=ハイブリッド、0=ガソリン車)', x1:'走行距離(万km)', dummy:'ハイブリッド車ダミー', baseLevel:'ガソリン車', targetLevel:'ハイブリッド車' },
+    { desc:'従業員の月給(万円)を分析。説明変数: 経験年数、正社員ダミー(1=正社員、0=契約社員)', x1:'経験年数', dummy:'正社員ダミー', baseLevel:'契約社員', targetLevel:'正社員' },
+  ];
+  const sc = scenarios[rndInt(0, scenarios.length-1)];
+  const b0 = rnd(80, 150, 2);
+  const b1 = -rnd(2, 8, 2); // 走行距離が増えると価格は下がる、または経験年数で月給が上がる想定
+  const bDummy = rnd(10, 40, 2);
+  const se1 = rnd(0.3, 1.2, 3), seD = rnd(2, 6, 2);
+  const t1 = (b1/se1).toFixed(2), tD = (bDummy/seD).toFixed(2);
+
+  const tableHTML = `<table style="width:100%;border-collapse:collapse;font-size:.88rem;margin:12px 0">
+      <tr style="background:#1e293b;color:#fff"><th style="padding:7px 10px">Coefficients</th><th style="padding:7px 10px">Estimate</th><th style="padding:7px 10px">Std.Error</th><th style="padding:7px 10px">t value</th><th style="padding:7px 10px">Pr(&gt;|t|)</th></tr>
+      <tr style="background:#f8fafc"><td style="padding:6px 10px">(Intercept)</td><td style="padding:6px 10px;text-align:right">${b0.toFixed(2)}</td><td style="padding:6px 10px;text-align:right">5.12</td><td style="padding:6px 10px;text-align:right">${(b0/5.12).toFixed(2)}</td><td style="padding:6px 10px;text-align:right">&lt;0.001 ***</td></tr>
+      <tr><td style="padding:6px 10px">${sc.x1}</td><td style="padding:6px 10px;text-align:right">${b1.toFixed(2)}</td><td style="padding:6px 10px;text-align:right">${se1.toFixed(3)}</td><td style="padding:6px 10px;text-align:right">${t1}</td><td style="padding:6px 10px;text-align:right">0.0012 **</td></tr>
+      <tr style="background:#f8fafc"><td style="padding:6px 10px">${sc.dummy}</td><td style="padding:6px 10px;text-align:right">${bDummy.toFixed(2)}</td><td style="padding:6px 10px;text-align:right">${seD.toFixed(2)}</td><td style="padding:6px 10px;text-align:right">${tD}</td><td style="padding:6px 10px;text-align:right">0.0089 **</td></tr>
+    </table>`;
+
+  const qType = rndInt(0,1);
+  if (qType === 0) {
+    const correct = `他の条件が同じ場合、${sc.targetLevel}は${sc.baseLevel}と比べて、推定値の分だけ平均的に${bDummy>0?'高い':'低い'}`;
+    const wrongs = [
+      `ダミー変数の係数 ${bDummy.toFixed(2)} は、${sc.targetLevel}と${sc.baseLevel}の価格比を示している`,
+      `ダミー変数が1のとき切片が0になり、回帰直線の傾きが完全に変わる`,
+      `ダミー変数の係数は、${sc.x1}の効果と掛け合わせて初めて意味を持つ数値であり、単独では解釈できない`,
+    ];
+    const {opts, ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-stat', badgeText:'回帰分析 — ダミー変数',
+      q: `<p>${sc.desc}。回帰分析の結果は以下の通り。</p>
+          ${tableHTML}
+          <p><strong>${sc.dummy}の係数 ${bDummy.toFixed(2)}</strong> の正しい解釈はどれか。</p>`,
+      opts, ansIndex,
+      exp: `<div class="s"><strong>ダミー変数の係数の意味</strong></div>
+            <div class="s">ダミー変数（0/1）の係数は、<strong>「切片の上乗せ分」</strong>＝グループ間の平均的な差を表す</div>
+            <div class="s">${sc.targetLevel}(=1) は ${sc.baseLevel}(=0) より平均 <strong>${bDummy.toFixed(2)}万円${bDummy>0?'高い':'低い'}</strong></div>
+            <div class="s">${sc.x1}の傾きは両グループで共通（切片だけが異なる平行な2本の回帰直線）</div>`
+    };
+  } else {
+    const xVal = rndInt(2, 10);
+    const predBase = b0 + b1*xVal;
+    const predTarget = b0 + b1*xVal + bDummy;
+    const correct = `${sc.baseLevel}: ${predBase.toFixed(2)}万円、${sc.targetLevel}: ${predTarget.toFixed(2)}万円`;
+    const wrongs = [
+      `${sc.baseLevel}: ${predTarget.toFixed(2)}万円、${sc.targetLevel}: ${predBase.toFixed(2)}万円`,
+      `${sc.baseLevel}: ${(b0+b1*xVal).toFixed(2)}万円、${sc.targetLevel}: ${(predTarget*2).toFixed(2)}万円`,
+      `${sc.baseLevel}と${sc.targetLevel}は同じ予測値 ${predBase.toFixed(2)}万円になる`,
+    ];
+    const {opts, ansIndex} = makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc', badgeText:'回帰分析 — ダミー変数の予測値',
+      q: `<p>${sc.desc}。回帰分析の結果は以下の通り。</p>
+          ${tableHTML}
+          <p>${sc.x1} = ${xVal} のとき、<strong>${sc.baseLevel}の場合</strong>と<strong>${sc.targetLevel}の場合</strong>のそれぞれの予測値を求めよ。</p>`,
+      opts, ansIndex,
+      exp: `<div class="s"><strong>ダミー変数を含む予測値の計算</strong></div>
+            <div class="s">${sc.baseLevel}（ダミー=0）: ŷ = ${b0.toFixed(2)} + ${b1.toFixed(2)}×${xVal} = <strong>${predBase.toFixed(2)}</strong></div>
+            <div class="s">${sc.targetLevel}（ダミー=1）: ŷ = ${b0.toFixed(2)} + ${b1.toFixed(2)}×${xVal} + ${bDummy.toFixed(2)} = <strong>${predTarget.toFixed(2)}</strong></div>`
+    };
+  }
+}
+
+// ─── 新規③ 回帰の分散分析表（F検定）─────────────────────────────────
+function genReg_ANOVA(){
+  const n = rndInt(20, 40);
+  const p = rndInt(1, 3); // 説明変数の数
+  const dfReg = p, dfRes = n - p - 1, dfTot = n - 1;
+  const msReg = rndInt(50, 200);
+  const msRes = rndInt(5, 20);
+  const ssReg = msReg * dfReg;
+  const ssRes = msRes * dfRes;
+  const ssTot = ssReg + ssRes;
+  const fVal = parseFloat((msReg/msRes).toFixed(3));
+  const r2 = parseFloat((ssReg/ssTot).toFixed(4));
+
+  const tableHTML = `<table style="width:100%;border-collapse:collapse;font-size:.88rem;margin:12px 0">
+      <tr style="background:#1e293b;color:#fff"><th style="padding:7px 10px">要因</th><th style="padding:7px 10px">平方和</th><th style="padding:7px 10px">自由度</th><th style="padding:7px 10px">平均平方</th><th style="padding:7px 10px">F値</th></tr>
+      <tr style="background:#f8fafc"><td style="padding:6px 10px;font-weight:600">回帰</td><td style="padding:6px 10px;text-align:right">${ssReg}</td><td style="padding:6px 10px;text-align:right">${dfReg}</td><td style="padding:6px 10px;text-align:right;color:#dc2626;font-weight:700">[ A ]</td><td style="padding:6px 10px;text-align:right;color:#dc2626;font-weight:700">[ B ]</td></tr>
+      <tr><td style="padding:6px 10px;font-weight:600">残差</td><td style="padding:6px 10px;text-align:right">${ssRes}</td><td style="padding:6px 10px;text-align:right">${dfRes}</td><td style="padding:6px 10px;text-align:right">${msRes}</td><td style="padding:6px 10px;text-align:right">—</td></tr>
+      <tr style="background:#f8fafc"><td style="padding:6px 10px;font-weight:600">全体</td><td style="padding:6px 10px;text-align:right">${ssTot}</td><td style="padding:6px 10px;text-align:right">${dfTot}</td><td style="padding:6px 10px;text-align:right">—</td><td style="padding:6px 10px;text-align:right">—</td></tr>
+    </table>`;
+
+  const correct = `[ A ] = ${msReg}、[ B ] = ${fVal}。このF値は「すべての回帰係数が0である」という帰無仮説を検定するための統計量である`;
+  const wrongs = [
+    `[ A ] = ${ssReg}、[ B ] = ${fVal}`,
+    `[ A ] = ${msReg}、[ B ] = ${(msRes/msReg).toFixed(3)}`,
+    `[ A ] = ${msReg}、[ B ] = ${fVal}。このF値は決定係数R²そのものを表す統計量である`,
+  ];
+  const {opts, ansIndex} = makeOpts(correct, wrongs);
+  return {
+    badgeClass:'qtype-calc', badgeText:'回帰分析 — 分散分析表',
+    q: `<p>説明変数 ${p} 個、標本サイズ n = ${n} の重回帰分析を行い、以下の分散分析表を得た。</p>
+        ${tableHTML}
+        <p>空欄 <strong>[ A ]</strong>と <strong>[ B ]</strong>の組み合わせ、およびこのF値の意味として正しいものはどれか。</p>`,
+    opts, ansIndex,
+    exp: `<div class="s"><strong>回帰の分散分析表（モデル全体の有意性検定）</strong></div>
+          <div class="s">① 平均平方 = 平方和 / 自由度 → [ A ] = ${ssReg}/${dfReg} = <strong>${msReg}</strong></div>
+          <div class="s">② F値 = 回帰の平均平方 / 残差の平均平方 → [ B ] = ${msReg}/${msRes} = <strong>${fVal}</strong></div>
+          <div class="s">H₀:「すべての回帰係数 β₁=β₂=…=0」（モデルに意味がない）を検定。F値が大きい→モデル全体が有意</div>
+          <div class="s">単回帰の場合、このF値はt値の2乗（F=t²）と一致する</div>`
+  };
+}
+
+// ─── 新規④ 残差プロット・変数変換の判断 ─────────────────────────────
+function genReg_Residual(){
+  const scenarios = [
+    { ctx:'あるコンサルティング会社が、企業の広告費から売上高を予測する単回帰モデルを構築した。', xLabel:'広告費', yLabel:'売上高' },
+    { ctx:'ある不動産鑑定士が、住宅の築年数から販売価格を予測する単回帰モデルを構築した。', xLabel:'築年数', yLabel:'販売価格' },
+    { ctx:'ある研究機関が、世帯所得から食費の支出額を予測する単回帰モデルを構築した。', xLabel:'世帯所得', yLabel:'食費支出額' },
+  ];
+  const sc = scenarios[rndInt(0, scenarios.length-1)];
+  const patterns = [
+    { name:'扇形（ファンネル型）パターン', desc:'予測値が大きくなるにつれて残差の散らばりが拡大していく形', issue:'不等分散性（ヘテロスケダスティシティ）', remedy:'目的変数の対数変換（log変換）を検討する' },
+    { name:'U字型（曲線）パターン', desc:'予測値の小さい範囲と大きい範囲で残差が正、中間で残差が負になるような曲線状の形', issue:'モデルの非線形性（線形モデルが当てはまっていない）', remedy:'説明変数の2次項を加える、または変数変換を検討する' },
+    { name:'ランダムな散らばり（パターンなし）', desc:'残差が0を中心に特定の傾向なくランダムに散らばっている形', issue:'特に問題はない（等分散性・線形性の仮定が満たされている）', remedy:'変数変換は不要。現在のモデルで問題ない' },
+  ];
+  const pat = patterns[rndInt(0, patterns.length-1)];
+  const isProblem = pat.issue !== '特に問題はない（等分散性・線形性の仮定が満たされている）';
+
+  const correct = `残差プロットが${pat.name}を示しており、${pat.issue}が疑われる。対処として${pat.remedy}`;
+  const others = patterns.filter(p => p !== pat);
+  const wrongs = [
+    `残差プロットが${others[0].name}を示しており、${others[0].issue}が疑われる`,
+    `残差プロットの形状にかかわらず、決定係数R²が高ければモデルに問題はない`,
+    `残差プロットが${others[1].name}を示しており、${others[1].issue}が疑われる`,
+  ];
+  const {opts, ansIndex} = makeOpts(correct, wrongs);
+  return {
+    badgeClass:'qtype-logic', badgeText:'回帰分析 — 残差診断',
+    q: `<div class="scenario">${sc.ctx}${sc.xLabel}を説明変数、${sc.yLabel}を目的変数とする単回帰分析を行った後、横軸に予測値、縦軸に残差をとった<strong>残差プロット</strong>を確認したところ、「${pat.desc}」というパターンが観察された。</div>
+        <p>この残差プロットから読み取れる診断と、対処方法として最も適切なものはどれか。</p>`,
+    opts, ansIndex,
+    exp: `<div class="s"><strong>残差プロットによるモデル診断（重要な実務スキル）</strong></div>
+          <div class="s"><strong>扇形（ファンネル型）:</strong> 不等分散性 → 対数変換などを検討</div>
+          <div class="s"><strong>U字型・曲線:</strong> 非線形性 → 2次項の追加、変数変換を検討</div>
+          <div class="s"><strong>ランダムな散らばり:</strong> 問題なし（理想的な残差プロット）</div>
+          <div class="s">今回のパターン「${pat.name}」→ <strong>${pat.issue}</strong></div>
+          <div class="s">⚠️ R²が高くても、残差プロットに系統的なパターンがあればモデルの仮定に問題がある</div>`
+  };
+}
+
+// ─── 新規⑤ 信頼区間・予測区間の違い ──────────────────────────────────
+function genReg_PredictionInterval(){
+  const b0 = rnd(20, 50, 2);
+  const b1 = rnd(0.5, 2.5, 2);
+  const xVal = rndInt(10, 30);
+  const pred = b0 + b1*xVal;
+  const seFit = rnd(0.8, 2.0, 2);   // 平均応答の標準誤差（狭い）
+  const sePred = seFit * parseFloat(rnd(2.5, 4.0, 2).toFixed(2)); // 個別予測の標準誤差（広い）
+  const tCrit = 2.045;
+  const ciWidth = (tCrit * seFit).toFixed(2);
+  const piWidth = (tCrit * sePred).toFixed(2);
+
+  const correct = `信頼区間は予測区間よりも狭い。信頼区間は「Xがこの値のときのYの平均」を、予測区間は「個々の新しい観測値」の範囲を推定するため`;
+  const wrongs = [
+    `信頼区間と予測区間は数学的に全く同じものであり、呼び方が異なるだけで幅は等しい`,
+    `予測区間の方が信頼区間よりも常に狭くなる。個別の値の方がばらつきが小さいため`,
+    `信頼区間は標本サイズに依存せず常に一定の幅を持つが、予測区間はサンプルサイズに応じて変動する`,
+  ];
+  const {opts, ansIndex} = makeOpts(correct, wrongs);
+  return {
+    badgeClass:'qtype-logic', badgeText:'回帰分析 — 信頼区間と予測区間',
+    q: `<p>単回帰モデル ŷ = ${b0.toFixed(2)} + ${b1.toFixed(2)}×X について、X = ${xVal} における<strong>「平均応答の95%信頼区間」</strong>と<strong>「個別の予測値の95%予測区間」</strong>を比較する。</p>
+        <p>2つの区間の関係について、最も適切な記述はどれか。</p>`,
+    opts, ansIndex,
+    exp: `<div class="s"><strong>信頼区間（CI）と予測区間（PI）の違い（頻出の混同ポイント）</strong></div>
+          <div class="s"><strong>信頼区間:</strong> X=${xVal}における「Yの<strong>母平均</strong>」を推定する区間 → 標準誤差が小さい → <strong>狭い</strong></div>
+          <div class="s"><strong>予測区間:</strong> X=${xVal}における「<strong>個別の新しいY</strong>」を予測する区間 → 個体差の分散も加わる → <strong>広い</strong></div>
+          <div class="s">予測値 ŷ = ${b0.toFixed(2)} + ${b1.toFixed(2)}×${xVal} = ${pred.toFixed(2)}</div>
+          <div class="s">95%CI: ${pred.toFixed(2)} ± ${ciWidth}　　95%PI: ${pred.toFixed(2)} ± ${piWidth}（PIの方が常に広い）</div>`
+  };
+}
+
+function genDesc(){
+  const type=rndInt(0,4);
+  if(type===0){
+    // 変動係数：実務シナリオを追加（2つの異なる単位のデータを比較する文脈）
+    const scenarios=[
+      {ctx:'ある製菓会社で、A工場のクッキー1枚あたりの重量を調べたところ', unit:'g', item:'クッキーの重量'},
+      {ctx:'ある人材会社が、営業部門の社員の月間契約件数を調査したところ', unit:'件', item:'契約件数'},
+      {ctx:'ある農協が、出荷されたみかん1箱あたりの個数を調べたところ', unit:'個', item:'みかんの個数'},
+    ];
+    const sc=scenarios[rndInt(0,scenarios.length-1)];
+    const mean=rndInt(4,9)*10, sd=rndInt(5,14), cv=sd/mean;
+    const correct=`${cv.toFixed(3)}`;
+    const wrongs=[`${(mean/sd).toFixed(3)}`,`${(cv*100).toFixed(1)}`,`${(sd).toFixed(3)}`].filter(x=>x!==correct);
+    while(wrongs.length<3) wrongs.push(rnd(0.01,0.5).toFixed(3));
+    const {opts,ansIndex}=makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc',badgeText:'記述統計',
+      q:`<div class="scenario">${sc.ctx}、${sc.item}の平均値が <strong>${mean}.0${sc.unit}</strong>、標準偏差が <strong>${sd}.0${sc.unit}</strong> であった。</div><p>このデータの<strong>変動係数</strong>はいくらか。</p>`,
+      opts,ansIndex,
+      exp:`<div class="s"><strong>📋 L14（変動係数）= L4（標準偏差）÷ L1（平均）</strong></div><div class="s">CV = ${sd} / ${mean} = <strong>${cv.toFixed(3)}</strong></div><div class="s">単位が同じでも平均が大きく異なるデータ間の「相対的なばらつき」を比較する指標です。</div>`
+    };
+
+  } else if(type===1){
+    // 分散分析表：実務シナリオを追加
+    const scenarios=[
+      {ctx:'ある製薬会社が、3種類の異なる成分配合（A・B・C）の鎮痛剤について、効果が現れるまでの時間を比較する実験を行った。', factor:'配合パターン'},
+      {ctx:'ある自動車メーカーが、4種類のタイヤ素材（甲・乙・丙・丁）について、摩耗するまでの走行距離を比較するテストを行った。', factor:'タイヤ素材'},
+    ];
+    const sc=scenarios[rndInt(0,1)];
+    const dfFac=rndInt(2,3), dfErr=rndInt(16,24), dfTot=dfFac+dfErr;
+    const msFac=rndInt(35,55), msErr=rndInt(10,18);
+    const ssFac=msFac * dfFac, ssErr=msErr * dfErr, ssTot=ssFac+ssErr;
+    const fV=msFac / msErr;
+
+    const tableHTML=`<table class="qtable"><tr><th>要因</th><th>自由度</th><th>平方和</th><th>平均平方</th><th>F値</th></tr><tr><td>${sc.factor}</td><td>${dfFac}</td><td>${ssFac}</td><td>[ A ]</td><td>[ B ]</td></tr><tr><td>残差</td><td>${dfErr}</td><td>${ssErr}</td><td>${msErr}</td><td></td></tr><tr><td>全体</td><td>${dfTot}</td><td>${ssTot}</td><td></td><td></td></tr></table>`;
+    const correct=`[ A ] = ${msFac}, [ B ] = ${fV.toFixed(2)}`;
+    const wrongs=[
+      `[ A ] = ${(ssFac)}, [ B ] = ${(ssFac/ssErr).toFixed(2)}`,
+      `[ A ] = ${msFac}, [ B ] = ${(msErr/msFac).toFixed(2)}`,
+      `[ A ] = ${(ssErr/dfErr)}, [ B ] = ${fV.toFixed(2)}`
+    ];
+    const {opts,ansIndex}=makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc',badgeText:'記述統計',
+      q:`<div class="scenario">${sc.ctx}一元配置分散分析を実施し、以下の分散分析表を得た。</div>${tableHTML}<p>空欄 <strong>[ A ]</strong> と <strong>[ B ]</strong>の正しい組み合わせを選べ。</p>`,
+      opts,ansIndex,
+      exp:`<div class="s"><strong>📋 L3（分散）の応用：平均平方 = 平方和/自由度、F値 = 群間平均平方/群内平均平方</strong></div><div class="s">① [ A ] = ${ssFac} / ${dfFac} = <strong>${msFac}</strong></div><div class="s">② [ B ] = ${msFac} / ${msErr} = <strong>${fV.toFixed(2)}</strong></div>`
+    };
+
+  } else if(type===2){
+    // 標本抽出法：航空会社のアンケート調査を題材にした複合シナリオ問題に刷新
+    return genDesc_SamplingComposite();
+
+  } else if(type===3){
+    // ラスパイレス/パーシェ：具体的な品目データを使った実務シナリオに変更
+    const itemSets=[
+      {items:'食料品(パン・米・野菜)', org:'総務省統計局が消費者物価指数を算出する際'},
+      {items:'エネルギー(電気・ガス・ガソリン)', org:'ある国がエネルギー価格指数を算出する際'},
+    ];
+    const is=itemSets[rndInt(0,1)];
+    const correct='ラスパイレス指数は「基準時点」の数量を、パーシェ指数は「比較時点」の数量をウエイトとして固定する';
+    const wrongs=[
+      'ラスパイレス指数は「比較時点」の数量を、パーシェ指数は「基準時点」の数量をウエイトとして固定する',
+      'ラスパイレス指数は価格の平均を、パーシェ指数は数量の平均をウエイトとして固定する',
+      'どちらも基準時点の価格をウエイトとするため、結果は常に一致する'
+    ];
+    const {opts,ansIndex}=makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-stat',badgeText:'記述統計',
+      q:`<div class="scenario">${is.org}、${is.items}の価格と購入量データから2種類の物価指数を計算することを検討している。</div><p><strong>ラスパイレス指数</strong>と<strong>パーシェ指数</strong>のウエイト設定に関する記述として正しいものはどれか。</p>`,
+      opts,ansIndex,
+      exp:`<div class="s"><strong>📋 L1（加重平均）のウェイト選択がバイアスの源</strong></div><div class="s">・<strong>ラスパイレス指数:</strong> 基準時点の数量をウエイト（暗記：「ラ・キ」＝ラス・基準）※消費者物価指数などで使われる</div><div class="s">・<strong>パーシェ指数:</strong> 比較時点（現在）の数量をウエイト（暗記：「パ・ヒ」＝パー・比較）※GDPデフレーターなどで使われる</div>`
+    };
+
+  } else {
+    // 線形変換の分散：実務シナリオを追加
+    const scenarios=[
+      {ctx:'ある不動産会社が、物件の床面積（m²）データを、海外向け資料として全データを3.3倍してft²（平方フィート）に換算する。', factor:3.3},
+      {ctx:'ある飲料メーカーが、製品の容量データ（リットル単位）を、すべて2倍の容量にリニューアルする計画を検討している。', factor:2},
+    ];
+    const sc=scenarios[rndInt(0,1)];
+    const v=rndInt(10,50);
+    const aSquared=Math.round(sc.factor*sc.factor*100)/100;
+    const correct=`分散は ${aSquared}倍 の ${(v*aSquared).toFixed(2)} になる`;
+    const wrongs=[
+      `分散は ${sc.factor}倍 の ${(v*sc.factor).toFixed(2)} になる`,
+      `分散は 変わらず ${v} のまま`,
+      `分散は ${(aSquared*2).toFixed(2)}倍 の ${(v*aSquared*2).toFixed(2)} になる`
+    ];
+    const {opts,ansIndex}=makeOpts(correct, wrongs);
+    return {
+      badgeClass:'qtype-calc',badgeText:'記述統計',
+      q:`<div class="scenario">${sc.ctx}元のデータの分散は <strong>${v}</strong> であった。</div><p>すべての値を <strong>${sc.factor}倍</strong> にしたとき、分散はどうなるか。</p>`,
+      opts,ansIndex,
+      exp:`<div class="s"><strong>📋 L13（線形変換）：V[aX] = a²×V[X]</strong></div><div class="s">変数Xを a=${sc.factor}倍 すると、分散は <strong>a²=${aSquared}倍</strong> になります。</div><div class="s">= ${v} × ${aSquared} = <strong>${(v*aSquared).toFixed(2)}</strong>　※標準偏差は a倍（${sc.factor}倍）のままです。</div>`
+    };
+  }
+}
+
+// ─── 標本抽出法：複合シナリオ問題（ご指摘により全面刷新）─────────────────
+// 「ある組織が複数の調査方法A・B・Cを実施し、それぞれどの抽出法に該当するか」
+// という長文シナリオの中で複数の手法を順番に判定させる形式
+function genDesc_SamplingComposite(){
+  const scenarioSets = [
+    {
+      org: 'ある航空会社',
+      intro: '機内サービスの満足度を調べるため、3つの異なる調査チームがそれぞれ独立にアンケート調査を実施した。',
+      methods: [
+        { label:'調査A', desc:'全国の搭乗者名簿に通し番号を付け、最初の1人を無作為に選んだ後、そこから500人ごとに1人を選んでアンケートを送付した。',
+          answer:'系統抽出法', wrongs:['層化抽出法','クラスター抽出法','単純無作為抽出法'] },
+        { label:'調査B', desc:'国内線・国際線・貨物便の3つの事業区分に分け、各区分の利用者数の比率に応じて、それぞれの区分から無作為に標本を抽出した。',
+          answer:'層化抽出法', wrongs:['系統抽出法','クラスター抽出法','多段抽出法'] },
+        { label:'調査C', desc:'全国の支店を50か所のグループに分け、その中から無作為に5支店を選び、選ばれた5支店の利用者全員にアンケートを実施した。',
+          answer:'クラスター抽出法（集落抽出法）', wrongs:['層化抽出法','系統抽出法','単純無作為抽出法'] },
+      ]
+    },
+    {
+      org: 'ある自治体の教育委員会',
+      intro: '市内の中学生の学習習慣を調べるため、3つの異なる方法で標本調査を計画した。',
+      methods: [
+        { label:'調査A', desc:'市内すべての中学校（30校）から、まず無作為に6校を選び、選ばれた6校に在籍する生徒全員を対象に調査した。',
+          answer:'クラスター抽出法（集落抽出法）', wrongs:['層化抽出法','系統抽出法','単純無作為抽出法'] },
+        { label:'調査B', desc:'市内の中学生全員の名簿（出席番号順）に通し番号を付け、最初の1人を無作為に選んだ後、そこから20人ごとに1人を選んだ。',
+          answer:'系統抽出法', wrongs:['層化抽出法','クラスター抽出法','多段抽出法'] },
+        { label:'調査C', desc:'男子生徒・女子生徒の人数比に応じて、それぞれのグループから比率を保ったまま無作為に標本を抽出した。',
+          answer:'層化抽出法', wrongs:['系統抽出法','クラスター抽出法','単純無作為抽出法'] },
+      ]
+    },
+    {
+      org: 'ある食品メーカーの品質管理部門',
+      intro: '製造ラインから出荷される製品の品質検査において、3つの異なる抽出方法を比較検討している。',
+      methods: [
+        { label:'方法A', desc:'1時間あたり1200個生産される製品に対し、最初の1個を無作為に選んだ後、そこから100個おきに1個を抜き取って検査した。',
+          answer:'系統抽出法', wrongs:['層化抽出法','クラスター抽出法','単純無作為抽出法'] },
+        { label:'方法B', desc:'製造ラインを稼働時間帯（早朝・日中・深夜）の3グループに分け、各時間帯の生産量比率に応じてそれぞれから標本を抽出した。',
+          answer:'層化抽出法', wrongs:['系統抽出法','クラスター抽出法','多段抽出法'] },
+        { label:'方法C', desc:'1日の生産分を50個ずつの箱（ロット）にまとめ、ロットの中から無作為に10箱を選び、選ばれた箱の中身を全数検査した。',
+          answer:'クラスター抽出法（集落抽出法）', wrongs:['層化抽出法','系統抽出法','単純無作為抽出法'] },
+      ]
+    },
+  ];
+
+  const set = scenarioSets[rndInt(0, scenarioSets.length-1)];
+  const targetIdx = rndInt(0, set.methods.length-1);
+  const target = set.methods[targetIdx];
+
+  const methodsListHTML = set.methods.map((m,i) =>
+    `<div style="margin:8px 0;padding:9px 13px;background:${i===targetIdx?'#fef3c7':'#f8fafc'};border-left:3px solid ${i===targetIdx?'#f59e0b':'#94a3b8'};border-radius:0 6px 6px 0;font-size:.88rem;line-height:1.6">
+      <strong style="color:#1d4ed8">${m.label}：</strong>${m.desc}
+    </div>`
+  ).join('');
+
+  const {opts, ansIndex} = makeOpts(target.answer, target.wrongs);
+  return {
+    badgeClass:'qtype-logic', badgeText:'標本抽出法（複合判定）',
+    q:`<div class="scenario"><strong>${set.org}</strong>では、${set.intro}</div>
+       ${methodsListHTML}
+       <p><strong>${target.label}</strong>で採用されている標本抽出法はどれか。</p>`,
+    opts, ansIndex,
+    exp:`<div class="s"><strong>📋 標本抽出法の判別ポイント</strong></div>
+         <div class="s">・<strong>系統抽出法:</strong> 通し番号をつけ、最初の1つを無作為に選び、以降は等間隔で抽出</div>
+         <div class="s">・<strong>層化抽出法:</strong> 母集団をグループに分け、各グループの比率に応じて無作為抽出（グループ内から個別に選ぶ）</div>
+         <div class="s">・<strong>クラスター抽出法（集落抽出法）:</strong> グループに分け、グループ自体を無作為に選んで、選ばれたグループは全数調査</div>
+         <div class="s">→ <strong>${target.label}</strong>の記述から<strong>${target.answer}</strong>と判定できる</div>
+         <div class="s">📌 層化とクラスターの違い：層化は「各グループから一部を抽出」、クラスターは「グループ全体を抽出」</div>`
+  };
+}
+</script>
+</body>
+</html>
