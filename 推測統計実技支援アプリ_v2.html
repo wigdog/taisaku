@@ -1849,6 +1849,127 @@ print(f"CI重なり: {not (hiA < loB or hiB < loA)}")`,
     }
   },
 
+  // ── Nグループ平均の区間推定と比較（グループ数を動的に増減可能） ──
+  {
+    id: 'ci_nmean_compare', flowCat: 'group2',
+    title: 'Nグループ平均の区間推定と比較（グループ数は自由に設定可）',
+    dist: 't分布（母分散未知）',
+    keywords: ['3グループ以上の信頼区間を並べて比較したい', '「どこが重なっていてどこが離れているか」を一覧で見たい', 'グループ数を自分で決めて入力'],
+    formula: '<div class="f-title">公式</div>各グループごとに x̄ ± t × s/√n でCIを計算し、全ペアの重なりを確認<br><span style="color:#94a3b8">グループ数 k は最初の質問で自由に指定（2以上）</span>',
+    // ★ fields を関数にすることで、「グループ数 k」の回答直後に
+    //   k個ぶんの「グループ◯：n / 平均 / 標準偏差」質問を動的に追加生成する。
+    fields(answers) {
+      const base = [
+        { id: 'k', label: '比較するグループ数は？（2以上の整数）', type: 'number', default: 3, hint: '3グループ以上でもOK。後から人数を変えたくなったら「ここに戻る」で変更できます' },
+      ];
+      const k = Math.max(2, Math.min(12, Math.round(answers.k) || 0));
+      if (!answers.k || isNaN(answers.k)) return base; // kがまだ未回答なら最初の質問だけ返す
+      const groupFields = [];
+      for (let i = 1; i <= k; i++) {
+        groupFields.push(
+          { id: `n_${i}`,    label: `グループ${i}：サンプルサイズ n${i}`, type: 'number', default: 20 },
+          { id: `mean_${i}`, label: `グループ${i}：標本平均 x̄${i}`,      type: 'number', default: 100 + i * 5, step: 0.01 },
+          { id: `sd_${i}`,   label: `グループ${i}：不偏標準偏差 s${i}`,   type: 'number', default: 15, step: 0.01 },
+        );
+      }
+      groupFields.push({ id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] });
+      return [...base, ...groupFields];
+    },
+    calc(v) {
+      const k = Math.max(2, Math.min(12, Math.round(v.k) || 0));
+      if (!k || k < 2) return { error: 'グループ数は2以上の整数で指定してください' };
+
+      const groups = [];
+      for (let i = 1; i <= k; i++) {
+        const n = v[`n_${i}`], mean = v[`mean_${i}`], sd = v[`sd_${i}`];
+        if (!n || n < 2 || mean === undefined || !sd) {
+          return { error: `グループ${i}の入力が不足しています（n・平均・標準偏差を確認してください）` };
+        }
+        const t = jStat.studentt.inv(1 - (1 - v.conf) / 2, n - 1);
+        const se = sd / Math.sqrt(n);
+        const lo = mean - t * se, hi = mean + t * se;
+        groups.push({ idx: i, n, mean, sd, lo, hi });
+      }
+
+      // 全ペアの重なり判定
+      const overlapPairs = [];
+      const nonOverlapPairs = [];
+      for (let a = 0; a < groups.length; a++) {
+        for (let b = a + 1; b < groups.length; b++) {
+          const A = groups[a], B = groups[b];
+          const overlap = !(A.hi < B.lo || B.hi < A.lo);
+          (overlap ? overlapPairs : nonOverlapPairs).push(`${A.idx}-${B.idx}`);
+        }
+      }
+
+      const vals = groups.map(g => ({
+        label: `グループ${g.idx}: x̄ / CI`,
+        val: g.mean.toFixed(2) + ' / [' + g.lo.toFixed(2) + ', ' + g.hi.toFixed(2) + ']',
+      }));
+      vals.push({
+        label: '重ならないペア',
+        val: nonOverlapPairs.length ? nonOverlapPairs.join(', ') + ' ✅' : 'なし',
+      });
+      vals.push({
+        label: '重なるペア',
+        val: overlapPairs.length ? overlapPairs.join(', ') + ' ⚠️' : 'なし',
+      });
+
+      const interpretLines = groups.map(g =>
+        `グループ${g.idx}: x̄=${g.mean.toFixed(2)}  CI=[${g.lo.toFixed(2)}, ${g.hi.toFixed(2)}]`
+      );
+      interpretLines.push('');
+      interpretLines.push(
+        nonOverlapPairs.length
+          ? `→ 区間が重ならないペア（${nonOverlapPairs.join(', ')}）は明確な差があると言えます。`
+          : '→ 重ならないペアはありません。'
+      );
+      interpretLines.push(
+        overlapPairs.length
+          ? `→ 区間が重なるペア（${overlapPairs.join(', ')}）は差が明確とは言えません。`
+          : '→ 重なるペアはありません（全グループ間で差が明確）。'
+      );
+
+      const pyGroups = groups.map(g => `g${g.idx} = {"n": ${g.n}, "mean": ${g.mean}, "sd": ${g.sd}}`).join('\n');
+      const pyList = groups.map(g => `g${g.idx}`).join(', ');
+
+      return {
+        vals,
+        interpret: interpretLines.join('\n'),
+        chart: {
+          type: 'errorbar',
+          title: `${k}グループの${(v.conf*100).toFixed(0)}%信頼区間比較`,
+          labels: groups.map(g => `G${g.idx}`),
+          values: groups.map(g => g.mean),
+          los: groups.map(g => g.lo),
+          his: groups.map(g => g.hi),
+          fmt: x => x.toFixed(1),
+        },
+        code: `import numpy as np
+from scipy import stats
+from itertools import combinations
+
+${pyGroups}
+groups = [${pyList}]
+conf = ${v.conf}
+
+results = []
+for i, g in enumerate(groups, start=1):
+    n, mean, sd = g["n"], g["mean"], g["sd"]
+    t = stats.t.ppf(1-(1-conf)/2, df=n-1)
+    se = sd / np.sqrt(n)
+    lo, hi = mean - t*se, mean + t*se
+    results.append((i, mean, lo, hi))
+    print(f"グループ{i}: x̄={mean:.2f}  CI=[{lo:.2f}, {hi:.2f}]")
+
+print("\\n--- ペアごとの重なり判定 ---")
+for (i1, m1, lo1, hi1), (i2, m2, lo2, hi2) in combinations(results, 2):
+    overlap = not (hi1 < lo2 or hi2 < lo1)
+    print(f"G{i1}-G{i2}: {'重なりあり' if overlap else '重なりなし（差が明確）'}")`,
+      };
+    }
+  },
+
   // ── 2比率の差（前後比較型：指標A/B・政策評価） ──
   {
     id: 'ci_2prop_before_after', flowCat: 'group2',
@@ -2135,6 +2256,141 @@ se = np.sqrt((pA*(1-pA) + pB*(1-pB)) / n)
 lo = diff - z * se
 print(f"必要サンプルサイズ: n = {n}")
 print(f"差の信頼区間下限: {lo:.4f} ({'OK' if lo > 0 else 'NG'})")`,
+      };
+    }
+  },
+
+  // ── 選挙出口調査サンプルサイズ設計（N候補・候補数を動的に増減可能） ──
+  {
+    id: 'ci_election_n_multi', flowCat: 'design',
+    title: '選挙出口調査のサンプルサイズ設計（3候補以上にも対応）',
+    dist: 'z分布（正規近似）',
+    keywords: ['3人以上の候補で当確を打ちたい', '「最有力候補が2位を確実に上回るには何人必要か」', '候補数を自分で決めて入力', '全候補ペアの中で最も厳しい組み合わせを基準にnを決める'],
+    formula: '<div class="f-title">公式</div>各ペアについて n ≥ z² × (pi(1-pi) + pj(1-pj)) / (pi-pj)² を計算し、最大値（最も差が小さく検出が難しいペア）を採用<br><span style="color:#94a3b8">候補数 k は最初の質問で自由に指定（2以上）</span>',
+    // ★ fields を関数にし、「候補数 k」回答直後に k人ぶんの得票率入力を動的生成する
+    fields(answers) {
+      const base = [
+        { id: 'k', label: '候補者数は？（2以上の整数）', type: 'number', default: 3, hint: '2候補のみなら従来の「2候補版」でもOK。3人以上の乱戦・接戦比較に向いています' },
+      ];
+      if (!answers.k || isNaN(answers.k)) return base;
+      const k = Math.max(2, Math.min(10, Math.round(answers.k)));
+      const candFields = [];
+      for (let i = 1; i <= k; i++) {
+        candFields.push({ id: `p_${i}`, label: `候補${i}の想定得票率 p${i}`, type: 'number', default: Math.max(0.05, 0.5 - (i-1)*0.1), step: 0.01 });
+      }
+      candFields.push({ id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] });
+      return [...base, ...candFields];
+    },
+    calc(v) {
+      const k = Math.max(2, Math.min(10, Math.round(v.k) || 0));
+      if (!k || k < 2) return { error: '候補者数は2以上の整数で指定してください' };
+
+      const ps = [];
+      for (let i = 1; i <= k; i++) {
+        const p = v[`p_${i}`];
+        if (p === undefined || isNaN(p) || p <= 0 || p >= 1) {
+          return { error: `候補${i}の得票率の入力が不正です（0〜1の範囲で入力してください）` };
+        }
+        ps.push({ idx: i, p });
+      }
+      const sumP = ps.reduce((a, c) => a + c.p, 0);
+      if (Math.abs(sumP - 1) > 0.05) {
+        // 厳密に1.0でなくても計算は続けるが、注意を促す
+      }
+
+      const z = jStat.normal.inv(1 - (1 - v.conf) / 2, 0, 1);
+
+      // 全ペアについて、そのペアを区別するために必要なnを計算し、最大値（最も厳しい＝最も大きいn）を採用
+      let maxN = 0, worstPair = null, worstDiff = Infinity;
+      const pairResults = [];
+      for (let a = 0; a < ps.length; a++) {
+        for (let b = a + 1; b < ps.length; b++) {
+          const A = ps[a], B = ps[b];
+          const diff = Math.abs(A.p - B.p);
+          if (diff <= 0) continue; // 同率は区別不能（理論上n→∞）なのでスキップして注意書きで扱う
+          const n_raw = z * z * (A.p * (1 - A.p) + B.p * (1 - B.p)) / (diff * diff);
+          const n = Math.ceil(n_raw);
+          pairResults.push({ a: A.idx, b: B.idx, diff, n });
+          if (n > maxN) { maxN = n; worstPair = `${A.idx}-${B.idx}`; worstDiff = diff; }
+        }
+      }
+      if (!pairResults.length) {
+        return { error: '少なくとも1組は得票率が異なる候補が必要です（全員同率では当確判定できません）' };
+      }
+
+      // 採用したnで全ペアの信頼区間下限を確認
+      const checks = pairResults.map(r => {
+        const A = ps.find(c => c.idx === r.a), B = ps.find(c => c.idx === r.b);
+        const se = Math.sqrt((A.p * (1 - A.p) + B.p * (1 - B.p)) / maxN);
+        const diffSigned = A.p - B.p;
+        const lo = Math.abs(diffSigned) - z * se;
+        return { ...r, lo, ok: lo > 0 };
+      });
+
+      const vals = [
+        { label: '候補者数', val: k },
+        { label: '最も差が小さいペア（最厳しい基準）', val: `候補${worstPair}（差 ${worstDiff.toFixed(4)}）` },
+        { label: '必要サンプルサイズ n', val: maxN },
+      ];
+      checks.forEach(c => {
+        vals.push({ label: `候補${c.a}-候補${c.b} の下限確認`, val: c.lo.toFixed(4) + (c.ok ? ' ✅' : ' ⚠️') });
+      });
+
+      const interpretLines = [
+        `候補者数 ${k}人：得票率 ${ps.map(c => `候補${c.idx}=${c.p}`).join(', ')}`,
+        `最も僅差なのは 候補${worstPair}（差 ${worstDiff.toFixed(4)}）→ これが律速条件になります。`,
+        `→ 全候補ペアの差を ${(v.conf*100).toFixed(0)}%信頼度で検出するには n = ${maxN} 以上が必要です。`,
+        '',
+        '【採用したnでの全ペア下限チェック】',
+        ...checks.map(c => `候補${c.a}-候補${c.b}: 差の下限 = ${c.lo.toFixed(4)} ${c.ok ? '> 0 ✅' : '≤ 0 ⚠️（このペアはこのnでも有意差を断言できません）'}`),
+      ];
+
+      const pyPs = ps.map(c => `p_${c.idx} = ${c.p}`).join('\n');
+      const pyList = ps.map(c => `("候補${c.idx}", p_${c.idx})`).join(', ');
+
+      return {
+        vals,
+        interpret: interpretLines.join('\n'),
+        chart: {
+          type: 'errorbar',
+          title: `${k}候補：想定得票率と必要n=${maxN}での信頼区間`,
+          labels: ps.map(c => `候補${c.idx}`),
+          values: ps.map(c => c.p),
+          los: ps.map(c => c.p - z * Math.sqrt(c.p * (1 - c.p) / maxN)),
+          his: ps.map(c => c.p + z * Math.sqrt(c.p * (1 - c.p) / maxN)),
+          fmt: x => (x * 100).toFixed(1) + '%',
+        },
+        code: `import numpy as np
+from scipy import stats
+import math
+from itertools import combinations
+
+${pyPs}
+candidates = [${pyList}]
+conf = ${v.conf}
+z = stats.norm.ppf(1-(1-conf)/2)
+
+# 全ペアについて必要なnを計算し、最大値（最も厳しいペア）を採用
+results = []
+for (name1, p1), (name2, p2) in combinations(candidates, 2):
+    diff = abs(p1 - p2)
+    n_raw = z**2 * (p1*(1-p1) + p2*(1-p2)) / diff**2
+    n = math.ceil(n_raw)
+    results.append((name1, name2, diff, n))
+    print(f"{name1} vs {name2}: 差={diff:.4f}  必要n={n}")
+
+worst = max(results, key=lambda r: r[3])
+n_final = worst[3]
+print(f"\\n最も厳しいペア: {worst[0]} vs {worst[1]} → 採用するn = {n_final}")
+
+print("\\n--- 採用したnでの全ペア下限チェック ---")
+for name1, p1 in candidates:
+    for name2, p2 in candidates:
+        pass
+for (name1, p1), (name2, p2) in combinations(candidates, 2):
+    se = np.sqrt((p1*(1-p1) + p2*(1-p2)) / n_final)
+    lo = abs(p1 - p2) - z*se
+    print(f"{name1}-{name2}: 下限={lo:.4f} ({'OK' if lo > 0 else 'NG'})")`,
       };
     }
   },
@@ -3094,10 +3350,17 @@ function renderHome() {
 }
 
 // ─── Wizard state ─────────────────────────────────────────────────────
-let wizard = { pattern: null, index: 0, answers: {} };
+let wizard = { pattern: null, index: 0, answers: {}, fields: [] };
+
+// ★ pattern.fields は配列 または 関数(answers => 配列) のどちらでもよい。
+//   関数の場合、現在の回答状況に応じてフィールドの数・内容を動的に変えられる
+//   （例：「グループ数」に答えた直後に、その数だけグループ入力欄を追加生成する）。
+function resolveFields(p, answers) {
+  return typeof p.fields === 'function' ? p.fields(answers) : p.fields;
+}
 
 function startWizard(p) {
-  wizard = { pattern: p, index: 0, answers: {} };
+  wizard = { pattern: p, index: 0, answers: {}, fields: resolveFields(p, {}) };
   document.getElementById('wizTitle').textContent = p.title;
   document.getElementById('wizDist').textContent = '使用分布: ' + p.dist;
   document.getElementById('wizFormula').innerHTML = p.formula;
@@ -3125,7 +3388,7 @@ function goHome() {
 
 function renderWizardStep() {
   const p = wizard.pattern;
-  const fields = p.fields;
+  const fields = wizard.fields;
 
   // chat log of already-answered fields（クリックでそこまで戻れる）
   const log = document.getElementById('chatLog');
@@ -3187,17 +3450,20 @@ function renderWizardStep() {
 }
 
 function submitActiveInput() {
-  const f = wizard.pattern.fields[wizard.index];
+  const f = wizard.fields[wizard.index];
   const el = document.getElementById('activeInput');
   submitField(el.value);
 }
 
 function submitField(rawVal) {
-  const f = wizard.pattern.fields[wizard.index];
+  const f = wizard.fields[wizard.index];
   let val;
   if (f.type === 'text') val = rawVal;
   else val = parseFloat(rawVal);
   wizard.answers[f.id] = val;
+  // ★ 動的フィールド（関数fields）の場合、ここで回答状況に応じて質問リストを再計算する
+  //   （例：グループ数を答えた直後に、その数だけ「グループ◯：平均」等の質問が追加される）
+  wizard.fields = resolveFields(wizard.pattern, wizard.answers);
   wizard.index++;
   renderWizardStep();
 }
@@ -3206,8 +3472,10 @@ function submitField(rawVal) {
 function goBackOneStep() {
   if (wizard.index <= 0) return;
   wizard.index--;
-  const f = wizard.pattern.fields[wizard.index];
+  const f = wizard.fields[wizard.index];
   delete wizard.answers[f.id];
+  // 動的フィールドの場合、削除後の回答状況で質問リストを再計算
+  wizard.fields = resolveFields(wizard.pattern, wizard.answers);
   // 計算結果が表示されていた場合は隠す
   document.getElementById('resultBox').style.display = 'none';
   document.getElementById('codeBox').style.display = 'none';
@@ -3222,12 +3490,14 @@ function goBackOneStep() {
 // ★ チャットログ上の特定の質問まで一気に戻る ★
 function goBackToStep(stepIndex) {
   if (stepIndex < 0 || stepIndex >= wizard.index) return;
-  const fields = wizard.pattern.fields;
+  const fields = wizard.fields;
   // stepIndex以降の回答を全て削除
   for (let i = stepIndex; i < fields.length; i++) {
     delete wizard.answers[fields[i].id];
   }
   wizard.index = stepIndex;
+  // 動的フィールドの場合、削除後の回答状況で質問リストを再計算
+  wizard.fields = resolveFields(wizard.pattern, wizard.answers);
   document.getElementById('resultBox').style.display = 'none';
   document.getElementById('codeBox').style.display = 'none';
   document.getElementById('pyOutputBox').style.display = 'none';
