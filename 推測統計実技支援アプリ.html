@@ -212,6 +212,260 @@
   }
   .followup-card-action::after { content: '→'; }
 
+
+  /* ── SEARCH BOX ── */
+  .search-wrap {
+    position: relative;
+    margin: 18px 0 22px;
+    display: flex;
+    align-items: center;
+  }
+  .search-icon {
+    position: absolute;
+    left: 16px;
+    font-size: 1rem;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .search-box {
+    width: 100%;
+    padding: 14px 44px 14px 44px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .search-box:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(56,189,248,0.15);
+  }
+  .search-box::placeholder { color: var(--muted); }
+  .search-clear {
+    position: absolute;
+    right: 14px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.95rem;
+    padding: 4px;
+    border-radius: 50%;
+    transition: background 0.15s;
+  }
+  .search-clear:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+  .search-result-info {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin: -10px 0 16px 4px;
+  }
+  .search-result-info .hit-count { color: var(--accent); font-weight: 700; }
+  .no-results {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+  .no-results .nr-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
+
+  /* Highlight matched text */
+  mark.hl {
+    background: rgba(56,189,248,0.35);
+    color: #fff;
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+
+  /* ── KEYWORD FILTER CHIPS ── */
+  .chip-section {
+    margin: 4px 0 24px;
+  }
+  .chip-section-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .filter-chip {
+    font-size: 0.8rem;
+    padding: 6px 13px;
+    border-radius: 999px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .filter-chip:hover {
+    border-color: var(--accent);
+    background: var(--card-hover);
+  }
+  .filter-chip.active {
+    background: var(--accent);
+    color: #08131f;
+    border-color: var(--accent);
+    font-weight: 700;
+  }
+  .filter-chip.term-chip {
+    border-style: dashed;
+    color: var(--muted);
+  }
+  .filter-chip.term-chip.active {
+    background: var(--accent2, #a855f7);
+    color: #1a0c2e;
+    border-color: var(--accent2, #a855f7);
+    border-style: solid;
+  }
+  .chip-divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--border);
+    margin: 0 2px;
+  }
+
+
+  /* ── QUICK LINKS（頻出パターン固定表示） ── */
+  .quicklinks-section {
+    margin-bottom: 26px;
+  }
+  .quicklinks-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .quicklinks-title { font-size: 1.05rem; font-weight: 700; }
+  .quicklinks-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 12px; }
+  .quicklinks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .quicklink-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.12s;
+    position: relative;
+    overflow: hidden;
+  }
+  .quicklink-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--yellow, #fbbf24);
+  }
+  .quicklink-card:hover {
+    background: var(--card-hover);
+    border-color: var(--yellow, #fbbf24);
+    transform: translateY(-2px);
+  }
+  .quicklink-rank {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #fbbf24;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+    padding-left: 8px;
+  }
+  .quicklink-title {
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.4;
+    padding-left: 8px;
+  }
+
+
+  /* ── 1問戻るボタン ── */
+  .progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .back-one-btn {
+    font-size: 0.78rem;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .back-one-btn:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    background: var(--card-hover);
+  }
+  .chat-q-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .chat-edit-btn {
+    font-size: 0.7rem;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.12s;
+  }
+  .chat-edit-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+
+  /* ── 軽量SVGグラフ（Pyodide不使用・JSのみで即時描画） ── */
+  .result-chart {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .result-chart-title {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chart-svg-wrap {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .chart-axis-line { stroke: var(--border); stroke-width: 1; }
+  .chart-grid-line { stroke: var(--border); stroke-width: 0.5; stroke-dasharray: 2,3; }
+  .chart-axis-label { fill: #94a3b8; font-size: 11px; font-family: inherit; }
+  .chart-errorbar-line { stroke: #f87171; stroke-width: 2; }
+  .chart-errorbar-cap { stroke: #f87171; stroke-width: 2; }
+  .chart-point { fill: var(--accent); stroke: #08131f; stroke-width: 1.5; }
+  .chart-zero-line { stroke: #fbbf24; stroke-width: 1.2; stroke-dasharray: 4,3; }
+  .chart-bar { fill: var(--accent); opacity: 0.85; }
+  .chart-bar.neg { fill: #f87171; }
+  .chart-label-text { fill: var(--text); font-size: 11px; font-family: inherit; text-anchor: middle; }
+  .chart-reg-line { stroke: #fbbf24; stroke-width: 1.8; fill: none; }
+  .chart-scatter-pt { fill: var(--accent); opacity: 0.8; }
+
 </style>
 </head>
 <body>
@@ -236,6 +490,41 @@
       質問に答えながら数値を入力 → <strong>計算する</strong> で即時結果 + Pythonコードが出ます。<br>
       間違えたら上の「🔄 最初からやり直す」でリセット。
     </div>
+
+    <!-- ★ クイックリンク（試験頻出パターンを固定表示） ★ -->
+    <div class="quicklinks-section">
+      <div class="quicklinks-head">
+        <span class="quicklinks-title">🔥 よく出る問題</span>
+      </div>
+      <div class="quicklinks-sub">過去問・演習で頻出のパターンをあらかじめ並べています</div>
+      <div class="quicklinks-grid" id="quickLinksGrid"></div>
+    </div>
+
+    <!-- ★ 検索ボックス ★ -->
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchBox" class="search-box"
+             placeholder="キーワードで検索（例: 比率 差 信頼区間 / 売上 / サンプルサイズ）　[ / キーでフォーカス]"
+             oninput="handleSearch(this.value)" autocomplete="off">
+      <span class="search-clear" id="searchClear" onclick="clearSearch()" style="display:none;">✕</span>
+    </div>
+    <div id="searchResultInfo" class="search-result-info" style="display:none;"></div>
+
+    <!-- ★ 問題文によく出る言い回しチップ ★ -->
+    <div class="chip-section">
+      <div class="chip-section-label">💬 問題文によく出る言い回し（タップで絞り込み・複数選択可）</div>
+      <div class="chip-row" id="chipRow"></div>
+    </div>
+
+    <!-- ★ グラフ作成への直接リンク ★ -->
+    <div class="quicklinks-section">
+      <div class="quicklinks-head">
+        <span class="quicklinks-title">📊 グラフを作りたいときはここから</span>
+      </div>
+      <div class="quicklinks-sub">JSで即座にグラフが描画されるパターン（コードもmatplotlib版を併記）</div>
+      <div class="quicklinks-grid" id="graphLinksGrid"></div>
+    </div>
+
     <div id="catSections"></div>
   </div>
 
@@ -247,7 +536,10 @@
       <div class="formula-hint" id="wizFormula"></div>
     </div>
 
-    <div class="progress" id="wizProgress"></div>
+    <div class="progress-row" id="progressRow">
+      <span class="progress" id="wizProgress"></span>
+      <button class="back-one-btn" id="backOneBtn" onclick="goBackOneStep()" style="display:none;">← 1問戻る</button>
+    </div>
     <div class="chat-log" id="chatLog"></div>
     <div class="active-q" id="activeQ"></div>
 
@@ -259,6 +551,7 @@
         <div class="result-title">計算結果（即時・JS）</div>
         <div class="result-values" id="resultValues"></div>
         <div class="result-interpret" id="resultInterpret"></div>
+        <div class="result-chart" id="resultChart" style="display:none;"></div>
       </div>
 
       <!-- ★ 派生分析サジェスト ★ -->
@@ -284,7 +577,7 @@
 
       <div style="height:12px"></div>
       <div class="py-output-box" id="pyOutputBox" style="display:none;">
-        <div class="py-output-head">実行結果（Pyodide）</div>
+        <div class="py-output-head">実行結果（Pyodide・数値計算部分のみ）</div>
         <div id="pyOutput"></div>
       </div>
     </div>
@@ -295,10 +588,10 @@
 <script>
 // ─── Categories（傾向・流れ別） ─────────────────────────────────────
 const CATEGORIES = [
-  { id: 'group1',   emoji: '📐', title: '1グループを調べる',     desc: '1つの母集団の平均・比率・分散を推定／検定したい' },
-  { id: 'group2',   emoji: '⚖️', title: '2グループを比較する',   desc: 'ABテスト型の比率比較、2群の平均比較など' },
-  { id: 'relation', emoji: '🔗', title: '関係性を調べる',         desc: '相関・回帰など、2つの変数の関係を調べたい' },
-  { id: 'design',   emoji: '📏', title: '設計する',               desc: '必要なサンプルサイズを逆算したい' },
+  { id: 'group1',   emoji: '📐', title: '1つの値を推定・検定する',   desc: '例：「平均はいくつか」「比率は◯%と言えるか」を1つの集団から判断したい' },
+  { id: 'group2',   emoji: '⚖️', title: '2つを比べる（ABテスト・前後比較）', desc: '例：「A案とB案で差はあるか」「導入前後で変化したか」を2群で比較したい' },
+  { id: 'relation', emoji: '🔗', title: '関係性・予測を調べる',         desc: '例：「xとyに関係はあるか」「xからyを予測したい」（相関・回帰）' },
+  { id: 'design',   emoji: '📏', title: 'サンプルサイズを設計する（逆算）', desc: '例：「何人調べれば誤差±◯%に収まるか」「差を検出するには何人必要か」' },
 ];
 
 // ─── Pattern definitions ────────────────────────────────────────────
@@ -1247,7 +1540,14 @@ print(f"回帰式: y_hat = {b0:.4f} + {b1:.4f} x")
 print(f"決定係数 R^2: {r2:.4f}")
 print(f"b1の{conf*100:.0f}%信頼区間: [{b1_lo:.4f}, {b1_hi:.4f}]")
 print(f"b1=0検定: t={t_stat:.4f}, p={p_val:.4f}")
-print(f"x={x0} での予測値: {y0:.4f}")`
+print(f"x={x0} での予測値: {y0:.4f}")`,
+        chart: {
+          type: 'scatter',
+          title: '散布図と回帰直線',
+          xVals: x,
+          yVals: y,
+          b0, b1,
+        },
       };
     }
   },
@@ -1712,7 +2012,7 @@ print(f"必要なn: {n} (約{n/n0:.2f}倍)")`,
     id: 'reg_inverse', flowCat: 'relation',
     title: '単回帰の逆算（目標y値→必要x値・悲観/点推定/楽観）',
     dist: 'OLS回帰（t分布で信頼区間）',
-    keywords: ['目標とするyから必要なxを逆算したい', '「売上◯万を達成するには広告費いくら？」', '悲観・点推定・楽観の3パターンで試算'],
+    keywords: ['目標とするyから必要なxを逆算したい', '「売上◯万を達成するには広告費いくら？」', '悲観・点推定・楽観の3パターンで試算', 'yからxを逆推定する'],
     formula: '<div class="f-title">公式</div>x = (y_target - b0) / b1<br><span style="color:#94a3b8">b1のCIを使い悲観・点推定・楽観の3ケースで逆算</span>',
     fields: [
       { id: 'xy_data',  label: 'x,y のデータ（1行=1件 カンマ区切り）', type: 'text', default: '80,320\n100,350\n90,340\n120,380\n150,410\n130,395\n160,430\n140,415\n180,460\n200,480\n175,470\n210,500' },
@@ -1799,7 +2099,7 @@ print(f"  楽観: {(y_target-b0)/b1_hi:.2f}")`,
     id: 'ci_election_n', flowCat: 'design',
     title: '選挙出口調査のサンプルサイズ設計（2候補の差を検出）',
     dist: 'z分布（正規近似）',
-    keywords: ['2候補の差を統計的に断言したい', '「A候補がB候補より有意に多い」と言えるnは？', '2比率の差の信頼区間下限 > 0 を保証するn'],
+    keywords: ['2候補の差を統計的に断言したい', '「A候補がB候補より有意に多い」と言えるnは？', '2比率の差の信頼区間下限 > 0 を保証するn', '出口調査で当確を打ちたい'],
     formula: '<div class="f-title">公式</div>n ≥ z² × (pA(1-pA) + pB(1-pB)) / (pA-pB)²<br><span style="color:#94a3b8">差の信頼区間下限 > 0 になる最小サンプルサイズ</span>',
     fields: [
       { id: 'pA',   label: 'A候補の想定得票率 pA', type: 'number', default: 0.55, step: 0.01 },
@@ -1839,6 +2139,319 @@ print(f"差の信頼区間下限: {lo:.4f} ({'OK' if lo > 0 else 'NG'})")`,
     }
   },
 
+  // ══════════════════════════════════════════════════════════════════
+  // ★ 新規：複数時点・複合指標パターン（演習対応）
+  // ══════════════════════════════════════════════════════════════════
+
+  // ── 複数時点の比率を一括CI計算 + エラーバーグラフ（演習1型） ──
+  {
+    id: 'ci_prop_timeseries',
+    flowCat: 'group1',
+    title: '複数時点の比率を一括CI計算 + エラーバーグラフ',
+    dist: 'z分布（正規近似）',
+    keywords: [
+      '月別・時系列で比率（支持率など）が並んでいる',
+      '「上昇傾向か・ほとんど変化なしか」を判断したい',
+      'エラーバー付き折れ線グラフで可視化したい',
+      '支持率の推移を見たい',
+      '複数月の信頼区間を一括で出したい',
+    ],
+    formula: '<div class="f-title">公式（各時点）</div>p̂ ± z × √(p̂(1-p̂)/n)<br><span style="color:#94a3b8">各時点で同じ公式を繰り返し → エラーバーで重なりを確認</span>',
+    fields: [
+      { id: 'conf',   label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+      { id: 'labels', label: '時点ラベル（カンマ区切り）例: 2月,3月,4月,5月', type: 'text', default: '2月,3月,4月,5月' },
+      { id: 'ns',     label: 'サンプルサイズ（カンマ区切り・時点と同数）例: 1180,1210,1195,1220', type: 'text', default: '1180,1210,1195,1220' },
+      { id: 'ps',     label: '各時点の比率 p̂（カンマ区切り）例: 0.452,0.448,0.465,0.478', type: 'text', default: '0.452,0.448,0.465,0.478' },
+    ],
+    calc(v) {
+      const z = jStat.normal.inv(1 - (1 - v.conf) / 2, 0, 1);
+      const labels = v.labels.split(',').map(s => s.trim());
+      const ns     = v.ns.split(',').map(s => parseFloat(s.trim()));
+      const ps     = v.ps.split(',').map(s => parseFloat(s.trim()));
+      if (labels.length !== ns.length || ns.length !== ps.length)
+        throw new Error('ラベル・n・p̂ の個数が一致していません');
+
+      const rows = labels.map((lbl, i) => {
+        const p = ps[i], n = ns[i];
+        const se = Math.sqrt(p * (1 - p) / n);
+        const lo = p - z * se, hi = p + z * se;
+        return { lbl, p, n, se, lo, hi };
+      });
+
+      const valRows = rows.flatMap(r => [
+        { label: r.lbl + '  p̂',  val: r.p.toFixed(4) },
+        { label: r.lbl + '  CI', val: '[' + r.lo.toFixed(4) + ', ' + r.hi.toFixed(4) + ']' },
+      ]);
+
+      // 全区間が重なるかチェック
+      const loMin = Math.min(...rows.map(r => r.lo));
+      const hiMax = Math.max(...rows.map(r => r.hi));
+      const firstLo = rows[0].lo, lastHi = rows[rows.length-1].hi;
+      const firstHi = rows[0].hi, lastLo = rows[rows.length-1].lo;
+      const overlapNote = (lastLo < firstHi)
+        ? '⚠️ 最初と最後の信頼区間が重なっている → 「有意な上昇傾向」とは言い切れない'
+        : '✅ 最初と最後の信頼区間が離れている → 変化があると考えられる';
+
+      const interpretLines = rows.map(r =>
+        r.lbl + ': ' + r.p.toFixed(4) + '  95%CI [' + r.lo.toFixed(4) + ', ' + r.hi.toFixed(4) + ']'
+      ).join('\n') + '\n\n' + overlapNote;
+
+      const labelsJS  = JSON.stringify(labels);
+      const nsJS      = JSON.stringify(ns);
+      const psJS      = JSON.stringify(ps);
+      const confVal   = v.conf;
+
+      const code = `import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
+# 注意：このブラウザ内のPython実行環境には日本語フォントが入っていないため、
+# 図のタイトル・軸ラベルは英語表記にしています（labelsの中身自体は元データのまま）。
+# 日本語で読みたい場合は、上のprint()出力（コンソール）を参照してください。
+
+labels = ${labelsJS}
+ns     = ${nsJS}
+ps     = ${psJS}
+conf   = ${confVal}
+
+z = stats.norm.ppf(1 - (1 - conf) / 2)
+ses  = [np.sqrt(p*(1-p)/n) for p, n in zip(ps, ns)]
+los  = [p - z*se for p, se in zip(ps, ses)]
+his  = [p + z*se for p, se in zip(ps, ses)]
+errs = [p - lo   for p, lo in zip(ps, los)]
+
+print("=" * 50)
+print(f"信頼水準: {conf*100:.0f}%  z = {z:.4f}")
+print("-" * 50)
+for lbl, p, lo, hi in zip(labels, ps, los, his):
+    print(f"{lbl}: p̂={p:.4f}  CI=[{lo:.4f}, {hi:.4f}]")
+print("=" * 50)
+
+# エラーバー付き折れ線グラフ
+fig, ax = plt.subplots(figsize=(8, 5))
+x = range(len(labels))
+ax.errorbar(x, ps, yerr=errs, fmt='o-', capsize=6,
+            color='steelblue', ecolor='tomato', linewidth=2, markersize=8,
+            label=f'{conf*100:.0f}% CI')
+ax.set_xticks(list(x))
+ax.set_xticklabels(labels, fontsize=12)
+ax.set_ylabel('Proportion p-hat', fontsize=12)
+ax.set_title('Proportion over time (error bars = CI)', fontsize=13)
+ax.legend()
+ax.grid(axis='y', alpha=0.4)
+plt.tight_layout()
+plt.savefig('ci_timeseries.png', dpi=120)
+plt.show()
+print("Saved figure: ci_timeseries.png")`;
+
+      return {
+        vals: valRows,
+        interpret: interpretLines,
+        code,
+        chart: {
+          type: 'errorbar',
+          title: '時系列比率のエラーバー（' + (v.conf*100).toFixed(0) + '%信頼区間）',
+          labels: rows.map(r => r.lbl),
+          values: rows.map(r => r.p),
+          los: rows.map(r => r.lo),
+          his: rows.map(r => r.hi),
+          fmt: (val) => val.toFixed(3),
+        },
+      };
+    }
+  },
+  // ★ 演習3の指標A・B型（前後比較）に完全対応
+  {
+    id: 'ci_prop_diff_beforeafter',
+    flowCat: 'group2',
+    title: '前後比較：複数比率指標の差の信頼区間（一括）',
+    dist: 'z分布（正規近似）',
+    keywords: [
+      '政策・施策の導入前後で比率が変化したか調べたい',
+      '複数の比率指標（A・B・C…）をまとめて前後比較したい',
+      '「差の信頼区間が0を含むか」で有意性を判断したい',
+      '演習3型：保育利用率・就労率などの前後変化',
+    ],
+    formula: '<div class="f-title">公式</div>(p̂₂ - p̂₁) ± z × √[p̂₁(1-p̂₁)/n₁ + p̂₂(1-p̂₂)/n₂]<br><span style="color:#94a3b8">0を含まない → 有意な変化あり</span>',
+    fields: [
+      { id: 'conf',    label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+      { id: 'names',   label: '指標名（カンマ区切り）例: 保育所利用率,母親就労率', type: 'text', default: '保育所利用率,母親就労率' },
+      { id: 'n1s',     label: '前期サンプルサイズ（カンマ区切り）例: 600,600', type: 'text', default: '600,600' },
+      { id: 'p1s',     label: '前期比率 p̂₁（カンマ区切り）例: 0.345,0.612', type: 'text', default: '0.345,0.612' },
+      { id: 'n2s',     label: '後期サンプルサイズ（カンマ区切り）例: 620,620', type: 'text', default: '620,620' },
+      { id: 'p2s',     label: '後期比率 p̂₂（カンマ区切り）例: 0.398,0.658', type: 'text', default: '0.398,0.658' },
+    ],
+    calc(v) {
+      const z     = jStat.normal.inv(1 - (1 - v.conf) / 2, 0, 1);
+      const names = v.names.split(',').map(s => s.trim());
+      const n1s   = v.n1s.split(',').map(s => parseFloat(s.trim()));
+      const p1s   = v.p1s.split(',').map(s => parseFloat(s.trim()));
+      const n2s   = v.n2s.split(',').map(s => parseFloat(s.trim()));
+      const p2s   = v.p2s.split(',').map(s => parseFloat(s.trim()));
+      const len   = names.length;
+      if ([n1s, p1s, n2s, p2s].some(a => a.length !== len))
+        throw new Error('指標名・n・p̂ の個数が一致していません');
+
+      const rows = names.map((name, i) => {
+        const p1 = p1s[i], n1 = n1s[i], p2 = p2s[i], n2 = n2s[i];
+        const diff = p2 - p1;
+        const se   = Math.sqrt(p1*(1-p1)/n1 + p2*(1-p2)/n2);
+        const lo   = diff - z*se, hi = diff + z*se;
+        return { name, p1, p2, diff, lo, hi };
+      });
+
+      const valRows = rows.flatMap(r => [
+        { label: r.name + '  差(p̂₂-p̂₁)', val: r.diff.toFixed(4) },
+        { label: r.name + '  CI',          val: '[' + r.lo.toFixed(4) + ', ' + r.hi.toFixed(4) + ']' },
+      ]);
+
+      const interpretLines = rows.map(r => {
+        const sig = r.lo > 0 ? '✅ 有意に増加（0含まず）'
+                  : r.hi < 0 ? '✅ 有意に減少（0含まず）'
+                  : '⚠️ 有意差なし（0を含む）';
+        return r.name + ':\n  差 = ' + r.diff.toFixed(4) + '  CI=[' + r.lo.toFixed(4) + ', ' + r.hi.toFixed(4) + ']\n  → ' + sig;
+      }).join('\n\n');
+
+      const namesJS = JSON.stringify(names);
+      const n1sJS   = JSON.stringify(n1s);
+      const p1sJS   = JSON.stringify(p1s);
+      const n2sJS   = JSON.stringify(n2s);
+      const p2sJS   = JSON.stringify(p2s);
+
+      const code = `import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
+
+names = ${namesJS}
+n1s   = ${n1sJS}
+p1s   = ${p1sJS}
+n2s   = ${n2sJS}
+p2s   = ${p2sJS}
+conf  = ${v.conf}
+
+z = stats.norm.ppf(1 - (1 - conf) / 2)
+results = []
+for name, n1, p1, n2, p2 in zip(names, n1s, p1s, n2s, p2s):
+    diff = p2 - p1
+    se   = np.sqrt(p1*(1-p1)/n1 + p2*(1-p2)/n2)
+    lo   = diff - z * se
+    hi   = diff + z * se
+    sig  = "有意差あり" if lo > 0 or hi < 0 else "有意差なし（0を含む）"
+    results.append((name, diff, lo, hi, sig))
+    print(f"{name}: 差={diff:.4f}  CI=[{lo:.4f}, {hi:.4f}]  → {sig}")
+
+# 差のエラーバーグラフ
+fig, ax = plt.subplots(figsize=(8, 5))
+for i, (name, diff, lo, hi, _) in enumerate(results):
+    ax.errorbar(i, diff, yerr=[[diff-lo],[hi-diff]], fmt='s',
+                capsize=8, color='steelblue', markersize=9)
+    ax.text(i, hi+0.002, name, ha='center', fontsize=10)
+ax.axhline(0, color='tomato', linestyle='--', linewidth=1.5, label='差=0')
+ax.set_xticks(range(len(results)))
+ax.set_xticklabels([r[0] for r in results])
+ax.set_ylabel('差 (後期 - 前期)')
+ax.set_title(f'前後比較：差の{conf*100:.0f}%信頼区間')
+ax.legend(); ax.grid(axis='y', alpha=0.4)
+plt.tight_layout()
+plt.savefig('ci_diff_multi.png', dpi=120)
+plt.show()`;
+
+      return {
+        vals: valRows,
+        interpret: interpretLines,
+        code,
+        chart: {
+          type: 'diffbars',
+          title: '前後比較：差の' + (v.conf*100).toFixed(0) + '%信頼区間（0=変化なし）',
+          labels: rows.map(r => r.name),
+          diffs: rows.map(r => r.diff),
+          los: rows.map(r => r.lo),
+          his: rows.map(r => r.hi),
+        },
+      };
+    }
+  },
+
+  // ── 差を検出するためのサンプルサイズ（検出力ベース・演習3指標B型） ──
+  {
+    id: 'n_detect_prop_diff',
+    flowCat: 'design',
+    title: '比率の差を検出するために必要なサンプルサイズ（検出力分析）',
+    dist: 'z分布（正規近似）',
+    keywords: [
+      '今のnでは差が有意にならなかった：何人増やせばよいか',
+      '前後比率の差を検出したい',
+      '検出力（1-β）を指定してサンプルサイズを逆算したい',
+      '演習3 指標B型：就労率の変化を有意に検出するには？',
+    ],
+    formula: '<div class="f-title">公式</div>n ≥ (z_α/2 + z_β)² × [p₁(1-p₁) + p₂(1-p₂)] / (p₂-p₁)²<br><span style="color:#94a3b8">z_β: 検出力80%→0.842, 90%→1.282, 95%→1.645</span>',
+    fields: [
+      { id: 'p1',    label: '前期（または対照群）の比率 p₁', type: 'number', default: 0.612, step: 0.001 },
+      { id: 'p2',    label: '後期（または介入群）の比率 p₂', type: 'number', default: 0.658, step: 0.001 },
+      { id: 'alpha', label: '有意水準 α（両側）', type: 'select', options: ['0.05:5%', '0.01:1%', '0.10:10%'] },
+      { id: 'power', label: '検出力（1-β）', type: 'select', options: ['0.80:80%（標準）', '0.90:90%', '0.95:95%'] },
+    ],
+    calc(v) {
+      const za = jStat.normal.inv(1 - v.alpha / 2, 0, 1);
+      const powerVal = parseFloat(v.power);
+      const zb = jStat.normal.inv(powerVal, 0, 1);
+      const diff = Math.abs(v.p2 - v.p1);
+      if (diff < 1e-9) throw new Error('p₁ と p₂ が等しいです');
+      const n_raw = Math.pow(za + zb, 2) * (v.p1*(1-v.p1) + v.p2*(1-v.p2)) / (diff * diff);
+      const n = Math.ceil(n_raw);
+      const se = Math.sqrt((v.p1*(1-v.p1) + v.p2*(1-v.p2)) / n);
+      const lo = diff - za * se;
+      return {
+        vals: [
+          { label: 'p₂ - p₁（差）',   val: diff.toFixed(4) },
+          { label: 'z_α/2',            val: za.toFixed(4) },
+          { label: 'z_β（検出力）',    val: zb.toFixed(4) },
+          { label: '必要サンプルサイズ n（片群）', val: n },
+          { label: 'CI下限（確認）',   val: lo.toFixed(4) + (lo > 0 ? ' ✅' : ' ⚠') },
+        ],
+        interpret: `有意水準${(v.alpha*100).toFixed(0)}%・検出力${(powerVal*100).toFixed(0)}%で、この差（${diff.toFixed(4)}）を有意に検出するには\n各群 n = ${n} 以上が必要です。\n\n差の信頼区間下限（確認）= ${lo.toFixed(4)} ${lo > 0 ? '✅ 十分' : '⚠ もう少し必要'}`,
+        code: `import numpy as np
+from scipy import stats
+import math
+
+p1, p2   = ${v.p1}, ${v.p2}
+alpha    = ${v.alpha}    # 有意水準（両側）
+power    = ${powerVal}   # 検出力
+
+za = stats.norm.ppf(1 - alpha / 2)
+zb = stats.norm.ppf(power)
+diff = abs(p2 - p1)
+
+n_raw = (za + zb)**2 * (p1*(1-p1) + p2*(1-p2)) / diff**2
+n = math.ceil(n_raw)
+
+se  = np.sqrt((p1*(1-p1) + p2*(1-p2)) / n)
+lo  = diff - za * se
+
+print(f"z_α/2 = {za:.4f},  z_β = {zb:.4f}")
+print(f"必要サンプルサイズ（各群）: n = {n}")
+print(f"差の信頼区間下限（確認）: {lo:.4f} → {'OK ✅' if lo > 0 else 'NG ⚠'}")
+
+# サンプルサイズに対する検出力カーブ
+ns = np.arange(100, n*3, max(10, n//30))
+powers = [stats.norm.cdf(abs(p2-p1)/np.sqrt((p1*(1-p1)+p2*(1-p2))/ni) - za) for ni in ns]
+
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots(figsize=(8, 4))
+ax.plot(ns, powers, color='steelblue', linewidth=2)
+ax.axhline(power, color='tomato', linestyle='--', label=f'目標検出力 {power*100:.0f}%')
+ax.axvline(n, color='gold', linestyle='--', label=f'必要n = {n}')
+ax.set_xlabel('サンプルサイズ n（片群）')
+ax.set_ylabel('検出力（1-β）')
+ax.set_title('サンプルサイズと検出力の関係')
+ax.legend(); ax.grid(alpha=0.3)
+plt.tight_layout()
+plt.savefig('power_curve.png', dpi=120)
+plt.show()`,
+      };
+    }
+  },
+
+
 ];
 
 // ─── Pyodide setup ───────────────────────────────────────────────────
@@ -1847,6 +2460,8 @@ function initPyodide() {
   pyodideReadyPromise = (async () => {
     try {
       const pyodide = await loadPyodide();
+      // ★ 軽量方針：matplotlibはロードしない（重い・遅い）。
+      // グラフはJSのSVGエンジンで即時表示し、「実行（検算）」では数値計算部分だけをPyodideで走らせる。
       await pyodide.loadPackage(['numpy', 'scipy']);
       document.getElementById('pyoDot').classList.add('ready');
       document.getElementById('pyoLabel').textContent = 'Python準備完了';
@@ -2140,6 +2755,58 @@ const FOLLOW_UPS = {
       action: '区間推定へ'
     }
   ],
+
+  // ── 複数時点の比率CI → 2時点の差 / 検出力 ──
+  'ci_prop_timeseries': [
+    {
+      targetId: 'ci_prop_diff',
+      type: 'next',
+      badge: '次のステップ',
+      label: '最初と最後の時点の差の信頼区間を計算する',
+      reason: 'エラーバーで視覚的に確認したら、最初と最後の時点を選んで「差が0を含むか」を数値で確認しよう。',
+      action: '差の区間推定へ'
+    },
+    {
+      targetId: 'n_detect_prop_diff',
+      type: 'design',
+      badge: 'サンプル設計',
+      label: '差を有意に検出するためのサンプルサイズを逆算する',
+      reason: '区間が重なっていて「有意とは言えない」場合、何人集めれば有意になるかを検出力分析で求めよう。',
+      action: '検出力分析へ'
+    }
+  ],
+
+  // ── 前後比較複数指標 → 検出力分析 ──
+  'ci_prop_diff_beforeafter': [
+    {
+      targetId: 'n_detect_prop_diff',
+      type: 'design',
+      badge: 'サンプル設計',
+      label: '差を検出できなかった指標：必要サンプルサイズを逆算',
+      reason: '0を含む（有意差なし）の指標があったら、差を検出するには何人必要かを検出力分析で求めよう。',
+      action: '検出力分析へ'
+    },
+    {
+      targetId: 'ci_2mean_diff',
+      type: 'related',
+      badge: '関連分析',
+      label: '平均値の差（指標Cのような連続変数）も計算する',
+      reason: '比率指標に加えて、費用・時間などの平均値指標の前後比較は2標本の差の区間推定を使う。',
+      action: '平均の差へ'
+    }
+  ],
+
+  // ── 検出力分析 → 実際に前後比較 ──
+  'n_detect_prop_diff': [
+    {
+      targetId: 'ci_prop_diff_beforeafter',
+      type: 'next',
+      badge: '次のステップ',
+      label: '十分なnが集まったら前後比較をまとめて実施',
+      reason: '必要サンプルサイズが分かったらデータを収集し、複数指標の前後比較をまとめて実施しよう。',
+      action: '前後比較へ'
+    }
+  ],
 };
 
 // ─── Follow-up rendering ─────────────────────────────────────────────
@@ -2177,9 +2844,240 @@ function jumpToFollowUp(targetId) {
 }
 
 // ─── Render home ─────────────────────────────────────────────────────
+// ─── グラフ作成への直接リンク ──────────────────────────────────────
+// chart データを返すパターン（JSのSVGエンジンで即座にグラフが見られるもの）を直接列挙
+const GRAPH_LINKS = [
+  'ci_prop_timeseries',          // 複数時点の比率を一括CI計算 + エラーバーグラフ
+  'ci_prop_diff_beforeafter',    // 前後比較：複数比率指標の差の信頼区間（一括）
+  'regression',                  // 単回帰分析（散布図＋回帰直線）
+];
+
+function renderGraphLinks() {
+  const grid = document.getElementById('graphLinksGrid');
+  if (!grid) return;
+  grid.innerHTML = GRAPH_LINKS.map(id => {
+    const p = PATTERNS.find(pp => pp.id === id);
+    if (!p) return '';
+    return `
+      <div class="quicklink-card" onclick="startWizard(PATTERNS.find(pp=>pp.id==='${id}'))">
+        <div class="quicklink-rank">📈 グラフ対応</div>
+        <div class="quicklink-title">${p.title}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ─── Search ──────────────────────────────────────────────────────────
+let searchQuery = '';
+
+// ─── クイックリンク（試験頻出パターンを固定で先頭表示） ──────────────
+// 過去問・演習問題の出題傾向から、頻出度の高い順に並べる
+const QUICK_LINKS = [
+  'ci_prop_diff',            // 2比率の差の区間推定（ABテスト）
+  'ci_mean_t',                 // 母平均の区間推定（t分布）
+  'ci_prop',                    // 母比率の区間推定
+  'ci_n',                         // サンプルサイズ設計
+];
+
+function renderQuickLinks() {
+  const grid = document.getElementById('quickLinksGrid');
+  if (!grid) return;
+  grid.innerHTML = QUICK_LINKS.map((id, i) => {
+    const p = PATTERNS.find(pp => pp.id === id);
+    if (!p) return '';
+    return `
+      <div class="quicklink-card" onclick="startWizard(PATTERNS.find(pp=>pp.id==='${id}'))">
+        <div class="quicklink-rank">頻出 #${i + 1}</div>
+        <div class="quicklink-title">${p.title}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ─── 問題文によく出る言い回しチップ ──────────────────────────────────
+// label: チップに表示する短い言い回し（過去問・演習の生の言葉）
+// term: チップを押したときに検索ボックスへ追加するトークン（labelと同じでOK）
+// isTermChip: true の場合は「統計用語側」のチップとして見た目を変える（既に何をすべきか分かっている人向け）
+const CHIPS = [
+  { label: '比率',           term: '比率' },
+  { label: '推移',           term: '推移' },
+  { label: '上昇傾向',        term: '上昇傾向' },
+  { label: '前後で変化',      term: '前後' },
+  { label: '差は0を含むか',   term: '0を含む' },
+  { label: 'ABテスト',        term: 'ABテスト' },
+  { label: '売上への影響',    term: '売上' },
+  { label: '当確を打ちたい',  term: '当確' },
+  { label: '何人必要',        term: '何人' },
+  { label: '生データの列',    term: '生データ' },
+  { label: '区間が重なるか',  term: '重なる' },
+  { label: 'σが既知',         term: 'σ' },
+  { label: '検出力',          term: '検出力' },
+
+  // ─ 「すでに何をすべきか分かっている人」向け：統計用語チップ ─
+  { label: '区間推定',  term: '区間推定', isTermChip: true },
+  { label: '検定',      term: '検定',     isTermChip: true },
+  { label: '相関',      term: '相関',     isTermChip: true },
+  { label: '回帰',      term: '回帰',     isTermChip: true },
+  { label: '分散',      term: '分散',     isTermChip: true },
+  { label: '最尤推定',  term: '最尤推定', isTermChip: true },
+  { label: 'サンプルサイズ', term: 'サンプルサイズ', isTermChip: true },
+  { label: '逆推定',    term: '逆推定',   isTermChip: true },
+];
+
+function getSearchTokens() {
+  return searchQuery ? searchQuery.split(/\s+/).filter(Boolean) : [];
+}
+
+function isChipActive(chip) {
+  return getSearchTokens().includes(chip.term);
+}
+
+function toggleChip(term) {
+  const sb = document.getElementById('searchBox');
+  let tokens = getSearchTokens();
+  const idx = tokens.indexOf(term);
+  if (idx >= 0) {
+    tokens.splice(idx, 1);
+  } else {
+    tokens.push(term);
+  }
+  const newValue = tokens.join(' ');
+  sb.value = newValue;
+  handleSearch(newValue);
+}
+
+function renderChips() {
+  const row = document.getElementById('chipRow');
+  if (!row) return;
+  let html = '';
+  let lastWasNormal = null;
+  CHIPS.forEach((chip, i) => {
+    // 通常チップ → 用語チップの切り替わり目に区切り線を入れる
+    if (lastWasNormal !== null && lastWasNormal === false && !chip.isTermChip) {
+      // no-op (順序的に起きない想定だが安全のため何もしない)
+    }
+    if (lastWasNormal === false && chip.isTermChip === false) { /* noop */ }
+    if (i > 0 && CHIPS[i - 1].isTermChip !== chip.isTermChip) {
+      html += '<span class="chip-divider"></span>';
+    }
+    const active = isChipActive(chip);
+    html += `<span class="filter-chip${chip.isTermChip ? ' term-chip' : ''}${active ? ' active' : ''}"
+      onclick="toggleChip('${chip.term.replace(/'/g, "\\'")}')">${chip.label}</span>`;
+    lastWasNormal = !chip.isTermChip;
+  });
+  row.innerHTML = html;
+}
+
+function normalize(s) {
+  return (s || '').toLowerCase();
+}
+
+function patternMatchScore(p, qTokens) {
+  // タイトル・分布名・キーワード全てを対象に検索。一致度が高いほど高スコア
+  const haystacks = [
+    { text: p.title, weight: 3 },
+    { text: p.dist, weight: 1 },
+    ...p.keywords.map(k => ({ text: k, weight: 2 })),
+  ];
+  let score = 0;
+  for (const tok of qTokens) {
+    let tokHit = false;
+    for (const h of haystacks) {
+      if (normalize(h.text).includes(tok)) {
+        score += h.weight;
+        tokHit = true;
+      }
+    }
+    if (!tokHit) return -1; // 全トークンが最低1つはヒットしないと除外（AND検索）
+  }
+  return score;
+}
+
+function handleSearch(value) {
+  searchQuery = value.trim();
+  document.getElementById('searchClear').style.display = searchQuery ? 'inline-block' : 'none';
+  renderChips();
+  renderHome();
+}
+
+function clearSearch() {
+  searchQuery = '';
+  document.getElementById('searchBox').value = '';
+  document.getElementById('searchClear').style.display = 'none';
+  renderChips();
+  renderHome();
+}
+
+function highlightText(text, qTokens) {
+  if (!qTokens.length) return text;
+  let result = text;
+  // 長いトークンから処理（部分一致の重複を避ける）
+  const sorted = [...qTokens].sort((a, b) => b.length - a.length);
+  for (const tok of sorted) {
+    if (!tok) continue;
+    const re = new RegExp('(' + tok.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    result = result.replace(re, '<mark class="hl">$1</mark>');
+  }
+  return result;
+}
+
+function buildPatternCard(p, qTokens) {
+  const card = document.createElement('div');
+  card.className = 'pattern-card';
+  const titleHtml = highlightText(p.title, qTokens);
+  const kwHtml = p.keywords.map((k, ki) => {
+    const hl = highlightText(k, qTokens);
+    return `<span class="kw${ki < 3 ? ' trigger' : ''}">${hl}</span>`;
+  }).join('');
+  card.innerHTML = `
+    <div class="card-title">${titleHtml}</div>
+    <div class="card-dist">${p.dist}</div>
+    <div class="card-keywords">${kwHtml}</div>
+  `;
+  card.onclick = () => startWizard(p);
+  return card;
+}
+
 function renderHome() {
   const wrap = document.getElementById('catSections');
+  const resultInfo = document.getElementById('searchResultInfo');
   wrap.innerHTML = '';
+
+  const qTokens = searchQuery ? normalize(searchQuery).split(/\s+/).filter(Boolean) : [];
+
+  if (qTokens.length > 0) {
+    const scored = PATTERNS
+      .map(p => ({ p, score: patternMatchScore(p, qTokens) }))
+      .filter(x => x.score >= 0)
+      .sort((a, b) => b.score - a.score);
+
+    if (scored.length === 0) {
+      resultInfo.style.display = 'block';
+      resultInfo.innerHTML = `「${searchQuery}」に一致するパターンは見つかりませんでした`;
+      wrap.innerHTML = `
+        <div class="no-results">
+          <span class="nr-icon">🔍</span>
+          一致するパターンがありません。別のキーワードを試してください。<br>
+          <span style="font-size:0.78rem;">例: 「比率」「平均」「差」「相関」「サンプルサイズ」「売上」</span>
+        </div>`;
+      return;
+    }
+
+    resultInfo.style.display = 'block';
+    resultInfo.innerHTML = `<span class="hit-count">${scored.length}件</span> 一致するパターンが見つかりました`;
+
+    const sec = document.createElement('div');
+    sec.className = 'cat-section cat-searchresult';
+    sec.innerHTML = `<div class="pattern-grid" id="searchGrid"></div>`;
+    const grid = sec.querySelector('.pattern-grid');
+    scored.forEach(({ p }) => grid.appendChild(buildPatternCard(p, qTokens)));
+    wrap.appendChild(sec);
+    return;
+  }
+
+  // ── 通常表示：検索なし ──
+  resultInfo.style.display = 'none';
+
   CATEGORIES.forEach(cat => {
     const sec = document.createElement('div');
     sec.className = `cat-section cat-${cat.id}`;
@@ -2190,18 +3088,7 @@ function renderHome() {
       <div class="pattern-grid"></div>
     `;
     const grid = sec.querySelector('.pattern-grid');
-    pats.forEach((p, i) => {
-      const card = document.createElement('div');
-      card.className = 'pattern-card';
-      const kwHtml = p.keywords.map((k,ki) => `<span class="kw${ki < 3 ? ' trigger' : ''}">${k}</span>`).join('');
-      card.innerHTML = `
-        <div class="card-title">${p.title}</div>
-        <div class="card-dist">${p.dist}</div>
-        <div class="card-keywords">${kwHtml}</div>
-      `;
-      card.onclick = () => startWizard(p);
-      grid.appendChild(card);
-    });
+    pats.forEach(p => grid.appendChild(buildPatternCard(p, [])));
     wrap.appendChild(sec);
   });
 }
@@ -2220,6 +3107,7 @@ function startWizard(p) {
   document.getElementById('pyOutputBox').style.display = 'none';
   document.getElementById('errorMsg').style.display = 'none';
   document.getElementById('followUpPanel').style.display = 'none';
+  showResultChart(null);
 
   document.getElementById('homeScreen').classList.remove('active');
   document.getElementById('wizScreen').classList.add('active');
@@ -2239,20 +3127,27 @@ function renderWizardStep() {
   const p = wizard.pattern;
   const fields = p.fields;
 
-  // chat log of already-answered fields
+  // chat log of already-answered fields（クリックでそこまで戻れる）
   const log = document.getElementById('chatLog');
   log.innerHTML = '';
   for (let i = 0; i < wizard.index; i++) {
     const f = fields[i];
     const row = document.createElement('div');
     row.innerHTML = `
-      <div class="chat-q">Q. ${f.label}</div>
+      <div class="chat-q-row">
+        <div class="chat-q">Q. ${f.label}</div>
+        <button class="chat-edit-btn" onclick="goBackToStep(${i})">✎ ここに戻る</button>
+      </div>
       <div class="chat-a-row"><span class="a-label">回答</span><span class="a-val">${displayAnswer(f, wizard.answers[f.id])}</span></div>
     `;
     log.appendChild(row);
   }
 
   document.getElementById('wizProgress').textContent = `質問 ${Math.min(wizard.index+1, fields.length)} / ${fields.length}`;
+
+  // 「1問戻る」ボタンは2問目以降、または計算結果画面（index>=fields.length）で表示
+  const backBtn = document.getElementById('backOneBtn');
+  backBtn.style.display = wizard.index > 0 ? 'inline-block' : 'none';
 
   const activeQ = document.getElementById('activeQ');
   if (wizard.index >= fields.length) {
@@ -2307,6 +3202,42 @@ function submitField(rawVal) {
   renderWizardStep();
 }
 
+// ★ 1問だけ戻る（直前の質問をやり直す） ★
+function goBackOneStep() {
+  if (wizard.index <= 0) return;
+  wizard.index--;
+  const f = wizard.pattern.fields[wizard.index];
+  delete wizard.answers[f.id];
+  // 計算結果が表示されていた場合は隠す
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('codeBox').style.display = 'none';
+  document.getElementById('pyOutputBox').style.display = 'none';
+  document.getElementById('errorMsg').style.display = 'none';
+  document.getElementById('followUpPanel').style.display = 'none';
+  document.getElementById('calcStage').style.display = 'none';
+  showResultChart(null);
+  renderWizardStep();
+}
+
+// ★ チャットログ上の特定の質問まで一気に戻る ★
+function goBackToStep(stepIndex) {
+  if (stepIndex < 0 || stepIndex >= wizard.index) return;
+  const fields = wizard.pattern.fields;
+  // stepIndex以降の回答を全て削除
+  for (let i = stepIndex; i < fields.length; i++) {
+    delete wizard.answers[fields[i].id];
+  }
+  wizard.index = stepIndex;
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('codeBox').style.display = 'none';
+  document.getElementById('pyOutputBox').style.display = 'none';
+  document.getElementById('errorMsg').style.display = 'none';
+  document.getElementById('followUpPanel').style.display = 'none';
+  document.getElementById('calcStage').style.display = 'none';
+  showResultChart(null);
+  renderWizardStep();
+}
+
 function displayAnswer(f, val) {
   if (f.type === 'select') {
     const opt = f.options.find(o => o.split(':')[0] === String(val));
@@ -2316,6 +3247,156 @@ function displayAnswer(f, val) {
 }
 
 // ─── Calculate ────────────────────────────────────────────────────────
+// ─── 軽量グラフエンジン（Pyodide不使用・JSのみで瞬時描画） ──────────────
+// calc()がresult.chart = {type, ...} を返したとき、これらの関数でSVGを生成する
+// type: 'errorbar'（誤差棒の折れ線・点）, 'diffbars'（差の棒グラフ）, 'scatter'（散布図＋回帰直線）
+
+const CHART_W = 600, CHART_H = 280, CHART_PAD = { l: 56, r: 24, t: 20, b: 40 };
+
+function chartScaleY(val, yMin, yMax) {
+  const innerH = CHART_H - CHART_PAD.t - CHART_PAD.b;
+  return CHART_PAD.t + innerH * (1 - (val - yMin) / (yMax - yMin));
+}
+
+function niceRange(values) {
+  let min = Math.min(...values), max = Math.max(...values);
+  if (min === max) { min -= 1; max += 1; }
+  const pad = (max - min) * 0.18;
+  return [min - pad, max + pad];
+}
+
+function svgHeader() {
+  return `<svg viewBox="0 0 ${CHART_W} ${CHART_H}" width="100%" style="display:block;">`;
+}
+
+function drawAxes(yMin, yMax, n, yLabelFmt) {
+  const innerW = CHART_W - CHART_PAD.l - CHART_PAD.r;
+  let s = '';
+  // y軸グリッド線（4分割）
+  for (let i = 0; i <= 4; i++) {
+    const v = yMin + (yMax - yMin) * i / 4;
+    const y = chartScaleY(v, yMin, yMax);
+    s += `<line x1="${CHART_PAD.l}" y1="${y}" x2="${CHART_W - CHART_PAD.r}" y2="${y}" class="chart-grid-line"/>`;
+    s += `<text x="${CHART_PAD.l - 8}" y="${y + 4}" text-anchor="end" class="chart-axis-label">${yLabelFmt(v)}</text>`;
+  }
+  // 軸線
+  s += `<line x1="${CHART_PAD.l}" y1="${CHART_PAD.t}" x2="${CHART_PAD.l}" y2="${CHART_H - CHART_PAD.b}" class="chart-axis-line"/>`;
+  s += `<line x1="${CHART_PAD.l}" y1="${CHART_H - CHART_PAD.b}" x2="${CHART_W - CHART_PAD.r}" y2="${CHART_H - CHART_PAD.b}" class="chart-axis-line"/>`;
+  return s;
+}
+
+function chartXPos(i, n) {
+  const innerW = CHART_W - CHART_PAD.l - CHART_PAD.r;
+  if (n === 1) return CHART_PAD.l + innerW / 2;
+  return CHART_PAD.l + innerW * (i / (n - 1));
+}
+
+// ── エラーバー付き折れ線/点グラフ（複数時点・複数指標の信頼区間表示） ──
+function renderErrorBarChart(labels, values, los, his, fmt) {
+  fmt = fmt || (v => v.toFixed(3));
+  const n = labels.length;
+  const [yMin, yMax] = niceRange([...los, ...his]);
+  let s = svgHeader();
+  s += drawAxes(yMin, yMax, n, fmt);
+
+  const xs = labels.map((_, i) => chartXPos(i, n));
+
+  // 点をつなぐ線（時系列っぽい見た目のときだけ薄く）
+  if (n > 1) {
+    const linePts = xs.map((x, i) => `${x},${chartScaleY(values[i], yMin, yMax)}`).join(' ');
+    s += `<polyline points="${linePts}" fill="none" stroke="var(--accent)" stroke-width="1.2" opacity="0.5"/>`;
+  }
+
+  // エラーバー＋点
+  xs.forEach((x, i) => {
+    const yLo = chartScaleY(los[i], yMin, yMax);
+    const yHi = chartScaleY(his[i], yMin, yMax);
+    const yV  = chartScaleY(values[i], yMin, yMax);
+    s += `<line x1="${x}" y1="${yLo}" x2="${x}" y2="${yHi}" class="chart-errorbar-line"/>`;
+    s += `<line x1="${x-6}" y1="${yLo}" x2="${x+6}" y2="${yLo}" class="chart-errorbar-cap"/>`;
+    s += `<line x1="${x-6}" y1="${yHi}" x2="${x+6}" y2="${yHi}" class="chart-errorbar-cap"/>`;
+    s += `<circle cx="${x}" cy="${yV}" r="4.5" class="chart-point"/>`;
+    s += `<text x="${x}" y="${CHART_H - CHART_PAD.b + 18}" class="chart-label-text">${labels[i]}</text>`;
+  });
+
+  s += '</svg>';
+  return s;
+}
+
+// ── 差の棒グラフ（0との比較・前後比較系） ──
+function renderDiffBarChart(labels, diffs, los, his) {
+  const n = labels.length;
+  const allVals = [0, ...los, ...his, ...diffs];
+  const [yMin, yMax] = niceRange(allVals);
+  let s = svgHeader();
+  s += drawAxes(yMin, yMax, n, v => v.toFixed(3));
+
+  const y0 = chartScaleY(0, yMin, yMax);
+  s += `<line x1="${CHART_PAD.l}" y1="${y0}" x2="${CHART_W - CHART_PAD.r}" y2="${y0}" class="chart-zero-line"/>`;
+
+  const xs = labels.map((_, i) => chartXPos(i, n));
+  const barW = Math.min(46, (CHART_W - CHART_PAD.l - CHART_PAD.r) / n * 0.4);
+
+  xs.forEach((x, i) => {
+    const yLo = chartScaleY(los[i], yMin, yMax);
+    const yHi = chartScaleY(his[i], yMin, yMax);
+    const yD  = chartScaleY(diffs[i], yMin, yMax);
+    s += `<line x1="${x}" y1="${yLo}" x2="${x}" y2="${yHi}" class="chart-errorbar-line"/>`;
+    s += `<line x1="${x-6}" y1="${yLo}" x2="${x+6}" y2="${yLo}" class="chart-errorbar-cap"/>`;
+    s += `<line x1="${x-6}" y1="${yHi}" x2="${x+6}" y2="${yHi}" class="chart-errorbar-cap"/>`;
+    const barCls = diffs[i] < 0 ? 'chart-bar neg' : 'chart-bar';
+    s += `<rect x="${x - barW/2}" y="${Math.min(y0,yD)}" width="${barW}" height="${Math.abs(yD-y0)}" rx="3" class="${barCls}" opacity="0.35"/>`;
+    s += `<circle cx="${x}" cy="${yD}" r="4.5" class="chart-point"/>`;
+    s += `<text x="${x}" y="${CHART_H - CHART_PAD.b + 18}" class="chart-label-text">${labels[i]}</text>`;
+  });
+
+  s += '</svg>';
+  return s;
+}
+
+// ── 散布図＋回帰直線（regressionパターン用） ──
+function renderScatterChart(xVals, yVals, b0, b1) {
+  const [xMin, xMax] = niceRange(xVals);
+  const [yMin, yMax] = niceRange(yVals);
+  const innerW = CHART_W - CHART_PAD.l - CHART_PAD.r;
+
+  function sx(v) { return CHART_PAD.l + innerW * (v - xMin) / (xMax - xMin); }
+
+  let s = svgHeader();
+  s += drawAxes(yMin, yMax, xVals.length, v => v.toFixed(2));
+
+  // 回帰直線
+  const yAtXmin = b0 + b1 * xMin, yAtXmax = b0 + b1 * xMax;
+  s += `<line x1="${sx(xMin)}" y1="${chartScaleY(yAtXmin, yMin, yMax)}" x2="${sx(xMax)}" y2="${chartScaleY(yAtXmax, yMin, yMax)}" class="chart-reg-line"/>`;
+
+  // 散布点
+  xVals.forEach((xv, i) => {
+    s += `<circle cx="${sx(xv)}" cy="${chartScaleY(yVals[i], yMin, yMax)}" r="4" class="chart-scatter-pt"/>`;
+  });
+
+  s += '</svg>';
+  return s;
+}
+
+function showResultChart(chartSpec) {
+  const wrap = document.getElementById('resultChart');
+  if (!chartSpec) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+
+  let svg = '';
+  if (chartSpec.type === 'errorbar') {
+    svg = renderErrorBarChart(chartSpec.labels, chartSpec.values, chartSpec.los, chartSpec.his, chartSpec.fmt);
+  } else if (chartSpec.type === 'diffbars') {
+    svg = renderDiffBarChart(chartSpec.labels, chartSpec.diffs, chartSpec.los, chartSpec.his);
+  } else if (chartSpec.type === 'scatter') {
+    svg = renderScatterChart(chartSpec.xVals, chartSpec.yVals, chartSpec.b0, chartSpec.b1);
+  } else {
+    wrap.style.display = 'none'; wrap.innerHTML = ''; return;
+  }
+
+  wrap.innerHTML = `<div class="result-chart-title">📊 ${chartSpec.title || 'グラフ'}（JSで即時描画・Pyodide不使用）</div><div class="chart-svg-wrap">${svg}</div>`;
+  wrap.style.display = 'block';
+}
+
 function runCalculate() {
   const p = wizard.pattern;
   const errEl = document.getElementById('errorMsg');
@@ -2332,6 +3413,9 @@ function runCalculate() {
     `).join('');
     document.getElementById('resultInterpret').textContent = result.interpret;
     document.getElementById('resultBox').style.display = 'block';
+
+    // ★ 軽量SVGグラフ（Pyodide不使用・JSのみで即時描画） ★
+    showResultChart(result.chart);
 
     document.getElementById('codeEditor').value = result.code;
     document.getElementById('codeBox').style.display = 'block';
@@ -2353,6 +3437,7 @@ function runCalculate() {
     errEl.style.display = 'block';
     document.getElementById('resultBox').style.display = 'none';
     document.getElementById('codeBox').style.display = 'none';
+    showResultChart(null);
   }
 }
 
@@ -2367,8 +3452,30 @@ function copyCode() {
 }
 
 // ─── Run Python via Pyodide ────────────────────────────────────────────
+// ★ 軽量方針：matplotlib関連の行は「実行（検算）」のときだけ自動でスキップする。
+// コード欄に表示されるテキスト自体は変更しない（試験の答案としてはそのままコピーして使える）。
+// グラフの見た目はJSのSVGエンジン（showResultChart）で別途・即時に確認できる。
+function stripPlottingLines(code) {
+  const skipPatterns = [
+    /^\s*import\s+matplotlib/,
+    /^\s*matplotlib\./,
+    /^\s*plt\./,
+    /^\s*fig\s*,\s*ax/,
+    /^\s*ax\d?\./,
+    /^\s*ax\[/,
+  ];
+  const lines = code.split('\n');
+  let skippedCount = 0;
+  const kept = lines.filter(line => {
+    const hit = skipPatterns.some(re => re.test(line));
+    if (hit) skippedCount++;
+    return !hit;
+  });
+  return { code: kept.join('\n'), skippedCount };
+}
+
 async function runPython() {
-  const code = document.getElementById('codeEditor').value;
+  const rawCode = document.getElementById('codeEditor').value;
   const outBox = document.getElementById('pyOutputBox');
   const outEl = document.getElementById('pyOutput');
   const runBtn = document.getElementById('runBtn');
@@ -2381,8 +3488,15 @@ async function runPython() {
     let output = '';
     pyodide.setStdout({ batched: (s) => { output += s + '\n'; } });
     pyodide.setStderr({ batched: (s) => { output += s + '\n'; } });
+
+    const { code, skippedCount } = stripPlottingLines(rawCode);
     await pyodide.runPythonAsync(code);
-    outEl.textContent = output || '(出力なし。print() で結果を出してください)';
+
+    let resultText = output || '(出力なし。print() で結果を出してください)';
+    if (skippedCount > 0) {
+      resultText += `\n\n― matplotlib関連の ${skippedCount} 行はこの軽量実行ではスキップしました（グラフは上の📊欄でJS描画を確認してください。コード自体はコピーしてそのまま使えます）`;
+    }
+    outEl.textContent = resultText;
   } catch (e) {
     outEl.classList.add('err');
     outEl.textContent = '⚠ エラー:\n' + (e.message || String(e));
@@ -2392,7 +3506,26 @@ async function runPython() {
 }
 
 // ─── Init ───────────────────────────────────────────────────────────
+renderQuickLinks();
+renderGraphLinks();
+renderChips();
 renderHome();
+
+// "/" キーで検索ボックスにフォーカス（入力中は無効）
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+    e.preventDefault();
+    const sb = document.getElementById('searchBox');
+    if (sb && document.getElementById('homeScreen').classList.contains('active')) {
+      sb.focus();
+    }
+  }
+  if (e.key === 'Escape' && document.activeElement.id === 'searchBox') {
+    clearSearch();
+    document.activeElement.blur();
+  }
+});
+
 </script>
 </body>
 </html>
