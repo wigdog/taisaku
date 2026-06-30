@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>統計2級 実技支援ツール</title>
+<script src="https://cdn.jsdelivr.net/npm/jstat@1.9.6/dist/jstat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #1a1d27;
+    --border: #2a2d3e;
+    --accent: #4f8ef7;
+    --accent2: #7c3aed;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --card-hover: #20243a;
+    --mono: 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; min-height: 100vh; }
+
+  header { border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; background: var(--bg); z-index: 20; }
+  header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.05em; }
+  .badge { font-size: 0.7rem; background: var(--accent2); color: #fff; padding: 2px 8px; border-radius: 999px; }
+  .pyo-status { font-size: 0.7rem; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-left: 4px; }
+  .pyo-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--yellow); transition: background 0.3s; }
+  .pyo-dot.ready { background: var(--green); }
+  .pyo-dot.error { background: var(--red); }
+  .reset-btn { margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: none; white-space: nowrap; }
+  .reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .container { max-width: 880px; margin: 0 auto; padding: 32px 24px 80px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── HOME ── */
+  /* intro は折りたたみ式に変更 */
+  .intro-toggle { font-size: 0.8rem; color: var(--muted); cursor: pointer; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 6px; user-select: none; }
+  .intro-toggle:hover { color: var(--text); }
+  .intro-body { color: var(--muted); font-size: 0.82rem; margin-bottom: 20px; line-height: 1.8; display: none; padding: 10px 14px; background: var(--panel); border-radius: 8px; border: 1px solid var(--border); }
+  .intro-body.open { display: block; }
+  .intro-body strong { color: var(--text); }
+
+  .cat-section { margin-bottom: 36px; }
+  .cat-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .cat-emoji { font-size: 1.4rem; }
+  .cat-title { font-size: 1.1rem; font-weight: 700; }
+  .cat-desc { font-size: 0.82rem; color: #94a3b8; margin-bottom: 14px; }
+
+  /* カードは1列表示で手がかりを読ませる */
+  .pattern-grid { display: flex; flex-direction: column; gap: 8px; }
+  .pattern-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: all 0.12s;
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 6px 16px;
+    align-items: start;
+  }
+  .pattern-card::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px; border-radius: 10px 0 0 10px; }
+  .cat-group1 .pattern-card::before { background: var(--accent); }
+  .cat-group2 .pattern-card::before { background: var(--green); }
+  .cat-relation .pattern-card::before { background: var(--accent2); }
+  .cat-design .pattern-card::before { background: var(--yellow); }
+  .pattern-card:hover { background: var(--card-hover); border-color: var(--accent); }
+  /* card-num は非表示 */
+  .card-num { display: none; }
+  /* タイトルは左上・大きめ */
+  .card-title { font-size: 0.95rem; font-weight: 700; line-height: 1.4; grid-column: 1; grid-row: 1; padding-left: 8px; }
+  /* 使用分布は右上・アクセントカラーで目立たせる */
+  .card-dist { font-size: 0.8rem; font-weight: 700; color: #7dd3fc; grid-column: 2; grid-row: 1; white-space: nowrap; align-self: center; }
+  /* キーワードは左下・「問題文の手がかり」 */
+  .card-keywords { display: flex; flex-wrap: wrap; gap: 4px; grid-column: 1 / 3; grid-row: 2; padding-left: 8px; }
+  .kw { font-size: 0.72rem; background: rgba(255,255,255,0.06); color: #94a3b8; padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); }
+  /* 手がかりキーワードは特別に強調 */
+  .kw.trigger { background: rgba(79,142,247,0.15); color: #93c5fd; border-color: rgba(79,142,247,0.3); }
+
+  /* ── WIZARD ── */
+  .wiz-head { margin-bottom: 20px; }
+  .wiz-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; }
+  /* 使用分布を大きく・目立たせる */
+  .wiz-dist { font-size: 1rem; font-weight: 700; color: #7dd3fc; margin-bottom: 2px; }
+  .formula-hint { background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.3); border-radius: 8px; padding: 12px 16px; margin: 12px 0 20px; font-size: 0.88rem; line-height: 1.9; color: #c4b5fd; }
+  .formula-hint .f-title { font-size: 0.72rem; color: var(--accent2); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+
+  .chat-log { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .chat-q { font-size: 0.8rem; color: var(--muted); margin-bottom: 3px; }
+  .chat-a-row { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px; }
+  .chat-a-row .a-label { font-size: 0.8rem; color: #94a3b8; min-width: 0; flex: 1; }
+  .chat-a-row .a-val { font-family: var(--mono); font-weight: 700; font-size: 1rem; color: var(--accent); white-space: nowrap; }
+
+  .active-q { background: var(--panel); border: 2px solid var(--accent); border-radius: 10px; padding: 18px 20px; margin-bottom: 18px; }
+  .active-q .q-label { font-size: 1rem; font-weight: 700; margin-bottom: 6px; line-height: 1.5; }
+  .active-q .q-hint { font-size: 0.8rem; color: #94a3b8; margin-bottom: 12px; }
+  .active-q input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 11px 14px; font-size: 1.1rem; outline: none; font-family: var(--mono);
+  }
+  .active-q input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,142,247,0.15); }
+  .choice-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choice-btn {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 11px 20px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; transition: all 0.12s;
+  }
+  .choice-btn:hover { border-color: var(--accent); background: var(--card-hover); color: #fff; }
+  .next-btn {
+    margin-top: 14px; background: var(--accent); color: #fff; border: none; padding: 11px 26px;
+    border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+  }
+  .next-btn:hover { opacity: 0.85; }
+  /* progress を目立たせる */
+  .progress { font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px; font-weight: 600; letter-spacing: 0.03em; }
+
+  /* ── RESULT ── */
+  .result-box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  .result-title { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; }
+  .result-values { display: flex; flex-wrap: wrap; gap: 16px 24px; margin-bottom: 16px; }
+  /* label と num のサイズ差を縮める */
+  .result-val { display: flex; flex-direction: column; gap: 3px; }
+  .result-val .label { font-size: 0.82rem; color: #94a3b8; font-weight: 500; }
+  .result-val .num { font-size: 1.2rem; font-weight: 700; color: var(--accent); font-family: var(--mono); }
+  .result-interpret { background: rgba(79,142,247,0.08); border-left: 3px solid var(--accent); padding: 12px 16px; font-size: 0.9rem; line-height: 1.8; border-radius: 0 6px 6px 0; white-space: pre-line; }
+  .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--red); padding: 10px 14px; border-radius: 6px; font-size: 0.88rem; margin-bottom: 12px; }
+
+  /* ── CODE / PYODIDE ── */
+  .code-box { background: #0d1117; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+  .code-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .code-lang { font-size: 0.72rem; color: var(--muted); font-family: var(--mono); }
+  .code-btns { display: flex; gap: 8px; }
+  .copy-btn, .run-btn { border: none; padding: 5px 14px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; color: #fff; }
+  .copy-btn { background: var(--border); color: var(--text); }
+  .copy-btn:hover { background: #3a3f55; }
+  .copy-btn.copied { background: var(--green); color: #fff; }
+  .run-btn { background: var(--green); font-weight: 700; }
+  .run-btn:hover { opacity: 0.85; }
+  .run-btn:disabled { background: var(--border); color: var(--muted); cursor: wait; }
+  #codeEditor {
+    width: 100%; min-height: 220px; background: #0d1117; border: none; outline: none; resize: vertical;
+    color: #a5f3fc; font-family: var(--mono); font-size: 0.82rem; line-height: 1.7; padding: 16px;
+  }
+  .py-output-box { background: #0d1117; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .py-output-head { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 0.72rem; color: var(--muted); font-family: var(--mono); }
+  #pyOutput { padding: 16px; font-family: var(--mono); font-size: 0.82rem; line-height: 1.7; color: #86efac; white-space: pre-wrap; min-height: 24px; }
+  #pyOutput.err { color: var(--red); }
+
+  .calc-btn {
+    background: var(--accent); color: #fff; border: none; padding: 10px 28px; border-radius: 8px;
+    font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-bottom: 24px;
+  }
+  .calc-btn:hover { opacity: 0.85; }
+
+  /* ── FOLLOW-UP SUGGESTIONS ── */
+  .followup-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 0 10px;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .followup-icon { font-size: 1.3rem; }
+  .followup-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+  .followup-sub { font-size: 0.78rem; color: var(--muted); flex-basis: 100%; padding-left: 2px; margin-top: -4px; }
+  .followup-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .followup-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .followup-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+    border-radius: 10px 0 0 10px;
+  }
+  .followup-card.type-extend::before  { background: #f59e0b; }
+  .followup-card.type-next::before    { background: #22c55e; }
+  .followup-card.type-related::before { background: #7c3aed; }
+  .followup-card.type-design::before  { background: #06b6d4; }
+  .followup-card:hover { background: var(--card-hover); border-color: var(--accent); transform: translateX(2px); }
+  .followup-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .followup-badge {
+    font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    white-space: nowrap; letter-spacing: 0.05em;
+  }
+  .type-extend  .followup-badge { background: rgba(245,158,11,0.2);  color: #fbbf24; border: 1px solid rgba(245,158,11,0.4); }
+  .type-next    .followup-badge { background: rgba(34,197,94,0.2);   color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
+  .type-related .followup-badge { background: rgba(124,58,237,0.2);  color: #a78bfa; border: 1px solid rgba(124,58,237,0.4); }
+  .type-design  .followup-badge { background: rgba(6,182,212,0.2);   color: #67e8f9; border: 1px solid rgba(6,182,212,0.4); }
+  .followup-card-title { font-size: 0.92rem; font-weight: 700; }
+  .followup-card-reason { font-size: 0.8rem; color: #94a3b8; line-height: 1.6; }
+  .followup-card-action {
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 8px;
+    font-size: 0.78rem; font-weight: 700; color: var(--accent);
+  }
+  .followup-card-action::after { content: '→'; }
+
+</style>
+</head>
+<body>
+
+<header>
+  <div>📊</div>
+  <h1>統計2級 実技支援ツール</h1>
+  <span class="badge">推測統計</span>
+  <span class="pyo-status"><span class="pyo-dot" id="pyoDot"></span><span id="pyoLabel">Python準備中…</span></span>
+  <button class="reset-btn" id="resetBtn" onclick="goHome()">🔄 最初からやり直す</button>
+</header>
+
+<div class="container">
+
+  <!-- HOME -->
+  <div class="screen active" id="homeScreen">
+    <div class="intro-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
+      ℹ️ 使い方を見る ▾
+    </div>
+    <div class="intro-body">
+      問題文の<strong>手がかり</strong>（「σが与えられている」「データ列が与えられている」など）からカードを選びます。<br>
+      質問に答えながら数値を入力 → <strong>計算する</strong> で即時結果 + Pythonコードが出ます。<br>
+      間違えたら上の「🔄 最初からやり直す」でリセット。
+    </div>
+    <div id="catSections"></div>
+  </div>
+
+  <!-- WIZARD -->
+  <div class="screen" id="wizScreen">
+    <div class="wiz-head">
+      <div class="wiz-title" id="wizTitle"></div>
+      <div class="wiz-dist" id="wizDist"></div>
+      <div class="formula-hint" id="wizFormula"></div>
+    </div>
+
+    <div class="progress" id="wizProgress"></div>
+    <div class="chat-log" id="chatLog"></div>
+    <div class="active-q" id="activeQ"></div>
+
+    <div id="calcStage" style="display:none;">
+      <button class="calc-btn" onclick="runCalculate()">計算する</button>
+      <div class="error-msg" id="errorMsg" style="display:none;"></div>
+
+      <div class="result-box" id="resultBox" style="display:none;">
+        <div class="result-title">計算結果（即時・JS）</div>
+        <div class="result-values" id="resultValues"></div>
+        <div class="result-interpret" id="resultInterpret"></div>
+      </div>
+
+      <!-- ★ 派生分析サジェスト ★ -->
+      <div id="followUpPanel" style="display:none;">
+        <div class="followup-header">
+          <span class="followup-icon">🔀</span>
+          <span class="followup-title">次の分析へ展開する</span>
+          <span class="followup-sub">この結果を踏まえて、派生する問題に有機的につなげよう</span>
+        </div>
+        <div id="followUpCards" class="followup-cards"></div>
+      </div>
+
+      <div class="code-box" id="codeBox" style="display:none;">
+        <div class="code-header">
+          <span class="code-lang">python（編集可）</span>
+          <div class="code-btns">
+            <button class="copy-btn" id="copyBtn" onclick="copyCode()">コピー</button>
+            <button class="run-btn" id="runBtn" onclick="runPython()">▶ 実行（検算）</button>
+          </div>
+        </div>
+        <textarea id="codeEditor" spellcheck="false"></textarea>
+      </div>
+
+      <div style="height:12px"></div>
+      <div class="py-output-box" id="pyOutputBox" style="display:none;">
+        <div class="py-output-head">実行結果（Pyodide）</div>
+        <div id="pyOutput"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── Categories（傾向・流れ別） ─────────────────────────────────────
+const CATEGORIES = [
+  { id: 'group1',   emoji: '📐', title: '1グループを調べる',     desc: '1つの母集団の平均・比率・分散を推定／検定したい' },
+  { id: 'group2',   emoji: '⚖️', title: '2グループを比較する',   desc: 'ABテスト型の比率比較、2群の平均比較など' },
+  { id: 'relation', emoji: '🔗', title: '関係性を調べる',         desc: '相関・回帰など、2つの変数の関係を調べたい' },
+  { id: 'design',   emoji: '📏', title: '設計する',               desc: '必要なサンプルサイズを逆算したい' },
+];
+
+// ─── Pattern definitions ────────────────────────────────────────────
+const PATTERNS = [
+  // ── 1グループを調べる ──
+  {
+    id: 'ci_mean_z', flowCat: 'group1',
+    title: '母平均の区間推定（母分散既知・z分布）',
+    dist: 'z分布（標準正規分布）',
+    keywords: ['σ（母標準偏差）が数値で与えられている', '「σ=◯」「過去のσ」という記述がある', '大標本 n≥30 かつσ既知'],
+    formula: '<div class="f-title">公式</div>x̄ ± z(α/2) × σ/√n<br><span style="color:#94a3b8">z(α/2): 95%→1.960, 99%→2.576, 90%→1.645</span>',
+    fields: [
+      { id: 'n', label: 'サンプルサイズ n は？', type: 'number', default: 100 },
+      { id: 'mean', label: '標本平均 x̄ は？', type: 'number', default: 50, step: 0.01 },
+      { id: 'sigma', label: '母標準偏差 σ（既知の値）は？', type: 'number', default: 10, step: 0.01 },
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const z = jStat.normal.inv(1 - (1-v.conf)/2, 0, 1);
+      const se = v.sigma / Math.sqrt(v.n);
+      const margin = z * se;
+      const lo = v.mean - margin, hi = v.mean + margin;
+      return {
+        vals: [
+          { label: 'z値', val: z.toFixed(3) },
+          { label: '標準誤差 SE', val: se.toFixed(4) },
+          { label: '誤差の幅 E', val: margin.toFixed(4) },
+          { label: '信頼区間 下限', val: lo.toFixed(4) },
+          { label: '信頼区間 上限', val: hi.toFixed(4) },
+        ],
+        interpret: `母平均の${(v.conf*100).toFixed(0)}%信頼区間は [${lo.toFixed(3)}, ${hi.toFixed(3)}] です。\n真の母平均がこの区間に含まれる確率が${(v.conf*100).toFixed(0)}%と解釈できます。`,
+        code: `import numpy as np
+from scipy import stats
+
+n = ${v.n}
+x_bar = ${v.mean}  # 標本平均
+sigma = ${v.sigma}  # 母標準偏差（既知）
+conf = ${v.conf}  # 信頼水準
+
+se = sigma / np.sqrt(n)
+z = stats.norm.ppf(1 - (1 - conf) / 2)
+margin = z * se
+
+lo = x_bar - margin
+hi = x_bar + margin
+
+print(f"z値: {z:.3f}")
+print(f"標準誤差: {se:.4f}")
+print(f"信頼区間: [{lo:.4f}, {hi:.4f}]")`
+      };
+    }
+  },
+  {
+    id: 'ci_mean_t', flowCat: 'group1',
+    title: '母平均の区間推定（母分散未知・t分布）',
+    dist: 't分布（自由度 n-1）',
+    keywords: ['σが与えられていない・不明', '「不偏標準偏差s」または「標本標準偏差」が与えられている', '小標本 n<30 でも使える'],
+    formula: '<div class="f-title">公式</div>x̄ ± t(α/2, n-1) × s/√n<br><span style="color:#94a3b8">s: 不偏標準偏差, 自由度 φ = n-1</span>',
+    fields: [
+      { id: 'n', label: 'サンプルサイズ n は？', type: 'number', default: 15 },
+      { id: 'mean', label: '標本平均 x̄ は？', type: 'number', default: 50, step: 0.01 },
+      { id: 's', label: '不偏標準偏差 s は？', type: 'number', default: 8, step: 0.01 },
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const df = v.n - 1;
+      const t = jStat.studentt.inv(1 - (1-v.conf)/2, df);
+      const se = v.s / Math.sqrt(v.n);
+      const margin = t * se;
+      const lo = v.mean - margin, hi = v.mean + margin;
+      return {
+        vals: [
+          { label: '自由度 φ', val: df },
+          { label: 't値', val: t.toFixed(4) },
+          { label: '標準誤差 SE', val: se.toFixed(4) },
+          { label: '信頼区間 下限', val: lo.toFixed(4) },
+          { label: '信頼区間 上限', val: hi.toFixed(4) },
+        ],
+        interpret: `自由度${df}のt分布を使用。\n母平均の${(v.conf*100).toFixed(0)}%信頼区間は [${lo.toFixed(3)}, ${hi.toFixed(3)}] です。`,
+        code: `import numpy as np
+from scipy import stats
+
+n = ${v.n}
+x_bar = ${v.mean}
+s = ${v.s}  # 不偏標準偏差
+conf = ${v.conf}
+
+df = n - 1
+se = s / np.sqrt(n)
+t = stats.t.ppf(1 - (1 - conf) / 2, df)
+margin = t * se
+
+lo = x_bar - margin
+hi = x_bar + margin
+
+print(f"自由度: {df}")
+print(f"t値: {t:.4f}")
+print(f"標準誤差: {se:.4f}")
+print(f"信頼区間: [{lo:.4f}, {hi:.4f}]")`
+      };
+    }
+  },
+  {
+    id: 'ci_prop', flowCat: 'group1',
+    title: '母比率の区間推定（正規近似）',
+    dist: 'z分布（正規近似）',
+    keywords: ['比率・割合・確率を推定したい', '「◯人中◯人」「◯%」という情報がある', '母比率の信頼区間'],
+    formula: '<div class="f-title">公式</div>p̂ ± z(α/2) × √(p̂(1-p̂)/n)<br><span style="color:#94a3b8">近似条件: np̂≥5, n(1-p̂)≥5</span>',
+    fields: [
+      { id: 'n', label: 'サンプルサイズ n は？', type: 'number', default: 200 },
+      { id: 'count', label: '該当数 x は？', type: 'number', default: 116, hint: '割合のみ分かる場合は x = n×p̂ で換算' },
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const p = v.count / v.n;
+      const z = jStat.normal.inv(1 - (1-v.conf)/2, 0, 1);
+      const se = Math.sqrt(p*(1-p)/v.n);
+      const margin = z * se;
+      const lo = Math.max(0, p - margin), hi = Math.min(1, p + margin);
+      return {
+        vals: [
+          { label: '標本比率 p̂', val: p.toFixed(4) },
+          { label: 'z値', val: z.toFixed(3) },
+          { label: '標準誤差 SE', val: se.toFixed(4) },
+          { label: '信頼区間 下限', val: `${lo.toFixed(4)} (${(lo*100).toFixed(1)}%)` },
+          { label: '信頼区間 上限', val: `${hi.toFixed(4)} (${(hi*100).toFixed(1)}%)` },
+        ],
+        interpret: `標本比率 p̂ = ${p.toFixed(3)}。\n母比率の${(v.conf*100).toFixed(0)}%信頼区間は [${lo.toFixed(3)}, ${hi.toFixed(3)}]（${(lo*100).toFixed(1)}% ～ ${(hi*100).toFixed(1)}%）です。`,
+        code: `import numpy as np
+from scipy import stats
+
+n = ${v.n}
+x = ${v.count}
+conf = ${v.conf}
+
+p_hat = x / n
+z = stats.norm.ppf(1 - (1 - conf) / 2)
+se = np.sqrt(p_hat * (1 - p_hat) / n)
+margin = z * se
+
+lo = max(0, p_hat - margin)
+hi = min(1, p_hat + margin)
+
+print(f"標本比率: {p_hat:.4f}")
+print(f"z値: {z:.3f}")
+print(f"信頼区間: [{lo:.4f}, {hi:.4f}]")
+print(f"  = [{lo*100:.1f}%, {hi*100:.1f}%]")`
+      };
+    }
+  },
+  {
+    id: 'ci_var', flowCat: 'group1',
+    title: '母分散の区間推定（χ²分布）',
+    dist: 'χ²分布（自由度 n-1）',
+    keywords: ['分散・ばらつきを推定したい', '「不偏分散 s²」が与えられている', 'χ²分布を使う'],
+    formula: '<div class="f-title">公式</div>[ (n-1)s² / χ²(α/2), (n-1)s² / χ²(1-α/2) ]',
+    fields: [
+      { id: 'n', label: 'サンプルサイズ n は？', type: 'number', default: 20 },
+      { id: 's2', label: '不偏分散 s² は？', type: 'number', default: 25, step: 0.01 },
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const df = v.n - 1;
+      const alpha = 1 - v.conf;
+      const chi_lo = jStat.chisquare.inv(alpha/2, df);
+      const chi_hi = jStat.chisquare.inv(1-alpha/2, df);
+      const lo = (df * v.s2) / chi_hi;
+      const hi = (df * v.s2) / chi_lo;
+      return {
+        vals: [
+          { label: '自由度 φ', val: df },
+          { label: 'χ²(α/2)', val: chi_lo.toFixed(4) },
+          { label: 'χ²(1-α/2)', val: chi_hi.toFixed(4) },
+          { label: '分散 下限', val: lo.toFixed(4) },
+          { label: '分散 上限', val: hi.toFixed(4) },
+        ],
+        interpret: `母分散の${(v.conf*100).toFixed(0)}%信頼区間は [${lo.toFixed(3)}, ${hi.toFixed(3)}] です。\n母標準偏差の信頼区間は [${Math.sqrt(lo).toFixed(3)}, ${Math.sqrt(hi).toFixed(3)}] です。`,
+        code: `import numpy as np
+from scipy import stats
+
+n = ${v.n}
+s2 = ${v.s2}
+conf = ${v.conf}
+
+df = n - 1
+alpha = 1 - conf
+
+chi_lo = stats.chi2.ppf(alpha / 2, df)
+chi_hi = stats.chi2.ppf(1 - alpha / 2, df)
+
+lo = (df * s2) / chi_hi
+hi = (df * s2) / chi_lo
+
+print(f"χ²(α/2): {chi_lo:.4f}")
+print(f"χ²(1-α/2): {chi_hi:.4f}")
+print(f"母分散の信頼区間: [{lo:.4f}, {hi:.4f}]")
+print(f"母標準偏差の信頼区間: [{np.sqrt(lo):.4f}, {np.sqrt(hi):.4f}]")`
+      };
+    }
+  },
+  {
+    id: 'test_mean_z', flowCat: 'group1',
+    title: '母平均の検定（z検定・母分散既知）',
+    dist: 'z分布',
+    keywords: ['「μ=◯と言えるか？」を検定したい', 'σ（母標準偏差）が既知・数値で与えられている', 'z検定・正規分布'],
+    formula: '<div class="f-title">検定統計量</div>z = (x̄ - μ₀) / (σ/√n)',
+    fields: [
+      { id: 'n', label: 'サンプルサイズ n は？', type: 'number', default: 100 },
+      { id: 'mean', label: '標本平均 x̄ は？', type: 'number', default: 52, step: 0.01 },
+      { id: 'mu0', label: '帰無仮説の母平均 μ₀ は？', type: 'number', default: 50, step: 0.01 },
+      { id: 'sigma', label: '母標準偏差 σ は？', type: 'number', default: 10, step: 0.01 },
+      { id: 'alpha', label: '有意水準は？', type: 'select', options: ['0.05:5%', '0.01:1%', '0.10:10%'] },
+      { id: 'tail', label: '対立仮説は？', type: 'select', options: ['two:両側 (μ≠μ₀)', 'right:右側 (μ>μ₀)', 'left:左側 (μ<μ₀)'] },
+    ],
+    calc(v) {
+      const z_stat = (v.mean - v.mu0) / (v.sigma / Math.sqrt(v.n));
+      let p_val, z_crit, reject;
+      if (v.tail === 'two') {
+        p_val = 2 * (1 - jStat.normal.cdf(Math.abs(z_stat), 0, 1));
+        z_crit = jStat.normal.inv(1 - v.alpha/2, 0, 1);
+        reject = Math.abs(z_stat) > z_crit;
+      } else if (v.tail === 'right') {
+        p_val = 1 - jStat.normal.cdf(z_stat, 0, 1);
+        z_crit = jStat.normal.inv(1 - v.alpha, 0, 1);
+        reject = z_stat > z_crit;
+      } else {
+        p_val = jStat.normal.cdf(z_stat, 0, 1);
+        z_crit = jStat.normal.inv(v.alpha, 0, 1);
+        reject = z_stat < z_crit;
+      }
+      return {
+        vals: [
+          { label: '検定統計量 z', val: z_stat.toFixed(4) },
+          { label: '臨界値', val: z_crit.toFixed(4) },
+          { label: 'p値', val: p_val.toFixed(4) },
+          { label: '判定', val: reject ? '❌ 棄却（有意差あり）' : '✅ 採択（有意差なし）' },
+        ],
+        interpret: `検定統計量 z = ${z_stat.toFixed(3)}、p値 = ${p_val.toFixed(4)}。\n有意水準${(v.alpha*100).toFixed(0)}%で帰無仮説（μ=μ₀=${v.mu0}）を${reject ? '棄却します。母平均は μ₀ と異なると言えます。' : '棄却できません。'}`,
+        code: `import numpy as np
+from scipy import stats
+
+n = ${v.n}
+x_bar = ${v.mean}
+mu0 = ${v.mu0}
+sigma = ${v.sigma}
+alpha = ${v.alpha}
+
+z_stat = (x_bar - mu0) / (sigma / np.sqrt(n))
+${v.tail === 'two'
+  ? `p_val = 2 * (1 - stats.norm.cdf(abs(z_stat)))`
+  : v.tail === 'right'
+  ? `p_val = 1 - stats.norm.cdf(z_stat)`
+  : `p_val = stats.norm.cdf(z_stat)`}
+
+print(f"z統計量: {z_stat:.4f}")
+print(f"p値: {p_val:.4f}")
+print(f"帰無仮説を{'棄却' if p_val < alpha else '採択'}: p={'<' if p_val < alpha else '>='}{alpha}")`
+      };
+    }
+  },
+  {
+    id: 'test_mean_t', flowCat: 'group1',
+    title: '母平均の検定（t検定・母分散未知）',
+    dist: 't分布（自由度 n-1）',
+    keywords: ['「μ=◯と言えるか？」を検定したい', 'σが未知・sだけ与えられている', 't検定・小標本でも可'],
+    formula: '<div class="f-title">検定統計量</div>t = (x̄ - μ₀) / (s/√n)',
+    fields: [
+      { id: 'n', label: 'サンプルサイズ n は？', type: 'number', default: 15 },
+      { id: 'mean', label: '標本平均 x̄ は？', type: 'number', default: 52, step: 0.01 },
+      { id: 'mu0', label: '帰無仮説の母平均 μ₀ は？', type: 'number', default: 50, step: 0.01 },
+      { id: 's', label: '不偏標準偏差 s は？', type: 'number', default: 8, step: 0.01 },
+      { id: 'alpha', label: '有意水準は？', type: 'select', options: ['0.05:5%', '0.01:1%', '0.10:10%'] },
+      { id: 'tail', label: '対立仮説は？', type: 'select', options: ['two:両側 (μ≠μ₀)', 'right:右側 (μ>μ₀)', 'left:左側 (μ<μ₀)'] },
+    ],
+    calc(v) {
+      const df = v.n - 1;
+      const t_stat = (v.mean - v.mu0) / (v.s / Math.sqrt(v.n));
+      let p_val, t_crit, reject;
+      if (v.tail === 'two') {
+        p_val = 2 * (1 - jStat.studentt.cdf(Math.abs(t_stat), df));
+        t_crit = jStat.studentt.inv(1 - v.alpha/2, df);
+        reject = Math.abs(t_stat) > t_crit;
+      } else if (v.tail === 'right') {
+        p_val = 1 - jStat.studentt.cdf(t_stat, df);
+        t_crit = jStat.studentt.inv(1 - v.alpha, df);
+        reject = t_stat > t_crit;
+      } else {
+        p_val = jStat.studentt.cdf(t_stat, df);
+        t_crit = jStat.studentt.inv(v.alpha, df);
+        reject = t_stat < t_crit;
+      }
+      return {
+        vals: [
+          { label: '自由度 φ', val: df },
+          { label: '検定統計量 t', val: t_stat.toFixed(4) },
+          { label: '臨界値', val: t_crit.toFixed(4) },
+          { label: 'p値', val: p_val.toFixed(4) },
+          { label: '判定', val: reject ? '❌ 棄却（有意差あり）' : '✅ 採択（有意差なし）' },
+        ],
+        interpret: `自由度${df}。検定統計量 t = ${t_stat.toFixed(3)}、p値 = ${p_val.toFixed(4)}。\n有意水準${(v.alpha*100).toFixed(0)}%で帰無仮説を${reject ? '棄却します。' : '棄却できません。'}`,
+        code: `import numpy as np
+from scipy import stats
+
+n = ${v.n}
+x_bar = ${v.mean}
+mu0 = ${v.mu0}
+s = ${v.s}
+alpha = ${v.alpha}
+
+df = n - 1
+t_stat = (x_bar - mu0) / (s / np.sqrt(n))
+${v.tail === 'two'
+  ? `p_val = 2 * (1 - stats.t.cdf(abs(t_stat), df))`
+  : v.tail === 'right'
+  ? `p_val = 1 - stats.t.cdf(t_stat, df)`
+  : `p_val = stats.t.cdf(t_stat, df)`}
+
+print(f"自由度: {df}")
+print(f"t統計量: {t_stat:.4f}")
+print(f"p値: {p_val:.4f}")
+print(f"帰無仮説を{'棄却' if p_val < alpha else '採択'}: p={'<' if p_val < alpha else '>='}{alpha}")`
+      };
+    }
+  },
+  {
+    id: 'test_prop', flowCat: 'group1',
+    title: '母比率の検定',
+    dist: 'z分布（正規近似）',
+    keywords: ['「比率がp₀と言えるか？」を検定したい', '「◯人中◯人」でH₀: p=◯という形', '母比率の検定'],
+    formula: '<div class="f-title">検定統計量</div>z = (p̂ - p₀) / √(p₀(1-p₀)/n)',
+    fields: [
+      { id: 'n', label: 'サンプルサイズ n は？', type: 'number', default: 200 },
+      { id: 'count', label: '該当数 x は？', type: 'number', default: 116 },
+      { id: 'p0', label: '帰無仮説の比率 p₀ は？', type: 'number', default: 0.5, step: 0.01 },
+      { id: 'alpha', label: '有意水準は？', type: 'select', options: ['0.05:5%', '0.01:1%', '0.10:10%'] },
+      { id: 'tail', label: '対立仮説は？', type: 'select', options: ['two:両側', 'right:右側 (p>p₀)', 'left:左側 (p<p₀)'] },
+    ],
+    calc(v) {
+      const p_hat = v.count / v.n;
+      const z_stat = (p_hat - v.p0) / Math.sqrt(v.p0*(1-v.p0)/v.n);
+      let p_val;
+      if (v.tail === 'two') p_val = 2 * (1 - jStat.normal.cdf(Math.abs(z_stat), 0, 1));
+      else if (v.tail === 'right') p_val = 1 - jStat.normal.cdf(z_stat, 0, 1);
+      else p_val = jStat.normal.cdf(z_stat, 0, 1);
+      const reject = p_val < v.alpha;
+      return {
+        vals: [
+          { label: '標本比率 p̂', val: p_hat.toFixed(4) },
+          { label: '検定統計量 z', val: z_stat.toFixed(4) },
+          { label: 'p値', val: p_val.toFixed(4) },
+          { label: '判定', val: reject ? '❌ 棄却（有意差あり）' : '✅ 採択（有意差なし）' },
+        ],
+        interpret: `p̂=${p_hat.toFixed(3)}, z=${z_stat.toFixed(3)}, p値=${p_val.toFixed(4)}。\n有意水準${(v.alpha*100).toFixed(0)}%で母比率=p₀=${v.p0}の帰無仮説を${reject ? '棄却します。' : '棄却できません。'}`,
+        code: `import numpy as np
+from scipy import stats
+
+n = ${v.n}
+x = ${v.count}
+p0 = ${v.p0}
+alpha = ${v.alpha}
+
+p_hat = x / n
+z_stat = (p_hat - p0) / np.sqrt(p0 * (1 - p0) / n)
+${v.tail === 'two'
+  ? `p_val = 2 * (1 - stats.norm.cdf(abs(z_stat)))`
+  : v.tail === 'right'
+  ? `p_val = 1 - stats.norm.cdf(z_stat)`
+  : `p_val = stats.norm.cdf(z_stat)`}
+
+print(f"標本比率: {p_hat:.4f}")
+print(f"z統計量: {z_stat:.4f}")
+print(f"p値: {p_val:.4f}")
+print(f"帰無仮説を{'棄却' if p_val < alpha else '採択'}: p={'<' if p_val < alpha else '>='}{alpha}")`
+      };
+    }
+  },
+  {
+    id: 'mle', flowCat: 'group1',
+    title: '最尤推定（正規分布の μ・σ²）',
+    dist: '正規分布の最尤推定量',
+    keywords: ['最尤推定量を求めたい', '正規分布の μ̂・σ̂² を求めたい', 'データ列が与えられている'],
+    formula: '<div class="f-title">公式</div>μ̂=x̄, σ̂²=Σ(x-x̄)²/n（n割り・バイアスあり）',
+    fields: [
+      { id: 'data', label: 'データを入力してください（カンマ区切り）', type: 'text', default: '10, 15, 20, 25, 30' },
+    ],
+    calc(v) {
+      const arr = v.data.split(',').map(s => parseFloat(s.trim())).filter(x => !isNaN(x));
+      if (arr.length < 2) throw new Error('データは2個以上入力してください');
+      const n = arr.length;
+      const mu = arr.reduce((a,b)=>a+b,0)/n;
+      const sigma2_mle = arr.reduce((a,b)=>a+(b-mu)**2,0)/n;
+      const sigma2_unbiased = sigma2_mle * n/(n-1);
+      return {
+        vals: [
+          { label: 'n', val: n },
+          { label: '最尤推定量 μ̂', val: mu.toFixed(4) },
+          { label: '最尤推定量 σ̂²（n割り）', val: sigma2_mle.toFixed(4) },
+          { label: '不偏分散 s²（参考）', val: sigma2_unbiased.toFixed(4) },
+        ],
+        interpret: `最尤推定では μ̂=x̄, σ̂²=Σ(x-x̄)²/n（n割り）。\n不偏分散（n-1割り）との違いに注意。最尤推定量の分散にはバイアスがある。`,
+        code: `import numpy as np
+
+data = np.array([${arr}])
+
+mu_hat = np.mean(data)
+sigma2_hat = np.var(data, ddof=0)     # n割り（最尤推定）
+sigma2_unbiased = np.var(data, ddof=1)  # n-1割り（不偏・参考）
+
+print(f"最尤推定: μ̂ = {mu_hat:.4f}")
+print(f"最尤推定: σ̂² = {sigma2_hat:.4f}  (n割り)")
+print(f"不偏分散: s² = {sigma2_unbiased:.4f}  (n-1割り, 参考)")`
+      };
+    }
+  },
+  {
+    id: 'basic_stats', flowCat: 'group1',
+    title: '基礎統計量（平均・分散・標準誤差）',
+    dist: '記述統計',
+    keywords: ['まず平均・分散・標準誤差を確認したい', 'データ列から基礎統計量を出したい', '集計・確認用'],
+    formula: '<div class="f-title">公式</div>x̄=Σx/n, s²=Σ(x-x̄)²/(n-1), SE=s/√n',
+    fields: [
+      { id: 'data', label: 'データを入力してください（カンマ区切り）', type: 'text', default: '10, 15, 20, 25, 30' },
+    ],
+    calc(v) {
+      const arr = v.data.split(',').map(s => parseFloat(s.trim())).filter(x => !isNaN(x));
+      if (arr.length < 2) throw new Error('データは2個以上入力してください');
+      const n = arr.length;
+      const mean = arr.reduce((a,b)=>a+b,0)/n;
+      const s2 = arr.reduce((a,b)=>a+(b-mean)**2,0)/(n-1);
+      const s = Math.sqrt(s2);
+      const se = s/Math.sqrt(n);
+      return {
+        vals: [
+          { label: 'n', val: n },
+          { label: '平均 x̄', val: mean.toFixed(4) },
+          { label: '不偏分散 s²', val: s2.toFixed(4) },
+          { label: '不偏標準偏差 s', val: s.toFixed(4) },
+          { label: '標準誤差 SE', val: se.toFixed(4) },
+        ],
+        interpret: `n=${n}, 平均=${mean.toFixed(3)}, 不偏標準偏差=${s.toFixed(3)}, 標準誤差=${se.toFixed(3)}。`,
+        code: `import numpy as np
+from scipy import stats
+
+data = np.array([${arr}])
+
+n = len(data)
+mean = np.mean(data)
+s2 = np.var(data, ddof=1)
+s  = np.std(data, ddof=1)
+se = stats.sem(data)
+
+print(f"n: {n}")
+print(f"平均: {mean:.4f}")
+print(f"不偏分散: {s2:.4f}")
+print(f"不偏標準偏差: {s:.4f}")
+print(f"標準誤差: {se:.4f}")`
+      };
+    }
+  },
+
+  // ── 2グループを比較する ──
+  {
+    id: 'ci_prop_diff', flowCat: 'group2',
+    title: '2つの比率の差の区間推定（ABテスト型）',
+    dist: 'z分布（正規近似）',
+    keywords: ['2グループの比率（割合）を比較したい', '「AグループはnA人中xA人」「BグループはnB人中xB人」', '2比率の差の信頼区間'],
+    formula: '<div class="f-title">公式</div>(p̂A-p̂B) ± z(α/2)×√(p̂A(1-p̂A)/nA + p̂B(1-p̂B)/nB)',
+    fields: [
+      { id: 'n_a', label: 'グループA：サンプルサイズ nA は？', type: 'number', default: 2000 },
+      { id: 'x_a', label: 'グループA：該当数 xA は？', type: 'number', default: 52 },
+      { id: 'n_b', label: 'グループB：サンプルサイズ nB は？', type: 'number', default: 2000 },
+      { id: 'x_b', label: 'グループB：該当数 xB は？', type: 'number', default: 76 },
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const p_a = v.x_a / v.n_a, p_b = v.x_b / v.n_b;
+      const diff = p_a - p_b;
+      const se = Math.sqrt(p_a*(1-p_a)/v.n_a + p_b*(1-p_b)/v.n_b);
+      const z = jStat.normal.inv(1 - (1-v.conf)/2, 0, 1);
+      const margin = z * se;
+      const lo = diff - margin, hi = diff + margin;
+      const includesZero = lo <= 0 && hi >= 0;
+      return {
+        vals: [
+          { label: 'p̂A', val: p_a.toFixed(4) },
+          { label: 'p̂B', val: p_b.toFixed(4) },
+          { label: '差 p̂A-p̂B', val: diff.toFixed(4) },
+          { label: '信頼区間 下限', val: lo.toFixed(4) },
+          { label: '信頼区間 上限', val: hi.toFixed(4) },
+        ],
+        interpret: `p̂A=${p_a.toFixed(3)}, p̂B=${p_b.toFixed(3)}, 差=${diff.toFixed(3)}。\n差の${(v.conf*100).toFixed(0)}%信頼区間は [${lo.toFixed(3)}, ${hi.toFixed(3)}]。\nこの区間は0を${includesZero ? '含むため、AとBに有意な差があるとは言えません。' : '含まないため、AとBに有意な差があると言えます。'}`,
+        code: `import numpy as np
+from scipy import stats
+
+n_a, x_a = ${v.n_a}, ${v.x_a}
+n_b, x_b = ${v.n_b}, ${v.x_b}
+conf = ${v.conf}
+
+p_a = x_a / n_a
+p_b = x_b / n_b
+diff = p_a - p_b
+
+se = np.sqrt(p_a*(1-p_a)/n_a + p_b*(1-p_b)/n_b)
+z = stats.norm.ppf(1 - (1 - conf) / 2)
+margin = z * se
+
+lo = diff - margin
+hi = diff + margin
+
+print(f"p_A: {p_a:.4f}, p_B: {p_b:.4f}")
+print(f"差: {diff:.4f}")
+print(f"信頼区間: [{lo:.4f}, {hi:.4f}]")
+print("0を含む → 有意差なし" if lo <= 0 <= hi else "0を含まない → 有意差あり")`
+      };
+    }
+  },
+  {
+    id: 'revenue_impact_3case', flowCat: 'group2',
+    title: '2つの比率の差による売上インパクト推定（最悪・点推定・最善の3ケース）',
+    dist: 'z分布（正規近似）',
+    keywords: ['2比率の差から売上インパクトを出したい', '最悪・点推定・最善の3パターンを見たい', 'CVR差 × 月間訪問者 × 単価で計算'],
+    formula: '<div class="f-title">公式</div>(p̂A-p̂B) ± z(α/2)×√(p̂A(1-p̂A)/nA + p̂B(1-p̂B)/nB)<br>売上インパクト = 採用した差 × volume × revenue_per_unit',
+    fields: [
+      { id: 'n_a', label: 'グループA：サンプルサイズ nA は？', type: 'number', default: 2000 },
+      { id: 'x_a', label: 'グループA：該当数 xA は？', type: 'number', default: 52 },
+      { id: 'n_b', label: 'グループB：サンプルサイズ nB は？', type: 'number', default: 2000 },
+      { id: 'x_b', label: 'グループB：該当数 xB は？', type: 'number', default: 76 },
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+      { id: 'volume', label: 'この施策の影響を受ける月間アクセス数・購入者数などの規模は？', type: 'number', default: 10000 },
+      { id: 'revenue_per_unit', label: 'コンバージョン1件あたりの売上（客単価など）は？', type: 'number', default: 5000 },
+    ],
+    calc(v) {
+      const p_a = v.x_a / v.n_a, p_b = v.x_b / v.n_b;
+      const diff = p_a - p_b;
+      const z = jStat.normal.inv(1 - (1-v.conf)/2, 0, 1);
+
+      // Aのみの信頼区間（1グループの比率のCIと同じ式）
+      const se_a = Math.sqrt(p_a*(1-p_a)/v.n_a);
+      const margin_a = z * se_a;
+      const lo_a = Math.max(0, p_a - margin_a), hi_a = Math.min(1, p_a + margin_a);
+
+      // Bのみの信頼区間
+      const se_b = Math.sqrt(p_b*(1-p_b)/v.n_b);
+      const margin_b = z * se_b;
+      const lo_b = Math.max(0, p_b - margin_b), hi_b = Math.min(1, p_b + margin_b);
+
+      // 差（A-B）の標準誤差と信頼区間
+      const se_diff = Math.sqrt(p_a*(1-p_a)/v.n_a + p_b*(1-p_b)/v.n_b);
+      const margin_diff = z * se_diff;
+      const lo = diff - margin_diff, hi = diff + margin_diff;
+      const includesZero = lo <= 0 && hi >= 0;
+
+      // 売上インパクト（最悪・点推定・最善の3ケース）
+      const worst = lo * v.volume * v.revenue_per_unit;
+      const point = diff * v.volume * v.revenue_per_unit;
+      const best  = hi * v.volume * v.revenue_per_unit;
+
+      const yen = (x) => Math.round(x).toLocaleString('ja-JP');
+
+      return {
+        vals: [
+          { label: 'p̂A（グループAのCVR）', val: p_a.toFixed(4) },
+          { label: 'p̂B（グループBのCVR）', val: p_b.toFixed(4) },
+          { label: 'z値', val: z.toFixed(3) },
+          { label: 'Aの信頼区間', val: `[${lo_a.toFixed(4)}, ${hi_a.toFixed(4)}]` },
+          { label: 'Bの信頼区間', val: `[${lo_b.toFixed(4)}, ${hi_b.toFixed(4)}]` },
+          { label: '差 p̂A-p̂B', val: diff.toFixed(4) },
+          { label: '差の標準誤差 SE', val: se_diff.toFixed(4) },
+          { label: '差の信頼区間', val: `[${lo.toFixed(4)}, ${hi.toFixed(4)}]` },
+          { label: '売上インパクト：最悪ケース', val: `${yen(worst)}円` },
+          { label: '売上インパクト：点推定', val: `${yen(point)}円` },
+          { label: '売上インパクト：最善ケース', val: `${yen(best)}円` },
+        ],
+        interpret: `p̂A=${p_a.toFixed(3)}, p̂B=${p_b.toFixed(3)}, 差=${diff.toFixed(3)}。
+Aの${(v.conf*100).toFixed(0)}%信頼区間：[${lo_a.toFixed(3)}, ${hi_a.toFixed(3)}] ／ Bの${(v.conf*100).toFixed(0)}%信頼区間：[${lo_b.toFixed(3)}, ${hi_b.toFixed(3)}]。
+差の${(v.conf*100).toFixed(0)}%信頼区間：[${lo.toFixed(3)}, ${hi.toFixed(3)}]（この区間は0を${includesZero ? '含むため、統計的には差があるとまだ言い切れません。' : '含まないため、統計的にも有意な差があると言えます。'}）。
+この差を売上に換算すると（規模=${v.volume.toLocaleString('ja-JP')}、単価=${v.revenue_per_unit.toLocaleString('ja-JP')}円）：
+　最悪ケース：${yen(worst)}円${worst < 0 ? '（売上が減少する可能性があります）' : ''}
+　点推定　　：${yen(point)}円
+　最善ケース：${yen(best)}円${best < 0 ? '（最善ケースでも売上が減少する可能性があります）' : ''}`,
+        code: `import numpy as np
+from scipy import stats
+
+n_a, x_a = ${v.n_a}, ${v.x_a}
+n_b, x_b = ${v.n_b}, ${v.x_b}
+conf = ${v.conf}
+volume = ${v.volume}
+revenue_per_unit = ${v.revenue_per_unit}
+
+# 標本比率の計算
+p_a = x_a / n_a
+p_b = x_b / n_b
+diff = p_a - p_b
+
+z = stats.norm.ppf(1 - (1 - conf) / 2)
+
+# Aのみの信頼区間
+se_a = np.sqrt(p_a * (1 - p_a) / n_a)
+margin_a = z * se_a
+lo_a = max(0, p_a - margin_a)
+hi_a = min(1, p_a + margin_a)
+
+# Bのみの信頼区間
+se_b = np.sqrt(p_b * (1 - p_b) / n_b)
+margin_b = z * se_b
+lo_b = max(0, p_b - margin_b)
+hi_b = min(1, p_b + margin_b)
+
+# 差（A-B）の標準誤差と信頼区間
+se_diff = np.sqrt(p_a*(1-p_a)/n_a + p_b*(1-p_b)/n_b)
+margin_diff = z * se_diff
+lo = diff - margin_diff
+hi = diff + margin_diff
+
+print(f"p_A: {p_a:.4f}  (信頼区間: [{lo_a:.4f}, {hi_a:.4f}])")
+print(f"p_B: {p_b:.4f}  (信頼区間: [{lo_b:.4f}, {hi_b:.4f}])")
+print(f"差(p_A - p_B): {diff:.4f}")
+print(f"差の標準誤差 SE: {se_diff:.4f}")
+print(f"差の信頼区間: [{lo:.4f}, {hi:.4f}]")
+print("0を含む → 統計的に差があるとまだ言い切れない" if lo <= 0 <= hi else "0を含まない → 統計的に有意な差がある")
+
+# 売上インパクト（最悪・点推定・最善の3ケース）
+worst = lo * volume * revenue_per_unit
+point = diff * volume * revenue_per_unit
+best  = hi * volume * revenue_per_unit
+
+print(f"\\n売上インパクト（最悪ケース）: {worst:,.0f}円")
+print(f"売上インパクト（点推定）　 : {point:,.0f}円")
+print(f"売上インパクト（最善ケース）: {best:,.0f}円")
+if worst < 0:
+    print("→ 最悪ケースではむしろ売上が減少する可能性がある")`
+      };
+    }
+  },
+  {
+    id: 'test_mean_diff2', flowCat: 'group2',
+    title: '2標本t検定（2グループの平均比較）',
+    dist: 't分布（自由度 nA+nB-2、等分散仮定）',
+    keywords: ['2グループの平均が等しいか検定したい', '「グループAとBの平均差に意味があるか」', '2標本t検定・Welch法'],
+    formula: '<div class="f-title">検定統計量</div>t = (x̄A-x̄B) / √(sp²(1/nA+1/nB))<br><span style="color:#94a3b8">sp²: プールした分散（等分散仮定）</span>',
+    fields: [
+      { id: 'n_a', label: 'グループA：サンプルサイズ nA は？', type: 'number', default: 15 },
+      { id: 'mean_a', label: 'グループA：標本平均 x̄A は？', type: 'number', default: 52, step: 0.01 },
+      { id: 's_a', label: 'グループA：不偏標準偏差 sA は？', type: 'number', default: 8, step: 0.01 },
+      { id: 'n_b', label: 'グループB：サンプルサイズ nB は？', type: 'number', default: 15 },
+      { id: 'mean_b', label: 'グループB：標本平均 x̄B は？', type: 'number', default: 47, step: 0.01 },
+      { id: 's_b', label: 'グループB：不偏標準偏差 sB は？', type: 'number', default: 9, step: 0.01 },
+      { id: 'alpha', label: '有意水準は？', type: 'select', options: ['0.05:5%', '0.01:1%', '0.10:10%'] },
+      { id: 'tail', label: '対立仮説は？', type: 'select', options: ['two:両側 (μA≠μB)', 'right:右側 (μA>μB)', 'left:左側 (μA<μB)'] },
+    ],
+    calc(v) {
+      const df = v.n_a + v.n_b - 2;
+      const sp2 = ((v.n_a-1)*v.s_a**2 + (v.n_b-1)*v.s_b**2) / df;
+      const se = Math.sqrt(sp2*(1/v.n_a + 1/v.n_b));
+      const t_stat = (v.mean_a - v.mean_b) / se;
+      let p_val, t_crit, reject;
+      if (v.tail === 'two') {
+        p_val = 2 * (1 - jStat.studentt.cdf(Math.abs(t_stat), df));
+        t_crit = jStat.studentt.inv(1 - v.alpha/2, df);
+        reject = Math.abs(t_stat) > t_crit;
+      } else if (v.tail === 'right') {
+        p_val = 1 - jStat.studentt.cdf(t_stat, df);
+        t_crit = jStat.studentt.inv(1 - v.alpha, df);
+        reject = t_stat > t_crit;
+      } else {
+        p_val = jStat.studentt.cdf(t_stat, df);
+        t_crit = jStat.studentt.inv(v.alpha, df);
+        reject = t_stat < t_crit;
+      }
+      return {
+        vals: [
+          { label: '自由度 φ', val: df },
+          { label: 'プール分散 sp²', val: sp2.toFixed(4) },
+          { label: '検定統計量 t', val: t_stat.toFixed(4) },
+          { label: '臨界値', val: t_crit.toFixed(4) },
+          { label: 'p値', val: p_val.toFixed(4) },
+          { label: '判定', val: reject ? '❌ 棄却（有意差あり）' : '✅ 採択（有意差なし）' },
+        ],
+        interpret: `自由度${df}。検定統計量 t = ${t_stat.toFixed(3)}、p値 = ${p_val.toFixed(4)}。\n有意水準${(v.alpha*100).toFixed(0)}%で「μA=μB」の帰無仮説を${reject ? '棄却します。AとBの平均は異なると言えます。' : '棄却できません。'}`,
+        code: `import numpy as np
+from scipy import stats
+
+n_a, mean_a, s_a = ${v.n_a}, ${v.mean_a}, ${v.s_a}
+n_b, mean_b, s_b = ${v.n_b}, ${v.mean_b}, ${v.s_b}
+alpha = ${v.alpha}
+
+df = n_a + n_b - 2
+sp2 = ((n_a-1)*s_a**2 + (n_b-1)*s_b**2) / df  # プールした分散
+se = np.sqrt(sp2 * (1/n_a + 1/n_b))
+t_stat = (mean_a - mean_b) / se
+
+${v.tail === 'two'
+  ? `p_val = 2 * (1 - stats.t.cdf(abs(t_stat), df))`
+  : v.tail === 'right'
+  ? `p_val = 1 - stats.t.cdf(t_stat, df)`
+  : `p_val = stats.t.cdf(t_stat, df)`}
+
+print(f"自由度: {df}")
+print(f"t統計量: {t_stat:.4f}")
+print(f"p値: {p_val:.4f}")
+print(f"帰無仮説(μA=μB)を{'棄却' if p_val < alpha else '採択'}: p={'<' if p_val < alpha else '>='}{alpha}")`
+      };
+    }
+  },
+
+  {
+    id: 'test_prop_diff', flowCat: 'group2',
+    title: '2つの比率の差の検定（ABテスト型・コンバージョン率比較）',
+    dist: 'z分布（正規近似・プールした比率を使用）',
+    keywords: ['2比率の差が有意かどうか検定したい', '「コンバージョン率の差はあるか？」', 'プールした比率でz検定'],
+    formula: '<div class="f-title">検定統計量（H₀: pA=pB）</div>z = (p̂A-p̂B) / √(p̄(1-p̄)(1/nA+1/nB))<br><span style="color:#94a3b8">p̄ = (xA+xB)/(nA+nB)　プールした比率</span>',
+    fields: [
+      { id: 'n_a', label: 'グループA：サンプルサイズ nA は？', type: 'number', default: 2000 },
+      { id: 'x_a', label: 'グループA：該当数（CV数）xA は？', type: 'number', default: 52 },
+      { id: 'n_b', label: 'グループB：サンプルサイズ nB は？', type: 'number', default: 2000 },
+      { id: 'x_b', label: 'グループB：該当数（CV数）xB は？', type: 'number', default: 76 },
+      { id: 'alpha', label: '有意水準は？', type: 'select', options: ['0.05:5%', '0.01:1%', '0.10:10%'] },
+      { id: 'tail', label: '対立仮説は？', type: 'select', options: ['two:両側 (pA≠pB)', 'right:右側 (pA>pB)', 'left:左側 (pA<pB)'] },
+    ],
+    calc(v) {
+      const p_a = v.x_a / v.n_a, p_b = v.x_b / v.n_b;
+      const p_pool = (v.x_a + v.x_b) / (v.n_a + v.n_b);
+      const se = Math.sqrt(p_pool * (1 - p_pool) * (1/v.n_a + 1/v.n_b));
+      const z_stat = (p_a - p_b) / se;
+      let p_val, z_crit, reject;
+      if (v.tail === 'two') {
+        p_val = 2 * (1 - jStat.normal.cdf(Math.abs(z_stat), 0, 1));
+        z_crit = jStat.normal.inv(1 - v.alpha/2, 0, 1);
+        reject = Math.abs(z_stat) > z_crit;
+      } else if (v.tail === 'right') {
+        p_val = 1 - jStat.normal.cdf(z_stat, 0, 1);
+        z_crit = jStat.normal.inv(1 - v.alpha, 0, 1);
+        reject = z_stat > z_crit;
+      } else {
+        p_val = jStat.normal.cdf(z_stat, 0, 1);
+        z_crit = jStat.normal.inv(v.alpha, 0, 1);
+        reject = z_stat < z_crit;
+      }
+      return {
+        vals: [
+          { label: 'p̂A', val: p_a.toFixed(4) },
+          { label: 'p̂B', val: p_b.toFixed(4) },
+          { label: 'プールした比率 p̄', val: p_pool.toFixed(4) },
+          { label: '検定統計量 z', val: z_stat.toFixed(4) },
+          { label: '臨界値', val: z_crit.toFixed(4) },
+          { label: 'p値', val: p_val.toFixed(4) },
+          { label: '判定', val: reject ? '❌ 棄却（有意差あり）' : '✅ 採択（有意差なし）' },
+        ],
+        interpret: `p̂A=${p_a.toFixed(3)}, p̂B=${p_b.toFixed(3)}, プール比率p̄=${p_pool.toFixed(3)}。\n検定統計量 z=${z_stat.toFixed(3)}, p値=${p_val.toFixed(4)}。\n有意水準${(v.alpha*100).toFixed(0)}%で「pA=pB（差がない）」の帰無仮説を${reject ? '棄却します。コンバージョン率に有意な差があると言えます。' : '棄却できません。有意な差があるとは言えません。'}`,
+        code: `import numpy as np
+from scipy import stats
+
+n_a, x_a = ${v.n_a}, ${v.x_a}
+n_b, x_b = ${v.n_b}, ${v.x_b}
+alpha = ${v.alpha}
+
+p_a = x_a / n_a
+p_b = x_b / n_b
+p_pool = (x_a + x_b) / (n_a + n_b)  # プールした比率（H0: pA=pBの下での共通比率）
+
+se = np.sqrt(p_pool * (1 - p_pool) * (1/n_a + 1/n_b))
+z_stat = (p_a - p_b) / se
+
+${v.tail === 'two'
+  ? `p_val = 2 * (1 - stats.norm.cdf(abs(z_stat)))`
+  : v.tail === 'right'
+  ? `p_val = 1 - stats.norm.cdf(z_stat)`
+  : `p_val = stats.norm.cdf(z_stat)`}
+
+print(f"p_A: {p_a:.4f}, p_B: {p_b:.4f}, プール比率: {p_pool:.4f}")
+print(f"z統計量: {z_stat:.4f}")
+print(f"p値: {p_val:.4f}")
+print(f"帰無仮説(pA=pB)を{'棄却' if p_val < alpha else '採択'}: p={'<' if p_val < alpha else '>='}{alpha}")`
+      };
+    }
+  },
+
+  // ── 関係性を調べる ──
+  {
+    id: 'ci_corr', flowCat: 'relation',
+    title: '相関係数の区間推定（Fisherのz変換）',
+    dist: 'Fisher z変換 → 正規分布',
+    keywords: ['相関係数 r の信頼区間を求めたい', '「r=◯のとき真の相関はどの範囲か」', 'Fisherのz変換を使う'],
+    formula: '<div class="f-title">公式</div>z = 0.5×ln((1+r)/(1-r))  → z±z(α/2)/√(n-3) → 逆変換',
+    fields: [
+      { id: 'n', label: 'サンプルサイズ n は？', type: 'number', default: 30 },
+      { id: 'r', label: '標本相関係数 r は？', type: 'number', default: 0.65, step: 0.01, hint: '-1 < r < 1' },
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      if (Math.abs(v.r) >= 1) throw new Error('r は -1 < r < 1 の値を入力してください');
+      const z_r = 0.5 * Math.log((1+v.r)/(1-v.r));
+      const z_crit = jStat.normal.inv(1 - (1-v.conf)/2, 0, 1);
+      const se = 1 / Math.sqrt(v.n - 3);
+      const z_lo = z_r - z_crit * se;
+      const z_hi = z_r + z_crit * se;
+      const r_lo = (Math.exp(2*z_lo)-1)/(Math.exp(2*z_lo)+1);
+      const r_hi = (Math.exp(2*z_hi)-1)/(Math.exp(2*z_hi)+1);
+      return {
+        vals: [
+          { label: 'Fisher z変換値', val: z_r.toFixed(4) },
+          { label: 'SE(z)', val: se.toFixed(4) },
+          { label: 'r 下限', val: r_lo.toFixed(4) },
+          { label: 'r 上限', val: r_hi.toFixed(4) },
+        ],
+        interpret: `相関係数の${(v.conf*100).toFixed(0)}%信頼区間は [${r_lo.toFixed(3)}, ${r_hi.toFixed(3)}] です。\n${r_lo > 0 ? '区間に0を含まないため、有意な正の相関があると言えます。' : r_hi < 0 ? '区間に0を含まないため、有意な負の相関があると言えます。' : '区間に0を含むため、有意な相関があるとは言えません。'}`,
+        code: `import numpy as np
+from scipy import stats
+
+n = ${v.n}
+r = ${v.r}
+conf = ${v.conf}
+
+z_r = np.arctanh(r)
+z_crit = stats.norm.ppf(1 - (1 - conf) / 2)
+se = 1 / np.sqrt(n - 3)
+
+z_lo = z_r - z_crit * se
+z_hi = z_r + z_crit * se
+
+r_lo = np.tanh(z_lo)
+r_hi = np.tanh(z_hi)
+
+print(f"Fisher z変換値: {z_r:.4f}")
+print(f"相関係数の信頼区間: [{r_lo:.4f}, {r_hi:.4f}]")`
+      };
+    }
+  },
+  {
+    id: 'test_corr', flowCat: 'relation',
+    title: '無相関検定（相関係数の検定）',
+    dist: 't分布（自由度 n-2）',
+    keywords: ['「相関がないとは言えないか？」を検定したい', 'H₀: ρ=0 の検定', 't検定を相関係数に使う'],
+    formula: '<div class="f-title">検定統計量</div>t = r√(n-2) / √(1-r²)　（H₀: ρ=0）',
+    fields: [
+      { id: 'n', label: 'サンプルサイズ n は？', type: 'number', default: 30 },
+      { id: 'r', label: '標本相関係数 r は？', type: 'number', default: 0.45, step: 0.01 },
+      { id: 'alpha', label: '有意水準は？', type: 'select', options: ['0.05:5%', '0.01:1%', '0.10:10%'] },
+    ],
+    calc(v) {
+      const df = v.n - 2;
+      const t_stat = v.r * Math.sqrt(df) / Math.sqrt(1 - v.r*v.r);
+      const p_val = 2 * (1 - jStat.studentt.cdf(Math.abs(t_stat), df));
+      const t_crit = jStat.studentt.inv(1 - v.alpha/2, df);
+      const reject = Math.abs(t_stat) > t_crit;
+      return {
+        vals: [
+          { label: '自由度 φ', val: df },
+          { label: '検定統計量 t', val: t_stat.toFixed(4) },
+          { label: '臨界値 ±', val: t_crit.toFixed(4) },
+          { label: 'p値', val: p_val.toFixed(4) },
+          { label: '判定', val: reject ? '❌ 棄却（相関あり）' : '✅ 採択（相関なしと言えない）' },
+        ],
+        interpret: `t=${t_stat.toFixed(3)}, p値=${p_val.toFixed(4)}。\n有意水準${(v.alpha*100).toFixed(0)}%でρ=0の帰無仮説を${reject ? '棄却します。有意な相関があると言えます。' : '棄却できません。有意な相関があるとは言えません。'}`,
+        code: `import numpy as np
+from scipy import stats
+
+n = ${v.n}
+r = ${v.r}
+alpha = ${v.alpha}
+
+df = n - 2
+t_stat = r * np.sqrt(df) / np.sqrt(1 - r**2)
+p_val = 2 * (1 - stats.t.cdf(abs(t_stat), df))
+
+print(f"自由度: {df}")
+print(f"t統計量: {t_stat:.4f}")
+print(f"p値: {p_val:.4f}")
+print(f"帰無仮説(ρ=0)を{'棄却' if p_val < alpha else '採択'}: p={'<' if p_val < alpha else '>='}{alpha}")`
+      };
+    }
+  },
+  {
+    id: 'regression', flowCat: 'relation',
+    title: '単回帰分析（係数・決定係数・予測）',
+    dist: 't分布（自由度 n-2）',
+    keywords: ['xとyの回帰直線を求めたい', '「係数b0・b1・R²・yの予測値」が欲しい', 'データ列が2列（xとy）与えられている'],
+    formula: '<div class="f-title">公式</div>ŷ = b0 + b1x,  b1 = Sxy/Sxx,  R² = 1 - SSE/Syy',
+    fields: [
+      { id: 'data_x', label: '説明変数 x のデータは？（カンマ区切り）', type: 'text', default: '1, 2, 3, 4, 5, 6' },
+      { id: 'data_y', label: '目的変数 y のデータは？（カンマ区切り・x と同じ個数）', type: 'text', default: '3, 5, 8, 9, 13, 15' },
+      { id: 'x0', label: '予測したい x の値は？（不要なら 0 のままでOK）', type: 'number', default: 0, step: 0.01 },
+      { id: 'conf', label: '回帰係数の信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const x = v.data_x.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+      const y = v.data_y.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+      if (x.length < 3 || x.length !== y.length) throw new Error('x と y は同じ個数（3個以上）で入力してください');
+      const n = x.length;
+      const mx = x.reduce((a,b)=>a+b,0)/n, my = y.reduce((a,b)=>a+b,0)/n;
+      let sxx=0, syy=0, sxy=0;
+      for (let i=0;i<n;i++){ sxx += (x[i]-mx)**2; syy += (y[i]-my)**2; sxy += (x[i]-mx)*(y[i]-my); }
+      const b1 = sxy/sxx, b0 = my - b1*mx;
+      let sse=0;
+      for (let i=0;i<n;i++){ const yhat = b0+b1*x[i]; sse += (y[i]-yhat)**2; }
+      const df = n-2;
+      const s2 = sse/df;
+      const se_b1 = Math.sqrt(s2/sxx);
+      const t_stat = b1/se_b1;
+      const p_val = 2*(1-jStat.studentt.cdf(Math.abs(t_stat), df));
+      const r2 = 1 - sse/syy;
+      const t_crit = jStat.studentt.inv(1-(1-v.conf)/2, df);
+      const b1_lo = b1 - t_crit*se_b1, b1_hi = b1 + t_crit*se_b1;
+      const y0 = b0 + b1*v.x0;
+      return {
+        vals: [
+          { label: '切片 b0', val: b0.toFixed(4) },
+          { label: '傾き b1', val: b1.toFixed(4) },
+          { label: '決定係数 R²', val: r2.toFixed(4) },
+          { label: 't統計量（b1=0検定）', val: t_stat.toFixed(4) },
+          { label: 'p値', val: p_val.toFixed(4) },
+          { label: `x=${v.x0} での予測値 ŷ`, val: y0.toFixed(4) },
+        ],
+        interpret: `回帰式: ŷ = ${b0.toFixed(3)} + ${b1.toFixed(3)}x。決定係数 R² = ${r2.toFixed(3)}。\n傾きb1の${(v.conf*100).toFixed(0)}%信頼区間は [${b1_lo.toFixed(3)}, ${b1_hi.toFixed(3)}]。\nb1=0の検定: p値=${p_val.toFixed(4)}（${p_val < 0.05 ? '5%水準で有意。xはyに影響していると言えます。' : '5%水準で有意とは言えません。'}）\nx=${v.x0} のときの予測値は ŷ=${y0.toFixed(3)}。`,
+        code: `import numpy as np
+from scipy import stats
+
+x = np.array([${x}])
+y = np.array([${y}])
+conf = ${v.conf}
+x0 = ${v.x0}  # 予測したいxの値
+
+n = len(x)
+mx, my = np.mean(x), np.mean(y)
+sxx = np.sum((x-mx)**2)
+syy = np.sum((y-my)**2)
+sxy = np.sum((x-mx)*(y-my))
+
+b1 = sxy / sxx
+b0 = my - b1*mx
+
+yhat = b0 + b1*x
+sse = np.sum((y-yhat)**2)
+df = n - 2
+s2 = sse / df
+se_b1 = np.sqrt(s2 / sxx)
+t_stat = b1 / se_b1
+p_val = 2 * (1 - stats.t.cdf(abs(t_stat), df))
+r2 = 1 - sse/syy
+
+t_crit = stats.t.ppf(1 - (1-conf)/2, df)
+b1_lo, b1_hi = b1 - t_crit*se_b1, b1 + t_crit*se_b1
+y0 = b0 + b1*x0
+
+print(f"回帰式: y_hat = {b0:.4f} + {b1:.4f} x")
+print(f"決定係数 R^2: {r2:.4f}")
+print(f"b1の{conf*100:.0f}%信頼区間: [{b1_lo:.4f}, {b1_hi:.4f}]")
+print(f"b1=0検定: t={t_stat:.4f}, p={p_val:.4f}")
+print(f"x={x0} での予測値: {y0:.4f}")`
+      };
+    }
+  },
+
+  // ── 設計する ──
+  {
+    id: 'ci_n', flowCat: 'design',
+    title: '必要サンプルサイズの逆算',
+    dist: 'z分布（正規近似）',
+    keywords: ['必要なサンプルサイズを決めたい', '「誤差をE以下にするにはnがいくつ必要か」', 'σ既知（z分布）または比率の逆算'],
+    formula: '<div class="f-title">公式</div>n ≥ (z(α/2) × σ/E)²<br><span style="color:#94a3b8">E: 許容誤差, 比率の場合は σ = √(p̂(1-p̂))</span>',
+    fields: [
+      { id: 'mode', label: '推定対象は？', type: 'select', options: ['mean:母平均', 'prop:母比率'] },
+      { id: 'E', label: '許容誤差 E は？', type: 'number', default: 2, step: 0.01 },
+      { id: 'sigma', label: '母標準偏差 σ は？（母比率推定時は使いません）', type: 'number', default: 10, step: 0.01 },
+      { id: 'p', label: '事前推定比率 p̂ は？（母平均推定時は使いません・不明なら0.5）', type: 'number', default: 0.5, step: 0.01 },
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const z = jStat.normal.inv(1 - (1-v.conf)/2, 0, 1);
+      let n_raw, detail;
+      if (v.mode === 'mean') {
+        n_raw = Math.pow(z * v.sigma / v.E, 2);
+        detail = `(z × σ / E)² = (${z.toFixed(3)} × ${v.sigma} / ${v.E})²`;
+      } else {
+        n_raw = Math.pow(z, 2) * v.p * (1-v.p) / Math.pow(v.E, 2);
+        detail = `z² × p̂(1-p̂) / E² = ${z.toFixed(3)}² × ${v.p}×${(1-v.p).toFixed(2)} / ${v.E}²`;
+      }
+      const n = Math.ceil(n_raw);
+      return {
+        vals: [
+          { label: 'z値', val: z.toFixed(3) },
+          { label: '理論値 n', val: n_raw.toFixed(2) },
+          { label: '必要サンプルサイズ n', val: n + '（切り上げ）' },
+        ],
+        interpret: `${detail} = ${n_raw.toFixed(2)}\n切り上げて n = ${n} 以上のサンプルが必要です。`,
+        code: `import numpy as np
+from scipy import stats
+import math
+
+conf = ${v.conf}
+E = ${v.E}
+${v.mode === 'mean' ? `sigma = ${v.sigma}` : `p_hat = ${v.p}`}
+
+z = stats.norm.ppf(1 - (1 - conf) / 2)
+${v.mode === 'mean'
+  ? `n_raw = (z * sigma / E) ** 2`
+  : `n_raw = z**2 * p_hat * (1 - p_hat) / E**2`}
+n = math.ceil(n_raw)
+
+print(f"z値: {z:.3f}")
+print(f"理論値: {n_raw:.2f}")
+print(f"必要サンプルサイズ: n = {n}")`
+      };
+    }
+  },
+
+  // ★ 演習対応追加パターン ★
+
+  // ── データ列入力→t分布区間推定（演習2: 睡眠時間, 演習3: 会食費用） ──
+  {
+    id: 'ci_t_rawdata', flowCat: 'group1',
+    title: '母平均の区間推定（生データ入力・t分布）',
+    dist: 't分布（母分散未知・データ列から自動計算）',
+    keywords: ['データの数値列がそのまま与えられている', '自分で x̄ や U² を計算しなくていい', '「以下のデータから…」という問題'],
+    formula: '<div class="f-title">公式</div>x̄ ± t(α/2, n-1) × U/√n<br><span style="color:#94a3b8">データ列を入力すると x̄・U² を自動算出します</span>',
+    fields: [
+      { id: 'data', label: 'データをカンマ区切りで入力（例: 6.5, 7.5, 5.5, 7.5）', type: 'text', default: '6.5, 7.5, 5.5, 7.5, 8.0, 6.0, 8.5, 5.0' },
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const raw = String(v.data).split(',').map(s => parseFloat(s.trim())).filter(x => !isNaN(x));
+      if (raw.length < 2) return { error: 'データを2個以上入力してください' };
+      const n = raw.length;
+      const xbar = raw.reduce((a,b) => a+b, 0) / n;
+      const u2 = raw.reduce((a,b) => a + Math.pow(b-xbar,2), 0) / (n-1);
+      const u = Math.sqrt(u2);
+      const df = n - 1;
+      const t = jStat.studentt.inv(1 - (1-v.conf)/2, df);
+      const se = u / Math.sqrt(n);
+      const lo = xbar - t * se;
+      const hi = xbar + t * se;
+      return {
+        vals: [
+          { label: 'n', val: n },
+          { label: '標本平均 x̄', val: xbar.toFixed(4) },
+          { label: '不偏分散 U²', val: u2.toFixed(4) },
+          { label: '標準誤差 U/√n', val: se.toFixed(4) },
+          { label: 't値（自由度'+df+'）', val: t.toFixed(4) },
+          { label: '下限', val: lo.toFixed(4) },
+          { label: '上限', val: hi.toFixed(4) },
+        ],
+        interpret: 'Step1 x̄ = ' + xbar.toFixed(4) + '\nStep2 U² = ' + u2.toFixed(4) + '（不偏分散）\nStep3 SE = U/√n = ' + se.toFixed(4) + '\nStep4 自由度 = n-1 = ' + df + '\nStep5 t値 = ' + t.toFixed(4) + '\nStep6 ' + (v.conf*100).toFixed(0) + '%信頼区間: [' + lo.toFixed(4) + ', ' + hi.toFixed(4) + ']',
+        code: `import numpy as np
+from scipy import stats
+
+data = [` + raw.join(', ') + `]
+conf = ` + v.conf + `
+
+n = len(data)
+x_bar = np.mean(data)
+u2 = np.var(data, ddof=1)
+u  = np.std(data, ddof=1)
+se = u / np.sqrt(n)
+df = n - 1
+t  = stats.t.ppf(1 - (1 - conf) / 2, df=df)
+lo = x_bar - t * se
+hi = x_bar + t * se
+
+print(f"n={n}, x_bar={x_bar:.4f}, U2={u2:.4f}")
+print(f"SE={se:.4f}, df={df}, t={t:.4f}")
+print(f"{conf*100:.0f}%信頼区間: [{lo:.4f}, {hi:.4f}]")`,
+      };
+    }
+  },
+
+  // ── t分布探索型サンプルサイズ（演習4: スーパーチャット） ──
+  {
+    id: 'ci_n_t_search', flowCat: 'design',
+    title: '必要サンプルサイズの逆算（t分布・区間幅を標準偏差の◯倍以下）',
+    dist: 't分布（母分散未知・繰り返し探索型）',
+    keywords: ['「区間の半幅をσの◯倍以下」にしたいがσ未知', 't分布でサンプルサイズを繰り返し探索', 'n=2からwhileループで最小nを見つける'],
+    formula: '<div class="f-title">公式</div>t(α/2, n-1)/√n ≤ h（hは標準偏差の倍率）<br><span style="color:#94a3b8">n=2から探索して条件を満たす最小nを見つけます</span>',
+    fields: [
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+      { id: 'h_ratio', label: '区間半幅を標準偏差の何倍以下にしたいか？（例: 0.5 → σの0.5倍）', type: 'number', default: 0.5, step: 0.01 },
+    ],
+    calc(v) {
+      let n = 2;
+      while (n < 10000) {
+        const t = jStat.studentt.inv(1 - (1-v.conf)/2, n-1);
+        const h = t / Math.sqrt(n);
+        if (h <= v.h_ratio) break;
+        n++;
+      }
+      const t_f = jStat.studentt.inv(1 - (1-v.conf)/2, n-1);
+      const h_f = t_f / Math.sqrt(n);
+      return {
+        vals: [
+          { label: '必要サンプルサイズ n', val: n },
+          { label: 't（df='+(n-1)+'）', val: t_f.toFixed(4) },
+          { label: '実際の半幅比 t/√n', val: h_f.toFixed(4) },
+          { label: '目標半幅比', val: v.h_ratio },
+        ],
+        interpret: 'n=' + n + ' のとき t/√n = ' + h_f.toFixed(4) + ' ≤ ' + v.h_ratio + '（目標）\n→ 必要なサンプルサイズは少なくとも ' + n + ' です。',
+        code: `from scipy import stats
+import numpy as np
+
+alpha = ` + v.conf + `
+target_ratio = ` + v.h_ratio + `
+
+n = 2
+while True:
+    upper = stats.t.ppf(1 - (1 - alpha) / 2, df=n - 1)
+    h = upper / np.sqrt(n)
+    if h <= target_ratio:
+        break
+    n += 1
+
+print(f"必要なサンプルサイズ: {n}")
+print(f"t/sqrt(n) = {upper/np.sqrt(n):.4f} <= {target_ratio}")`,
+      };
+    }
+  },
+
+  // ── 2比率の差の区間推定＋売上換算（ABテスト総合演習） ──
+  {
+    id: 'ci_2prop_diff_biz', flowCat: 'group2',
+    title: '2比率の差の区間推定（売上換算つき・ABテスト型）',
+    dist: 'z分布（正規近似）',
+    keywords: ['ABテストで「どちらが有意に高いか」 + 売上試算', '2グループの比率比較・売上換算付き', '最悪ケース / 点推定 / 最善ケースで試算したい'],
+    formula: '<div class="f-title">公式</div>(p̂B - p̂A) ± z × √[p̂A(1-p̂A)/nA + p̂B(1-p̂B)/nB]<br><span style="color:#94a3b8">差の信頼区間を求め、月間売上への寄与を3ケース試算</span>',
+    fields: [
+      { id: 'n_a',              label: 'A案：サンプルサイズ nA は？', type: 'number', default: 2000 },
+      { id: 'success_a',        label: 'A案：成功数（購入者数など）は？', type: 'number', default: 52 },
+      { id: 'n_b',              label: 'B案：サンプルサイズ nB は？', type: 'number', default: 2000 },
+      { id: 'success_b',        label: 'B案：成功数（購入者数など）は？', type: 'number', default: 76 },
+      { id: 'conf',             label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+      { id: 'monthly_visitors', label: '月間訪問者数（売上試算用・不要なら0）', type: 'number', default: 1000000 },
+      { id: 'unit_price',       label: '1件あたり平均購買額（円・不要なら0）', type: 'number', default: 3500 },
+    ],
+    calc(v) {
+      const pa = v.success_a / v.n_a;
+      const pb = v.success_b / v.n_b;
+      const diff = pb - pa;
+      const z = jStat.normal.inv(1 - (1-v.conf)/2, 0, 1);
+      const se = Math.sqrt(pa*(1-pa)/v.n_a + pb*(1-pb)/v.n_b);
+      const lo = diff - z * se;
+      const hi = diff + z * se;
+      let salesText = '';
+      if (v.monthly_visitors > 0 && v.unit_price > 0) {
+        const worst = lo * v.monthly_visitors * v.unit_price;
+        const point = diff * v.monthly_visitors * v.unit_price;
+        const best  = hi * v.monthly_visitors * v.unit_price;
+        salesText = '\n\n【売上試算（月間）】\n最悪ケース: ' + (worst >= 0 ? '+' : '') + Math.round(worst/10000) + '万円\n点推定:     ' + (point >= 0 ? '+' : '') + Math.round(point/10000) + '万円\n最善ケース: ' + (best >= 0 ? '+' : '') + Math.round(best/10000) + '万円';
+      }
+      return {
+        vals: [
+          { label: 'p̂A', val: pa.toFixed(4) },
+          { label: 'p̂B', val: pb.toFixed(4) },
+          { label: 'p̂B - p̂A', val: diff.toFixed(4) },
+          { label: '下限', val: lo.toFixed(4) },
+          { label: '上限', val: hi.toFixed(4) },
+        ],
+        interpret: '差の' + (v.conf*100).toFixed(0) + '%信頼区間: [' + lo.toFixed(4) + ', ' + hi.toFixed(4) + ']\n' + (lo > 0 ? '→ 下限 > 0：B案がA案より有意に高い' : '→ 下限 ≤ 0：差は有意とは言えない') + salesText,
+        code: `import numpy as np
+from scipy import stats
+
+n_a, success_a = ` + v.n_a + `, ` + v.success_a + `
+n_b, success_b = ` + v.n_b + `, ` + v.success_b + `
+conf = ` + v.conf + `
+
+pa = success_a / n_a
+pb = success_b / n_b
+diff = pb - pa
+z = stats.norm.ppf(1 - (1 - conf) / 2)
+se = np.sqrt(pa*(1-pa)/n_a + pb*(1-pb)/n_b)
+lo = diff - z * se
+hi = diff + z * se
+
+print(f"pa={pa:.4f}, pb={pb:.4f}, diff={diff:.4f}")
+print(f"{conf*100:.0f}%CI: [{lo:.4f}, {hi:.4f}]")
+
+monthly_visitors = ` + v.monthly_visitors + `
+unit_price = ` + v.unit_price + `
+if monthly_visitors > 0 and unit_price > 0:
+    print(f"最悪: {lo*monthly_visitors*unit_price/10000:.0f}万円")
+    print(f"点推定: {diff*monthly_visitors*unit_price/10000:.0f}万円")
+    print(f"最善: {hi*monthly_visitors*unit_price/10000:.0f}万円")`,
+      };
+    }
+  },
+
+  // ── 2グループ平均比較（ゲームデータ・滞在時間演習） ──
+  {
+    id: 'ci_2mean_compare', flowCat: 'group2',
+    title: '2グループ平均の区間推定と比較（生データ または 統計量入力）',
+    dist: 't分布（母分散未知）',
+    keywords: ['2グループの信頼区間を並べて比較したい', '「区間が重なるか」で差を視覚的に判断', '生データまたは統計量どちらでも入力可'],
+    formula: '<div class="f-title">公式</div>各グループの CI を計算して区間の重なりを確認<br><span style="color:#94a3b8">重なりなし→明確な差あり、重なりあり→差は不明瞭</span>',
+    fields: [
+      { id: 'input_mode', label: '入力方法は？', type: 'select', options: ['stats:統計量を直接入力', 'data:生データを入力'] },
+      { id: 'n_a',    label: 'A：サンプルサイズ nA', type: 'number', default: 25 },
+      { id: 'xbar_a', label: 'A：標本平均 x̄A', type: 'number', default: 102, step: 0.01 },
+      { id: 'sd_a',   label: 'A：標本標準偏差 sA（不偏）', type: 'number', default: 38, step: 0.01 },
+      { id: 'n_b',    label: 'B：サンプルサイズ nB', type: 'number', default: 22 },
+      { id: 'xbar_b', label: 'B：標本平均 x̄B', type: 'number', default: 135, step: 0.01 },
+      { id: 'sd_b',   label: 'B：標本標準偏差 sB（不偏）', type: 'number', default: 42, step: 0.01 },
+      { id: 'data_a', label: 'A：生データ（カンマ区切り）', type: 'text', default: '126, 118, 121, 112, 117, 132, 114, 118, 120, 119, 116, 109, 123, 118, 125, 106, 127, 110, 108, 106' },
+      { id: 'data_b', label: 'B：生データ（カンマ区切り）', type: 'text', default: '108, 101, 112, 99, 112, 107, 106, 113, 114, 115, 109, 120, 113, 104, 108, 105, 103, 117, 111, 98' },
+      { id: 'conf',   label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+      { id: 'kpi',    label: 'KPI目標値（任意・不要なら0）', type: 'number', default: 0, step: 0.01 },
+    ],
+    calc(v) {
+      let na, xbA, sdA, nb, xbB, sdB;
+      if (v.input_mode === 'data') {
+        const ra = String(v.data_a).split(',').map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x));
+        const rb = String(v.data_b).split(',').map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x));
+        if (ra.length < 2 || rb.length < 2) return { error: '生データを2個以上入力してください' };
+        na = ra.length; xbA = ra.reduce((a,b)=>a+b,0)/na; sdA = Math.sqrt(ra.reduce((a,b)=>a+Math.pow(b-xbA,2),0)/(na-1));
+        nb = rb.length; xbB = rb.reduce((a,b)=>a+b,0)/nb; sdB = Math.sqrt(rb.reduce((a,b)=>a+Math.pow(b-xbB,2),0)/(nb-1));
+      } else {
+        na=v.n_a; xbA=v.xbar_a; sdA=v.sd_a; nb=v.n_b; xbB=v.xbar_b; sdB=v.sd_b;
+      }
+      const tA = jStat.studentt.inv(1-(1-v.conf)/2, na-1);
+      const tB = jStat.studentt.inv(1-(1-v.conf)/2, nb-1);
+      const seA = sdA/Math.sqrt(na), seB = sdB/Math.sqrt(nb);
+      const loA = xbA - tA*seA, hiA = xbA + tA*seA;
+      const loB = xbB - tB*seB, hiB = xbB + tB*seB;
+      const overlap = !(hiA < loB || hiB < loA);
+      let kpiText = '';
+      if (v.kpi > 0) {
+        kpiText = '\n\n【KPI=' + v.kpi + ' 達成可否】\nA: 上限' + hiA.toFixed(2) + ' → ' + (hiA >= v.kpi ? '達成の可能性あり' : 'KPI未達が濃厚') + '\nB: 上限' + hiB.toFixed(2) + ' → ' + (hiB >= v.kpi ? '達成の可能性あり' : 'KPI未達が濃厚');
+      }
+      return {
+        vals: [
+          { label: 'A: x̄ / CI', val: xbA.toFixed(2) + ' / [' + loA.toFixed(2) + ', ' + hiA.toFixed(2) + ']' },
+          { label: 'B: x̄ / CI', val: xbB.toFixed(2) + ' / [' + loB.toFixed(2) + ', ' + hiB.toFixed(2) + ']' },
+          { label: '信頼区間の重なり', val: overlap ? '⚠️ 重なりあり' : '✅ 重なりなし' },
+        ],
+        interpret: 'A: [' + loA.toFixed(2) + ', ' + hiA.toFixed(2) + ']\nB: [' + loB.toFixed(2) + ', ' + hiB.toFixed(2) + ']\n→ 信頼区間が' + (overlap ? '重なっているため、差は明確とは言えません' : '重なっていないため、明確な差があります') + kpiText,
+        code: `import numpy as np
+from scipy import stats
+
+group_A = [` + String(v.data_a) + `]
+group_B = [` + String(v.data_b) + `]
+conf = ` + v.conf + `
+
+na = len(group_A); xbA = np.mean(group_A); sdA = np.std(group_A, ddof=1)
+nb = len(group_B); xbB = np.mean(group_B); sdB = np.std(group_B, ddof=1)
+tA = stats.t.ppf(1-(1-conf)/2, df=na-1)
+tB = stats.t.ppf(1-(1-conf)/2, df=nb-1)
+loA = xbA - tA*sdA/np.sqrt(na); hiA = xbA + tA*sdA/np.sqrt(na)
+loB = xbB - tB*sdB/np.sqrt(nb); hiB = xbB + tB*sdB/np.sqrt(nb)
+print(f"A: {xbA:.2f}  [{loA:.2f}, {hiA:.2f}]")
+print(f"B: {xbB:.2f}  [{loB:.2f}, {hiB:.2f}]")
+print(f"CI重なり: {not (hiA < loB or hiB < loA)}")`,
+      };
+    }
+  },
+
+  // ── 2比率の差（前後比較型：指標A/B・政策評価） ──
+  {
+    id: 'ci_2prop_before_after', flowCat: 'group2',
+    title: '2比率の差の区間推定（前後比較型・政策評価など）',
+    dist: 'z分布（正規近似）',
+    keywords: ['制度導入前後・施策前後で比率が変わったか', '「2022年度はp̂₁=◯」「2024年度はp̂₂=◯」という形', '0を含まなければ有意な変化'],
+    formula: '<div class="f-title">公式</div>(p̂2 - p̂1) ± z × √[p̂1(1-p̂1)/n1 + p̂2(1-p̂2)/n2]<br><span style="color:#94a3b8">前後の比率差の信頼区間が0を含まなければ有意な変化</span>',
+    fields: [
+      { id: 'p1', label: '前の比率 p̂1', type: 'number', default: 0.345, step: 0.001 },
+      { id: 'n1', label: '前のサンプルサイズ n1', type: 'number', default: 600 },
+      { id: 'p2', label: '後の比率 p̂2', type: 'number', default: 0.398, step: 0.001 },
+      { id: 'n2', label: '後のサンプルサイズ n2', type: 'number', default: 620 },
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const diff = v.p2 - v.p1;
+      const z = jStat.normal.inv(1-(1-v.conf)/2, 0, 1);
+      const se = Math.sqrt(v.p1*(1-v.p1)/v.n1 + v.p2*(1-v.p2)/v.n2);
+      const lo = diff - z*se, hi = diff + z*se;
+      return {
+        vals: [
+          { label: 'p̂1（前）', val: v.p1.toFixed(4) },
+          { label: 'p̂2（後）', val: v.p2.toFixed(4) },
+          { label: '差 p̂2 - p̂1', val: diff.toFixed(4) },
+          { label: '下限', val: lo.toFixed(4) },
+          { label: '上限', val: hi.toFixed(4) },
+        ],
+        interpret: '差の' + (v.conf*100).toFixed(0) + '%信頼区間: [' + lo.toFixed(4) + ', ' + hi.toFixed(4) + ']\n' + (lo > 0 ? '→ 有意な上昇' : hi < 0 ? '→ 有意な低下' : '→ 0を含むため、有意な変化とは言えません'),
+        code: `import numpy as np
+from scipy import stats
+
+p1, n1 = ` + v.p1 + `, ` + v.n1 + `
+p2, n2 = ` + v.p2 + `, ` + v.n2 + `
+conf = ` + v.conf + `
+
+diff = p2 - p1
+z = stats.norm.ppf(1 - (1 - conf) / 2)
+se = np.sqrt(p1*(1-p1)/n1 + p2*(1-p2)/n2)
+lo = diff - z * se
+hi = diff + z * se
+
+print(f"diff = {diff:.4f}")
+print(f"{conf*100:.0f}%CI: [{lo:.4f}, {hi:.4f}]")
+print("0を含む:", lo <= 0 <= hi)`,
+      };
+    }
+  },
+
+  // ── 2平均の差（Welch法：指標C・子育て費用など） ──
+  {
+    id: 'ci_2mean_diff', flowCat: 'group2',
+    title: '2グループ平均の差の区間推定（t分布・統計量入力）',
+    dist: 't分布（Welch近似）',
+    keywords: ['2グループ平均の差そのものの信頼区間がほしい', '差が0を含むかで有意性を判断', 'Welch法・等分散不要'],
+    formula: '<div class="f-title">公式</div>(x̄2 - x̄1) ± t × √(s1²/n1 + s2²/n2)<br><span style="color:#94a3b8">Welch法：等分散を仮定しない2標本の差の信頼区間</span>',
+    fields: [
+      { id: 'n1',    label: 'グループ1 サンプルサイズ n1', type: 'number', default: 300 },
+      { id: 'xbar1', label: 'グループ1 標本平均 x̄1', type: 'number', default: 76, step: 0.01 },
+      { id: 'sd1',   label: 'グループ1 標本標準偏差 s1', type: 'number', default: 24, step: 0.01 },
+      { id: 'n2',    label: 'グループ2 サンプルサイズ n2', type: 'number', default: 310 },
+      { id: 'xbar2', label: 'グループ2 標本平均 x̄2', type: 'number', default: 71, step: 0.01 },
+      { id: 'sd2',   label: 'グループ2 標本標準偏差 s2', type: 'number', default: 22, step: 0.01 },
+      { id: 'conf',  label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const s1sq = v.sd1*v.sd1/v.n1, s2sq = v.sd2*v.sd2/v.n2;
+      const se = Math.sqrt(s1sq + s2sq);
+      const df = Math.pow(s1sq+s2sq,2) / (Math.pow(s1sq,2)/(v.n1-1) + Math.pow(s2sq,2)/(v.n2-1));
+      const t = jStat.studentt.inv(1-(1-v.conf)/2, df);
+      const diff = v.xbar2 - v.xbar1;
+      const lo = diff - t*se, hi = diff + t*se;
+      return {
+        vals: [
+          { label: 'x̄2 - x̄1', val: diff.toFixed(4) },
+          { label: '自由度（Welch）', val: df.toFixed(2) },
+          { label: 'SE', val: se.toFixed(4) },
+          { label: '下限', val: lo.toFixed(4) },
+          { label: '上限', val: hi.toFixed(4) },
+        ],
+        interpret: '差の' + (v.conf*100).toFixed(0) + '%信頼区間: [' + lo.toFixed(4) + ', ' + hi.toFixed(4) + ']\n' + (lo > 0 ? '→ 有意な上昇' : hi < 0 ? '→ 有意な低下' : '→ 0を含むため差は有意とは言えません'),
+        code: `import numpy as np
+from scipy import stats
+
+n1, xbar1, sd1 = ` + v.n1 + `, ` + v.xbar1 + `, ` + v.sd1 + `
+n2, xbar2, sd2 = ` + v.n2 + `, ` + v.xbar2 + `, ` + v.sd2 + `
+conf = ` + v.conf + `
+
+diff = xbar2 - xbar1
+se = np.sqrt(sd1**2/n1 + sd2**2/n2)
+df = (sd1**2/n1 + sd2**2/n2)**2 / ((sd1**2/n1)**2/(n1-1) + (sd2**2/n2)**2/(n2-1))
+t = stats.t.ppf(1-(1-conf)/2, df=df)
+lo = diff - t * se
+hi = diff + t * se
+print(f"diff={diff:.4f}, Welch df={df:.2f}")
+print(f"{conf*100:.0f}%CI: [{lo:.4f}, {hi:.4f}]")`,
+      };
+    }
+  },
+
+  // ── 相関係数の区間幅を半分にするサンプルサイズ探索 ──
+  {
+    id: 'ci_corr_n_search', flowCat: 'design',
+    title: '相関係数の区間推定：区間幅を半分にするサンプルサイズ探索',
+    dist: 'Fisherのz変換',
+    keywords: ['相関係数の信頼区間を狭くしたい', '「区間幅を今の半分にするには何件必要？」', 'Fisherのz変換で繰り返し探索'],
+    formula: '<div class="f-title">公式</div>Fisher z変換後の幅 = 2z(α/2)/√(n-3)<br><span style="color:#94a3b8">元のnから目標幅になるまでnを増やして探索</span>',
+    fields: [
+      { id: 'r',            label: '標本相関係数 r は？', type: 'number', default: 0.65, step: 0.01 },
+      { id: 'n0',           label: '元のサンプルサイズ n₀ は？', type: 'number', default: 20 },
+      { id: 'conf',         label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+      { id: 'target_ratio', label: '区間幅を何分の1にしたいか？（例: 0.5→半分）', type: 'number', default: 0.5, step: 0.01 },
+    ],
+    calc(v) {
+      const z_a = jStat.normal.inv(1-(1-v.conf)/2, 0, 1);
+      const z_r = 0.5 * Math.log((1+v.r)/(1-v.r));
+      const ciW = (n) => {
+        const zL = z_r - z_a/Math.sqrt(n-3);
+        const zU = z_r + z_a/Math.sqrt(n-3);
+        const lo = (Math.exp(2*zL)-1)/(Math.exp(2*zL)+1);
+        const hi = (Math.exp(2*zU)-1)/(Math.exp(2*zU)+1);
+        return hi - lo;
+      };
+      const w0 = ciW(v.n0);
+      const wt = w0 * v.target_ratio;
+      let nn = v.n0 + 1;
+      while (nn < 100000 && ciW(nn) > wt) nn++;
+      return {
+        vals: [
+          { label: '元の区間幅', val: w0.toFixed(4) },
+          { label: '目標区間幅', val: wt.toFixed(4) },
+          { label: '必要 n', val: nn },
+          { label: '倍率 n/n₀', val: (nn/v.n0).toFixed(2) + '倍' },
+        ],
+        interpret: '元（n=' + v.n0 + '）: CI幅 = ' + w0.toFixed(4) + '\n目標幅 = ' + wt.toFixed(4) + '\n→ 少なくとも n = ' + nn + ' 必要（約' + (nn/v.n0).toFixed(2) + '倍）',
+        code: `import numpy as np
+from scipy import stats
+
+r, n0, conf, target_ratio = ` + v.r + `, ` + v.n0 + `, ` + v.conf + `, ` + v.target_ratio + `
+z_a = stats.norm.ppf(1-(1-conf)/2)
+z_r = 0.5 * np.log((1+r)/(1-r))
+
+def ci_width(n):
+    zL = z_r - z_a/np.sqrt(n-3); zU = z_r + z_a/np.sqrt(n-3)
+    lo = (np.exp(2*zL)-1)/(np.exp(2*zL)+1)
+    hi = (np.exp(2*zU)-1)/(np.exp(2*zU)+1)
+    return hi - lo
+
+w0 = ci_width(n0)
+wt = w0 * target_ratio
+n = n0 + 1
+while ci_width(n) > wt:
+    n += 1
+print(f"元の幅(n={n0}): {w0:.4f}, 目標幅: {wt:.4f}")
+print(f"必要なn: {n} (約{n/n0:.2f}倍)")`,
+      };
+    }
+  },
+
+  // ── 単回帰の逆算（目標y→必要x・3ケース） ──
+  {
+    id: 'reg_inverse', flowCat: 'relation',
+    title: '単回帰の逆算（目標y値→必要x値・悲観/点推定/楽観）',
+    dist: 'OLS回帰（t分布で信頼区間）',
+    keywords: ['目標とするyから必要なxを逆算したい', '「売上◯万を達成するには広告費いくら？」', '悲観・点推定・楽観の3パターンで試算'],
+    formula: '<div class="f-title">公式</div>x = (y_target - b0) / b1<br><span style="color:#94a3b8">b1のCIを使い悲観・点推定・楽観の3ケースで逆算</span>',
+    fields: [
+      { id: 'xy_data',  label: 'x,y のデータ（1行=1件 カンマ区切り）', type: 'text', default: '80,320\n100,350\n90,340\n120,380\n150,410\n130,395\n160,430\n140,415\n180,460\n200,480\n175,470\n210,500' },
+      { id: 'y_target', label: '達成したい y の目標値は？', type: 'number', default: 480, step: 0.01 },
+      { id: 'conf',     label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const lines = String(v.xy_data).trim().split(/[\n;]/);
+      const xs = [], ys = [];
+      for (const line of lines) {
+        const parts = line.split(',').map(s=>parseFloat(s.trim()));
+        if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) { xs.push(parts[0]); ys.push(parts[1]); }
+      }
+      if (xs.length < 3) return { error: 'データを3件以上入力してください（1行1件、x,y 形式）' };
+      const n = xs.length;
+      const xm = xs.reduce((a,b)=>a+b,0)/n, ym = ys.reduce((a,b)=>a+b,0)/n;
+      const Sxx = xs.reduce((a,xi)=>a+(xi-xm)**2, 0);
+      const Sxy = xs.reduce((a,xi,i)=>a+(xi-xm)*(ys[i]-ym), 0);
+      const b1 = Sxy/Sxx, b0 = ym - b1*xm;
+      const yh = xs.map(xi => b0+b1*xi);
+      const SSe = ys.reduce((a,yi,i)=>a+(yi-yh[i])**2, 0);
+      const se_b1 = Math.sqrt(SSe/(n-2)/Sxx);
+      const t = jStat.studentt.inv(1-(1-v.conf)/2, n-2);
+      const b1lo = b1-t*se_b1, b1hi = b1+t*se_b1;
+      const r2 = 1 - SSe/ys.reduce((a,yi)=>a+(yi-ym)**2,0);
+      const xp = (v.y_target-b0)/b1;
+      const xw = (v.y_target-b0)/b1lo;
+      const xb = (v.y_target-b0)/b1hi;
+      return {
+        vals: [
+          { label: 'b0', val: b0.toFixed(4) },
+          { label: 'b1', val: b1.toFixed(4) },
+          { label: 'b1 ' + (v.conf*100).toFixed(0) + '%CI', val: '[' + b1lo.toFixed(4) + ', ' + b1hi.toFixed(4) + ']' },
+          { label: 'R²', val: r2.toFixed(4) },
+          { label: '逆算x（悲観）', val: xw.toFixed(2) },
+          { label: '逆算x（点推定）', val: xp.toFixed(2) },
+          { label: '逆算x（楽観）', val: xb.toFixed(2) },
+        ],
+        interpret: '回帰式: y = ' + b0.toFixed(3) + ' + ' + b1.toFixed(3) + 'x\nR² = ' + r2.toFixed(4) + '\nb1の' + (v.conf*100).toFixed(0) + '%CI: [' + b1lo.toFixed(4) + ', ' + b1hi.toFixed(4) + ']\n\ny = ' + v.y_target + ' を達成するための x:\n悲観ケース: ' + xw.toFixed(2) + '\n点推定:     ' + xp.toFixed(2) + '\n楽観ケース: ' + xb.toFixed(2),
+        code: `import numpy as np
+from scipy import stats
+
+rows_raw = """80,320
+100,350
+90,340
+120,380
+150,410
+130,395
+160,430
+140,415
+180,460
+200,480
+175,470
+210,500"""
+rows = [list(map(float, r.split(','))) for r in rows_raw.strip().split('\\n')]
+xs = np.array([r[0] for r in rows])
+ys = np.array([r[1] for r in rows])
+y_target = ` + v.y_target + `
+conf = ` + v.conf + `
+
+n = len(xs)
+b1, b0 = np.polyfit(xs, ys, 1)
+y_hat = b0 + b1 * xs
+SSe = np.sum((ys - y_hat)**2)
+Sxx = np.sum((xs - xs.mean())**2)
+se_b1 = np.sqrt(SSe / (n - 2) / Sxx)
+t = stats.t.ppf(1-(1-conf)/2, df=n-2)
+b1_lo = b1 - t * se_b1
+b1_hi = b1 + t * se_b1
+r2 = 1 - SSe / np.sum((ys - ys.mean())**2)
+
+print(f"y = {b0:.3f} + {b1:.3f}x, R^2={r2:.4f}")
+print(f"b1 {conf*100:.0f}%CI: [{b1_lo:.4f}, {b1_hi:.4f}]")
+print(f"y={y_target} を達成するための x:")
+print(f"  悲観: {(y_target-b0)/b1_lo:.2f}")
+print(f"  点推定: {(y_target-b0)/b1:.2f}")
+print(f"  楽観: {(y_target-b0)/b1_hi:.2f}")`,
+      };
+    }
+  },
+
+  // ── 選挙出口調査サンプルサイズ設計 ──
+  {
+    id: 'ci_election_n', flowCat: 'design',
+    title: '選挙出口調査のサンプルサイズ設計（2候補の差を検出）',
+    dist: 'z分布（正規近似）',
+    keywords: ['2候補の差を統計的に断言したい', '「A候補がB候補より有意に多い」と言えるnは？', '2比率の差の信頼区間下限 > 0 を保証するn'],
+    formula: '<div class="f-title">公式</div>n ≥ z² × (pA(1-pA) + pB(1-pB)) / (pA-pB)²<br><span style="color:#94a3b8">差の信頼区間下限 > 0 になる最小サンプルサイズ</span>',
+    fields: [
+      { id: 'pA',   label: 'A候補の想定得票率 pA', type: 'number', default: 0.55, step: 0.01 },
+      { id: 'pB',   label: 'B候補の想定得票率 pB', type: 'number', default: 0.30, step: 0.01 },
+      { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
+    ],
+    calc(v) {
+      const z = jStat.normal.inv(1-(1-v.conf)/2, 0, 1);
+      const diff = v.pA - v.pB;
+      if (diff <= 0) return { error: 'pA > pB の場合のみ使えます' };
+      const n_raw = z*z * (v.pA*(1-v.pA) + v.pB*(1-v.pB)) / (diff*diff);
+      const n = Math.ceil(n_raw);
+      const se = Math.sqrt((v.pA*(1-v.pA) + v.pB*(1-v.pB)) / n);
+      const lo = diff - z*se;
+      return {
+        vals: [
+          { label: 'pA - pB', val: diff.toFixed(4) },
+          { label: 'z値', val: z.toFixed(4) },
+          { label: '必要サンプルサイズ n', val: n },
+          { label: '差の信頼区間下限（確認）', val: lo.toFixed(4) + (lo > 0 ? ' ✅' : ' ⚠️') },
+        ],
+        interpret: (v.conf*100).toFixed(0) + '%信頼度でA候補の当選を断言するには n = ' + n + ' 以上が必要。\n（差の信頼区間下限 = ' + lo.toFixed(4) + (lo > 0 ? ' > 0 ✅' : ' ≤ 0 ⚠️') + '）',
+        code: `import numpy as np
+from scipy import stats
+import math
+
+pA, pB, conf = ` + v.pA + `, ` + v.pB + `, ` + v.conf + `
+z = stats.norm.ppf(1-(1-conf)/2)
+diff = pA - pB
+n_raw = z**2 * (pA*(1-pA) + pB*(1-pB)) / diff**2
+n = math.ceil(n_raw)
+se = np.sqrt((pA*(1-pA) + pB*(1-pB)) / n)
+lo = diff - z * se
+print(f"必要サンプルサイズ: n = {n}")
+print(f"差の信頼区間下限: {lo:.4f} ({'OK' if lo > 0 else 'NG'})")`,
+      };
+    }
+  },
+
+];
+
+// ─── Pyodide setup ───────────────────────────────────────────────────
+let pyodideReadyPromise = null;
+function initPyodide() {
+  pyodideReadyPromise = (async () => {
+    try {
+      const pyodide = await loadPyodide();
+      await pyodide.loadPackage(['numpy', 'scipy']);
+      document.getElementById('pyoDot').classList.add('ready');
+      document.getElementById('pyoLabel').textContent = 'Python準備完了';
+      return pyodide;
+    } catch (e) {
+      document.getElementById('pyoDot').classList.add('error');
+      document.getElementById('pyoLabel').textContent = 'Python読み込み失敗';
+      throw e;
+    }
+  })();
+}
+initPyodide();
+
+// ─── Follow-up suggestions ──────────────────────────────────────────────
+// 各パターンIDに対する派生分析の定義
+// type: 'extend'=深掘り, 'next'=次のステップ, 'related'=関連分析, 'design'=設計
+
+const FOLLOW_UPS = {
+  // ── 母比率の検定 → 区間推定で幅を確認 / 売上試算 ──
+  'test_prop': [
+    {
+      targetId: 'ci_prop',
+      type: 'extend',
+      badge: '深掘り',
+      label: '比率の区間推定（幅で見積もる）',
+      reason: '検定で棄却／非棄却が分かった。次は「真の比率はどの幅にあるか」を信頼区間で確認しよう。点推定だけでなく幅で報告するのが実務の基本。',
+      action: '区間推定へ'
+    },
+    {
+      targetId: 'ci_n',
+      type: 'design',
+      badge: 'サンプル設計',
+      label: '必要サンプルサイズを逆算する',
+      reason: '「もっと精度を上げたい」「誤差±2%に収めたい」ときは、必要サンプルサイズを先に設計する。試験では逆算問題も頻出。',
+      action: '設計問題へ'
+    }
+  ],
+
+  // ── 2比率の差の区間推定（ABテスト）→ 売上換算 / 検定 ──
+  'ci_prop_diff': [
+    {
+      targetId: 'revenue_impact_3case',
+      type: 'extend',
+      badge: '深掘り・実務応用',
+      label: '売上貢献を最悪・点推定・最善の3ケースで試算する',
+      reason: '帰無仮説を棄却できた（下限>0）なら、次は「この差がビジネスにどれだけ貢献するか」を見積もろう。信頼区間の下限=最悪ケース、差=点推定、上限=最善ケースで月間売上への寄与を計算する。',
+      action: '売上試算へ'
+    },
+    {
+      targetId: 'test_prop_diff',
+      type: 'related',
+      badge: '関連分析',
+      label: '2比率の差の検定（有意かどうか確かめる）',
+      reason: '区間推定でB案が高いことは分かった。検定アプローチで p値を求めることで「その差は偶然ではないか」をより厳密に確認できる。',
+      action: '検定へ'
+    },
+    {
+      targetId: 'ci_n',
+      type: 'design',
+      badge: 'サンプル設計',
+      label: '次回テストのサンプルサイズを設計する',
+      reason: '「今回は有意でなかった」「もっと小さな差も検出したい」ときは、必要サンプルサイズを先に決めておく。',
+      action: '設計問題へ'
+    }
+  ],
+
+  // ── 2比率の差の検定 → 区間推定で幅確認 / 売上試算 ──
+  'test_prop_diff': [
+    {
+      targetId: 'ci_prop_diff',
+      type: 'next',
+      badge: '次のステップ',
+      label: '2比率の差の区間推定（差の幅を信頼区間で見る）',
+      reason: '検定で「差がある」と分かったなら、次は「差はどの幅か」を区間推定で明らかにしよう。実務では p値だけでなく効果量＋信頼区間をセットで報告するのが標準。',
+      action: '区間推定へ'
+    },
+    {
+      targetId: 'revenue_impact_3case',
+      type: 'extend',
+      badge: '深掘り・実務応用',
+      label: '売上貢献を3ケースで試算する',
+      reason: '有意差が確認できたら、信頼区間の幅を使って「最悪でもこれだけ、最善ではこれだけ」と意思決定に必要な数値を揃えよう。',
+      action: '売上試算へ'
+    }
+  ],
+
+  // ── 2比率の差の区間推定＋売上換算（ci_2prop_diff_biz）→ 深掘り ──
+  'ci_2prop_diff_biz': [
+    {
+      targetId: 'ci_n',
+      type: 'design',
+      badge: 'サンプル設計',
+      label: '次回テストの精度を上げるサンプルサイズを設計',
+      reason: '今回の信頼区間の幅が広すぎた場合、必要なサンプルサイズを逆算して次のテスト計画に活かそう。',
+      action: '設計問題へ'
+    }
+  ],
+
+  // ── 母平均の区間推定（z）→ t分布との使い分け / サンプル設計 ──
+  'ci_mean_z': [
+    {
+      targetId: 'ci_mean_t',
+      type: 'related',
+      badge: '関連分析',
+      label: '母分散が未知の場合（t分布）と比べてみる',
+      reason: '今はσ既知でz分布を使ったが、実務では母分散不明のケースが多い。t分布を使う場合と信頼区間がどう変わるか確認しよう。',
+      action: 't分布版へ'
+    },
+    {
+      targetId: 'test_mean_z',
+      type: 'related',
+      badge: '関連分析',
+      label: '検定にも繋げる（この平均は基準値と有意に異なるか？）',
+      reason: '区間推定で範囲が分かった。「その平均値は仮説の値μ₀と統計的に有意に異なるか」を検定で確かめるステップへ。',
+      action: '検定へ'
+    },
+    {
+      targetId: 'ci_n',
+      type: 'design',
+      badge: 'サンプル設計',
+      label: '誤差±◯以内に収めるには何件必要？',
+      reason: '信頼区間の幅（誤差）が大きすぎる場合、逆算して「誤差±2以内にするには何件必要か」を設計してみよう。',
+      action: 'サンプルサイズ設計へ'
+    }
+  ],
+
+  // ── 母平均の区間推定（t）→ 検定 / サンプル設計 ──
+  'ci_mean_t': [
+    {
+      targetId: 'test_mean_t',
+      type: 'related',
+      badge: '関連分析',
+      label: '検定にも繋げる（この平均は基準値と有意に異なるか？）',
+      reason: '区間推定で幅が確認できた。次は「その平均値はμ₀と有意に異なるか」を1標本t検定で確かめよう。両者は表裏一体の関係。',
+      action: '検定へ'
+    },
+    {
+      targetId: 'ci_n',
+      type: 'design',
+      badge: 'サンプル設計',
+      label: '必要サンプルサイズを逆算する',
+      reason: '信頼区間が広い場合、必要なサンプルサイズを事前設計する問題が頻出。誤差の許容幅から n を逆算しよう。',
+      action: '設計問題へ'
+    }
+  ],
+
+  // ── 平均の検定（z）→ 区間推定 ──
+  'test_mean_z': [
+    {
+      targetId: 'ci_mean_z',
+      type: 'next',
+      badge: '次のステップ',
+      label: '区間推定で「幅」も確認する',
+      reason: '検定で棄却／非棄却が分かった。次は信頼区間で「真の平均はどの範囲か」を幅で見積もろう。実務報告では検定＋区間推定がセット。',
+      action: '区間推定へ'
+    }
+  ],
+
+  // ── 平均の検定（t）→ 区間推定 / 2群比較 ──
+  'test_mean_t': [
+    {
+      targetId: 'ci_mean_t',
+      type: 'next',
+      badge: '次のステップ',
+      label: '区間推定で「幅」も確認する',
+      reason: '検定の棄却・非棄却だけでなく、「真の平均はどの幅にあるか」を区間推定で可視化しよう。',
+      action: '区間推定へ'
+    },
+    {
+      targetId: 'test_mean_diff2',
+      type: 'related',
+      badge: '関連分析',
+      label: '2グループの平均を比較する（2標本t検定）',
+      reason: '「AグループとBグループで平均に差があるか」という問題に自然に展開できる。Welch法を使った2標本t検定へ。',
+      action: '2標本t検定へ'
+    }
+  ],
+
+  // ── 2標本t検定 → 区間推定 / 売上試算 ──
+  'test_mean_diff2': [
+    {
+      targetId: 'ci_2mean_diff',
+      type: 'next',
+      badge: '次のステップ',
+      label: '2グループの平均差の区間推定（幅で見積もる）',
+      reason: '検定で「差がある」と分かったなら、次は「差はどの幅か」を区間推定で示そう。効果量の評価にも繋がる。',
+      action: '区間推定へ'
+    },
+    {
+      targetId: 'ci_2mean_compare',
+      type: 'related',
+      badge: '関連分析',
+      label: '両グループの信頼区間を並べて比較する',
+      reason: 'エラーバー検定の発想で「区間が重なるか」を視覚的に判断する方法。試験でよく出るエラーバー問題の対策に。',
+      action: '比較グラフ的推定へ'
+    }
+  ],
+
+  // ── 相関係数の区間推定 → 検定 ──
+  'ci_corr': [
+    {
+      targetId: 'test_corr',
+      type: 'related',
+      badge: '関連分析',
+      label: '無相関の検定（相関は偶然ではないか確かめる）',
+      reason: '相関係数の信頼区間が0を含まなければ有意。区間推定の結果を無相関検定で裏付けよう。表裏一体の関係。',
+      action: '無相関検定へ'
+    },
+    {
+      targetId: 'regression',
+      type: 'extend',
+      badge: '深掘り',
+      label: '回帰分析に展開する（予測・推定）',
+      reason: '相関があると分かったなら、回帰直線を当てはめて「xからyを予測する」問題に自然に繋がる。',
+      action: '回帰分析へ'
+    }
+  ],
+
+  // ── 無相関検定 → 回帰分析 ──
+  'test_corr': [
+    {
+      targetId: 'ci_corr',
+      type: 'next',
+      badge: '次のステップ',
+      label: '相関係数の区間推定（幅で見積もる）',
+      reason: '検定で「相関あり」と言えるか分かった。次は「相関係数の真値はどの幅か」を信頼区間で示そう。',
+      action: '区間推定へ'
+    },
+    {
+      targetId: 'regression',
+      type: 'extend',
+      badge: '深掘り',
+      label: '回帰分析・逆推定に展開する',
+      reason: '相関が確認できたなら、回帰直線を使って「yがこの値のとき、xはいくつ？」という逆推定問題にも対応できる。',
+      action: '回帰分析へ'
+    }
+  ],
+
+  // ── 回帰分析 → 逆推定 ──
+  'regression': [
+    {
+      targetId: 'reg_inverse',
+      type: 'extend',
+      badge: '深掘り',
+      label: '逆推定（yからxを求める）',
+      reason: '回帰直線が求まったなら、「yがこの値になるにはxがいくつ必要か？」という逆推定問題に対応できる。試験の発展問題に頻出。',
+      action: '逆推定へ'
+    }
+  ],
+
+  // ── 母比率の区間推定 → 必要サンプルサイズ ──
+  'ci_prop': [
+    {
+      targetId: 'ci_n',
+      type: 'design',
+      badge: 'サンプル設計',
+      label: '必要サンプルサイズを逆算する',
+      reason: '「誤差±3%以内にしたい」など精度の要件があるときは、必要nを先に設計する。試験の選挙速報問題などでも頻出。',
+      action: '設計問題へ'
+    },
+    {
+      targetId: 'test_prop',
+      type: 'related',
+      badge: '関連分析',
+      label: '比率の検定（この比率は基準値と有意に異なるか？）',
+      reason: '区間推定で「基準値p₀が区間に含まれるか」を確認する方法もあるが、p値で答えたい場合は検定で確かめよう。',
+      action: '検定へ'
+    }
+  ],
+
+  // ── revenue_impact_3case → サンプル設計 ──
+  'revenue_impact_3case': [
+    {
+      targetId: 'ci_n',
+      type: 'design',
+      badge: 'サンプル設計',
+      label: '次回テストのサンプルサイズを設計する',
+      reason: '売上試算の不確実性（最悪と最善の幅）が大きい場合、より精度の高い推定のために必要なサンプルサイズを設計しよう。',
+      action: 'サンプルサイズ設計へ'
+    }
+  ],
+
+  // ── サンプルサイズ設計 → 実際に区間推定する ──
+  'ci_n': [
+    {
+      targetId: 'ci_prop',
+      type: 'next',
+      badge: '次のステップ',
+      label: '実際に比率の区間推定をやってみる',
+      reason: '必要サンプルサイズを設計したなら、そのnで実際にデータを取った後の区間推定もシミュレーションできる。',
+      action: '区間推定へ'
+    }
+  ],
+};
+
+// ─── Follow-up rendering ─────────────────────────────────────────────
+function renderFollowUps(patternId) {
+  const suggestions = FOLLOW_UPS[patternId];
+  const panel = document.getElementById('followUpPanel');
+  const cards = document.getElementById('followUpCards');
+
+  if (!suggestions || suggestions.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  cards.innerHTML = suggestions.map(s => {
+    const target = PATTERNS.find(p => p.id === s.targetId);
+    if (!target) return '';
+    return `
+      <div class="followup-card type-${s.type}" onclick="jumpToFollowUp('${s.targetId}')">
+        <div class="followup-card-head">
+          <span class="followup-badge">${s.badge}</span>
+          <span class="followup-card-title">${s.label}</span>
+        </div>
+        <div class="followup-card-reason">${s.reason}</div>
+        <div class="followup-card-action">${s.action || '次の分析へ'}</div>
+      </div>
+    `;
+  }).join('');
+
+  panel.style.display = 'block';
+}
+
+function jumpToFollowUp(targetId) {
+  const target = PATTERNS.find(p => p.id === targetId);
+  if (target) startWizard(target);
+}
+
+// ─── Render home ─────────────────────────────────────────────────────
+function renderHome() {
+  const wrap = document.getElementById('catSections');
+  wrap.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const sec = document.createElement('div');
+    sec.className = `cat-section cat-${cat.id}`;
+    const pats = PATTERNS.filter(p => p.flowCat === cat.id);
+    sec.innerHTML = `
+      <div class="cat-head"><span class="cat-emoji">${cat.emoji}</span><span class="cat-title">${cat.title}</span></div>
+      <div class="cat-desc">${cat.desc}</div>
+      <div class="pattern-grid"></div>
+    `;
+    const grid = sec.querySelector('.pattern-grid');
+    pats.forEach((p, i) => {
+      const card = document.createElement('div');
+      card.className = 'pattern-card';
+      const kwHtml = p.keywords.map((k,ki) => `<span class="kw${ki < 3 ? ' trigger' : ''}">${k}</span>`).join('');
+      card.innerHTML = `
+        <div class="card-title">${p.title}</div>
+        <div class="card-dist">${p.dist}</div>
+        <div class="card-keywords">${kwHtml}</div>
+      `;
+      card.onclick = () => startWizard(p);
+      grid.appendChild(card);
+    });
+    wrap.appendChild(sec);
+  });
+}
+
+// ─── Wizard state ─────────────────────────────────────────────────────
+let wizard = { pattern: null, index: 0, answers: {} };
+
+function startWizard(p) {
+  wizard = { pattern: p, index: 0, answers: {} };
+  document.getElementById('wizTitle').textContent = p.title;
+  document.getElementById('wizDist').textContent = '使用分布: ' + p.dist;
+  document.getElementById('wizFormula').innerHTML = p.formula;
+  document.getElementById('calcStage').style.display = 'none';
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('codeBox').style.display = 'none';
+  document.getElementById('pyOutputBox').style.display = 'none';
+  document.getElementById('errorMsg').style.display = 'none';
+  document.getElementById('followUpPanel').style.display = 'none';
+
+  document.getElementById('homeScreen').classList.remove('active');
+  document.getElementById('wizScreen').classList.add('active');
+  document.getElementById('resetBtn').style.display = 'block';
+  window.scrollTo(0,0);
+  renderWizardStep();
+}
+
+function goHome() {
+  document.getElementById('wizScreen').classList.remove('active');
+  document.getElementById('homeScreen').classList.add('active');
+  document.getElementById('resetBtn').style.display = 'none';
+  window.scrollTo(0,0);
+}
+
+function renderWizardStep() {
+  const p = wizard.pattern;
+  const fields = p.fields;
+
+  // chat log of already-answered fields
+  const log = document.getElementById('chatLog');
+  log.innerHTML = '';
+  for (let i = 0; i < wizard.index; i++) {
+    const f = fields[i];
+    const row = document.createElement('div');
+    row.innerHTML = `
+      <div class="chat-q">Q. ${f.label}</div>
+      <div class="chat-a-row"><span class="a-label">回答</span><span class="a-val">${displayAnswer(f, wizard.answers[f.id])}</span></div>
+    `;
+    log.appendChild(row);
+  }
+
+  document.getElementById('wizProgress').textContent = `質問 ${Math.min(wizard.index+1, fields.length)} / ${fields.length}`;
+
+  const activeQ = document.getElementById('activeQ');
+  if (wizard.index >= fields.length) {
+    activeQ.innerHTML = '';
+    document.getElementById('calcStage').style.display = 'block';
+    return;
+  }
+  document.getElementById('calcStage').style.display = 'none';
+
+  const f = fields[wizard.index];
+  if (f.type === 'select') {
+    const btns = f.options.map(o => {
+      const [val, label] = o.split(':');
+      return `<button class="choice-btn" data-val="${val}">${label}</button>`;
+    }).join('');
+    activeQ.innerHTML = `
+      <div class="q-label">Q. ${f.label}</div>
+      ${f.hint ? `<div class="q-hint">💡 ${f.hint}</div>` : ''}
+      <div class="choice-row">${btns}</div>
+    `;
+    activeQ.querySelectorAll('.choice-btn').forEach(btn => {
+      btn.onclick = () => submitField(btn.dataset.val);
+    });
+  } else {
+    const inputType = f.type === 'text' ? 'text' : 'number';
+    activeQ.innerHTML = `
+      <div class="q-label">Q. ${f.label}</div>
+      ${f.hint ? `<div class="q-hint">💡 ${f.hint}</div>` : ''}
+      <input type="${inputType}" id="activeInput" value="${f.default ?? ''}" ${f.step ? `step="${f.step}"` : ''}>
+      <button class="next-btn" onclick="submitActiveInput()">次へ →</button>
+    `;
+    const inputEl = document.getElementById('activeInput');
+    inputEl.focus();
+    inputEl.select();
+    inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitActiveInput(); });
+  }
+}
+
+function submitActiveInput() {
+  const f = wizard.pattern.fields[wizard.index];
+  const el = document.getElementById('activeInput');
+  submitField(el.value);
+}
+
+function submitField(rawVal) {
+  const f = wizard.pattern.fields[wizard.index];
+  let val;
+  if (f.type === 'text') val = rawVal;
+  else val = parseFloat(rawVal);
+  wizard.answers[f.id] = val;
+  wizard.index++;
+  renderWizardStep();
+}
+
+function displayAnswer(f, val) {
+  if (f.type === 'select') {
+    const opt = f.options.find(o => o.split(':')[0] === String(val));
+    return opt ? opt.split(':')[1] : val;
+  }
+  return val;
+}
+
+// ─── Calculate ────────────────────────────────────────────────────────
+function runCalculate() {
+  const p = wizard.pattern;
+  const errEl = document.getElementById('errorMsg');
+  errEl.style.display = 'none';
+  try {
+    const result = p.calc(wizard.answers);
+
+    const rv = document.getElementById('resultValues');
+    rv.innerHTML = result.vals.map(r => `
+      <div class="result-val">
+        <div class="label">${r.label}</div>
+        <div class="num">${r.val}</div>
+      </div>
+    `).join('');
+    document.getElementById('resultInterpret').textContent = result.interpret;
+    document.getElementById('resultBox').style.display = 'block';
+
+    document.getElementById('codeEditor').value = result.code;
+    document.getElementById('codeBox').style.display = 'block';
+    document.getElementById('pyOutputBox').style.display = 'none';
+
+    document.getElementById('copyBtn').textContent = 'コピー';
+    document.getElementById('copyBtn').classList.remove('copied');
+
+    // 結果へ自動スクロール
+    setTimeout(() => {
+      document.getElementById('resultBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+
+    // ★ 派生分析サジェストを表示
+    renderFollowUps(wizard.pattern.id);
+
+  } catch (e) {
+    errEl.textContent = '⚠ ' + (e.message || '入力値を確認してください');
+    errEl.style.display = 'block';
+    document.getElementById('resultBox').style.display = 'none';
+    document.getElementById('codeBox').style.display = 'none';
+  }
+}
+
+function copyCode() {
+  const code = document.getElementById('codeEditor').value;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ コピー済み';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ─── Run Python via Pyodide ────────────────────────────────────────────
+async function runPython() {
+  const code = document.getElementById('codeEditor').value;
+  const outBox = document.getElementById('pyOutputBox');
+  const outEl = document.getElementById('pyOutput');
+  const runBtn = document.getElementById('runBtn');
+  outBox.style.display = 'block';
+  outEl.classList.remove('err');
+  outEl.textContent = '実行中…';
+  runBtn.disabled = true;
+  try {
+    const pyodide = await pyodideReadyPromise;
+    let output = '';
+    pyodide.setStdout({ batched: (s) => { output += s + '\n'; } });
+    pyodide.setStderr({ batched: (s) => { output += s + '\n'; } });
+    await pyodide.runPythonAsync(code);
+    outEl.textContent = output || '(出力なし。print() で結果を出してください)';
+  } catch (e) {
+    outEl.classList.add('err');
+    outEl.textContent = '⚠ エラー:\n' + (e.message || String(e));
+  } finally {
+    runBtn.disabled = false;
+  }
+}
+
+// ─── Init ───────────────────────────────────────────────────────────
+renderHome();
+</script>
+</body>
+</html>
