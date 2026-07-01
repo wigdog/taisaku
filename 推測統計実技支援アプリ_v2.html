@@ -725,6 +725,16 @@
     border-radius: 10px; padding: 12px 14px;
   }
   .karte-variant-label { font-size: 0.72rem; color: var(--accent2); font-weight: 700; margin-bottom: 6px; }
+  .karte-week-badge {
+    display: inline-block; background: var(--card-hover); color: var(--muted); font-weight: 700;
+    border: 1px solid var(--border); border-radius: 6px; padding: 2px 9px; font-size: 0.75rem;
+    margin-bottom: 8px; margin-right: 6px;
+  }
+  .karte-jump-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 8px; padding: 6px 14px; font-size: 0.8rem; cursor: pointer; font-weight: 600;
+  }
+  .karte-jump-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   /* ── 用語・概念 即答タブ ── */
   .concept-cat-row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
@@ -781,6 +791,39 @@
   .confuse-table td.confuse-left b, .confuse-table td.confuse-right b { color: var(--accent); }
   .confuse-table td.confuse-key { color: var(--muted); font-size: 0.8rem; line-height: 1.6; background: rgba(56,189,248,0.05); }
 
+  /* ── 誤答パターンDB ── */
+  .errpat-wrap { margin-bottom: 24px; }
+  .errpat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+
+  /* ── シンプル電卓 ── */
+  .calc-wrap { max-width: 360px; margin: 20px auto 0; }
+  .calc-display { background: #0a0c12; border: 1px solid var(--border); border-radius: 10px; padding: 24px 16px; text-align: right; font-family: var(--mono); font-size: 2rem; color: var(--text); margin-bottom: 12px; overflow-x: auto; white-space: nowrap; }
+  .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .calc-btn { background: var(--panel); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 18px 0; font-size: 1.15rem; cursor: pointer; transition: background 0.15s; }
+  .calc-btn:hover { background: var(--card-hover); }
+  .calc-btn:active { background: var(--border); }
+  .calc-btn.calc-op { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+  .calc-btn.calc-op:hover { filter: brightness(1.1); }
+  .calc-btn.calc-fn { color: var(--accent); }
+  .calc-btn.calc-eq { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+  .calc-btn.calc-eq:hover { filter: brightness(1.1); }
+  .errpat-card {
+    background: var(--panel); border: 1px solid rgba(248,113,113,0.35); border-radius: 12px;
+    padding: 14px 16px; scroll-margin-top: 90px; transition: box-shadow 0.25s, border-color 0.25s;
+  }
+  .errpat-card.flash { border-color: var(--red, #f87171); box-shadow: 0 0 0 3px rgba(248,113,113,0.25); }
+  .errpat-title { font-size: 0.88rem; font-weight: 800; color: var(--red, #f87171); margin-bottom: 6px; }
+  .errpat-desc { font-size: 0.82rem; color: var(--text); line-height: 1.6; margin-bottom: 6px; }
+  .errpat-example { font-size: 0.8rem; color: var(--muted); line-height: 1.6; background: rgba(248,113,113,0.07); border-radius: 8px; padding: 8px 10px; }
+  .errpat-example b { color: var(--text); }
+  .errpat-tip { font-size: 0.76rem; color: var(--accent); margin-top: 6px; }
+  .concept-errtag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .concept-errtag {
+    font-size: 0.72rem; color: var(--red, #f87171); border: 1px solid rgba(248,113,113,0.4);
+    background: rgba(248,113,113,0.08); border-radius: 999px; padding: 3px 10px; cursor: pointer; user-select: none;
+  }
+  .concept-errtag:hover { background: rgba(248,113,113,0.18); }
+
 </style>
 </head>
 <body>
@@ -802,6 +845,7 @@
     <button class="tab-btn" id="tab-monte" onclick="switchTab('monte')">🎲 モンテカルロ・カバレッジ</button>
     <button class="tab-btn" id="tab-karte" onclick="switchTab('karte')">📝 授業カルテ演習</button>
     <button class="tab-btn" id="tab-concept" onclick="switchTab('concept')">🧠 用語・概念 即答</button>
+    <button class="tab-btn" id="tab-calc" onclick="switchTab('calc')">🧮 電卓</button>
   </div>
 
   <!-- HOME -->
@@ -1111,23 +1155,27 @@
       <div class="tt-table-note">
         実際の授業カルテ(小テスト)に対応した全13回・130問。各回をタップして問題を確認し、「解答を見る」で解答・解説を表示。数値計算問題には🎲「類題に挑戦」ボタンがあり、数字を変えた別バージョンにその場で挑戦できます（何度でも新しい数字で再挑戦可）。
       </div>
+
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="karteSearchBox" class="search-box"
+               placeholder="キーワードで全回検索（例: 系統誤差 / 区間推定 / クラスター）"
+               oninput="handleKarteSearch(this.value)" autocomplete="off">
+        <span class="search-clear" id="karteSearchClear" onclick="clearKarteSearch()" style="display:none;">✕</span>
+      </div>
+      <div class="concept-count-info" id="karteSearchInfo" style="display:none;"></div>
+      <div id="karteSearchResults"></div>
+
       <div class="karte-week-nav" id="karteWeekNav"></div>
       <div id="karteWeekBody"></div>
     </div>
   </div>
 
+
   <!-- CONCEPT（用語・概念 即答） -->
   <div class="screen" id="conceptScreen">
     <div class="tt-section">
       <div class="tt-section-title">🧠 用語・概念 即答リファレンス</div>
-      <div class="tt-table-note">
-        カルテ第2回〜第14回に出てきた「計算では解けない問題」（用語の正誤・集合演算・抽出法の判別・誤差の分類・分布の見分け・信頼区間の解釈・コード選択など）を、出題週ではなく論点ごとにまとめ直したものです。少し違う聞かれ方をされても対応できるよう、「見分け方（合言葉）」を先頭に置いています。キーワードで検索するか、下のカテゴリをタップして絞り込んでください。
-      </div>
-
-      <div class="confuse-wrap">
-        <div class="tt-section-title" style="font-size:0.95rem; margin-bottom:8px;">⚔️ 混同しやすいペア一覧（見た瞬間の判別用）</div>
-        <div id="confusionPairsTable"></div>
-      </div>
 
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
@@ -1140,6 +1188,65 @@
       <div class="concept-cat-row" id="conceptCatRow"></div>
       <div class="concept-count-info" id="conceptCountInfo"></div>
       <div id="conceptList"></div>
+
+      <div class="tt-table-note" style="margin-top:20px;">
+        カルテ第2回〜第14回に出てきた「計算では解けない問題」（用語の正誤・集合演算・抽出法の判別・誤差の分類・分布の見分け・信頼区間の解釈・コード選択など）を、出題週ではなく論点ごとにまとめ直したものです。少し違う聞かれ方をされても対応できるよう、「見分け方（合言葉）」を先頭に置いています。キーワードで検索するか、下のカテゴリをタップして絞り込んでください。
+      </div>
+
+      <div class="confuse-wrap">
+        <div class="tt-section-title" style="font-size:0.95rem; margin-bottom:8px;">⚔️ 混同しやすいペア一覧（見た瞬間の判別用）</div>
+        <div id="confusionPairsTable"></div>
+      </div>
+
+      <div class="errpat-wrap">
+        <div class="tt-section-title" style="font-size:0.95rem; margin-bottom:8px;">🚩 誤答パターンDB（選択肢の作られ方で消去する）</div>
+        <div class="tt-table-note" style="margin-bottom:10px;">
+          正解を思い出せなくても、選択肢の「作られ方の型」を知っていれば消去できることが多いです。断定語（常に／必ず／いかなる場合も）が出たら特に疑ってください。
+        </div>
+        <div id="errorPatternsGrid" class="errpat-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALC（シンプル電卓） -->
+  <div class="screen" id="calcScreen">
+    <div class="tt-section">
+      <div class="tt-section-title">🧮 シンプル電卓</div>
+      <div class="tt-table-note">
+        四則演算に加えて √（平方根）、x²（二乗）、xʸ（べき乗）に対応しています。統計計算の検算などにどうぞ。
+      </div>
+      <div class="calc-wrap">
+        <div class="calc-display" id="calcDisplay">0</div>
+        <div class="calc-grid">
+          <button class="calc-btn calc-fn" onclick="calcAction('clear')">C</button>
+          <button class="calc-btn calc-fn" onclick="calcAction('sign')">±</button>
+          <button class="calc-btn calc-fn" onclick="calcAction('sqrt')">√</button>
+          <button class="calc-btn calc-op" onclick="calcAction('op','÷')">÷</button>
+
+          <button class="calc-btn" onclick="calcAction('digit','7')">7</button>
+          <button class="calc-btn" onclick="calcAction('digit','8')">8</button>
+          <button class="calc-btn" onclick="calcAction('digit','9')">9</button>
+          <button class="calc-btn calc-op" onclick="calcAction('op','×')">×</button>
+
+          <button class="calc-btn" onclick="calcAction('digit','4')">4</button>
+          <button class="calc-btn" onclick="calcAction('digit','5')">5</button>
+          <button class="calc-btn" onclick="calcAction('digit','6')">6</button>
+          <button class="calc-btn calc-op" onclick="calcAction('op','−')">−</button>
+
+          <button class="calc-btn" onclick="calcAction('digit','1')">1</button>
+          <button class="calc-btn" onclick="calcAction('digit','2')">2</button>
+          <button class="calc-btn" onclick="calcAction('digit','3')">3</button>
+          <button class="calc-btn calc-op" onclick="calcAction('op','+')">+</button>
+
+          <button class="calc-btn calc-fn" onclick="calcAction('square')">x²</button>
+          <button class="calc-btn" onclick="calcAction('digit','0')">0</button>
+          <button class="calc-btn" onclick="calcAction('decimal')">.</button>
+          <button class="calc-btn calc-op" onclick="calcAction('op','^')">xʸ</button>
+
+          <button class="calc-btn calc-fn" onclick="calcAction('back')" style="grid-column: span 2;">⌫ 削除</button>
+          <button class="calc-btn calc-eq" onclick="calcAction('equals')" style="grid-column: span 2;">=</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1151,6 +1258,7 @@ const CONCEPT_CATEGORIES = [
   { id: 'set',      label: '集合・確率の基本' },
   { id: 'sampling', label: '抽出法' },
   { id: 'error',    label: '誤差' },
+  { id: 'pvalue',   label: 'p値の注意点' },
   { id: 'estimator',label: '推定量の性質' },
   { id: 'dist',     label: '分布の見分け' },
   { id: 'ci',       label: '信頼区間の解釈' },
@@ -1159,12 +1267,57 @@ const CONCEPT_CATEGORIES = [
   { id: 'design',   label: 'サンプルサイズ設計' },
 ];
 
+// ─ 同義語辞書：検索トークンが以下グループのいずれかに属する場合、
+//   グループ内の全語を「同じ語」として検索対象にヒットさせる（AND検索の各語内でOR展開）。
+const SYNONYM_GROUPS = [
+  ['クラスター', '集落抽出法', 'クラスター抽出'],
+  ['有意水準', '危険率', 'α'],
+  ['信頼度', '信頼係数'],
+  ['母平均', '母集団平均'],
+  ['母比率', '母集団比率'],
+  ['標準誤差', 'SE', 'se'],
+  ['標準偏差', 'SD', 'sd'],
+  ['不偏分散', '不偏標本分散'],
+  ['最尤推定', 'MLE', 'mle', '尤度'],
+  ['自由度', 'df', 'DF'],
+  ['カイ二乗', 'χ²', 'カイ2乗', 'カイジジョウ'],
+  ['t検定', 'ｔ検定', 'ティー検定'],
+  ['系統誤差', 'バイアス', '偏り'],
+  ['単純無作為抽出', 'ランダムサンプリング', '無作為抽出'],
+  ['層化抽出法', '層別抽出'],
+  ['系統抽出法', '等間隔抽出'],
+  ['有意抽出法', '恣意抽出'],
+  ['区間推定', '信頼区間'],
+  ['点推定', '推定値'],
+  ['サンプルサイズ', '標本サイズ', 'n数'],
+  ['エラーバー', '誤差範囲', 'error bar'],
+  ['適合度検定', '適合度'],
+  ['独立性の検定', 'クロス集計', '分割表'],
+];
+
+let SYNONYM_INDEX = null;
+function getSynonymIndex() {
+  if (SYNONYM_INDEX) return SYNONYM_INDEX;
+  SYNONYM_INDEX = {};
+  SYNONYM_GROUPS.forEach(group => {
+    const normed = group.map(t => t.toLowerCase());
+    group.forEach(term => { SYNONYM_INDEX[term.toLowerCase()] = normed; });
+  });
+  return SYNONYM_INDEX;
+}
+// トークン1語に対し、同義語グループを含めた検索候補語（小文字）の配列を返す
+function tokenVariants(tok) {
+  const n = (tok || '').toLowerCase();
+  const idx = getSynonymIndex();
+  return idx[n] || [n];
+}
+
 const CONCEPTS = [
-  { id:'set1', cat:'set', title:'「根元事象」と「事象」の違い',
+  { id:'set1', cat:'set', title:'「根元事象」と「事象」の違い', errTags:['swap'],
     trigger:'用語の<b>正誤問題</b>で「根元事象」と「事象」の説明が入れ替えられているのが頻出の引っかけ。',
     answer:'根元事象＝1回の試行で得られる観測結果そのもの\n事象　　＝結果をまとめた集合（標本空間の部分集合）',
     exp:'標本空間＝出現しうる全結果の集合。「根元事象＝集合」「事象＝1回の結果」のように説明が逆になっている選択肢を見抜くのがポイント。' },
-  { id:'set2', cat:'set', title:'和事象・余事象・空事象・排反の記号',
+  { id:'set2', cat:'set', title:'和事象・余事象・空事象・排反の記号', errTags:['swap'],
     trigger:'「A∪B」「A∩B」がどの用語に対応するかを問う正誤問題。',
     answer:'和事象＝A∪B（AまたはBに含まれる）\n余事象＝Aᶜ（Aに含まれない結果）\n空事象＝∅（要素が存在しない）\n排反　＝A∩B＝∅（同時に起こりえない関係）',
     exp:'「余事象」と「排反」を混同させる選択肢が頻出。余事象は1つの事象に対する概念、排反は2つの事象の"関係"を表す言葉。' },
@@ -1177,7 +1330,7 @@ const CONCEPTS = [
     answer:'標本空間を全部書き出す（2ⁿ通り、kⁿ通りなど）→該当パターンの数を数える、が最も安全。\n「少なくとも1つは○○」は必ず余事象（全部×）を疑う：1－(1/2)ⁿ など。',
     exp:'3枚投げて「少なくとも1枚は表」＝1－全部裏の確率＝1－1/8＝7/8、のパターンが頻出。' },
 
-  { id:'samp1', cat:'sampling', title:'抽出法の見分け方一覧',
+  { id:'samp1', cat:'sampling', title:'抽出法の見分け方一覧', errTags:['swap'],
     trigger:'「普通の〜」「平均的な」→<b>有意抽出法</b>／「クラスターに分けて内部は全数調査」→<b>集落抽出法</b>／「台帳から機械的に等間隔」→<b>系統抽出法</b>／「層ごとに比率配分」→<b>層化抽出法</b>／単純にランダム→<b>単純無作為抽出</b>',
     answer:'表を参照',
     exp:'「調査者の意思・主観が入っている」＝有意抽出法、が最頻出の引っかけ。集落抽出は「クラスター内は全数調査」である点、層化抽出は「各層の重み付き平均で精度が上がる」点を覚える。',
@@ -1194,16 +1347,21 @@ const CONCEPTS = [
     trigger:'np.random.choice()の出力に同じ値が2回出ている／「互いに独立となるのはどちらか」と問う問題。',
     answer:'同じ要素が複数回選ばれ得る＝復元抽出（＝互いに独立）\n一度選んだら除外される＝非復元抽出（＝独立ではない）\nコードでは replace=False で非復元抽出になる',
     exp:'「独立」という言葉が出たら復元抽出とセット。非復元は前の抽出結果が次の確率に影響する。' },
-  { id:'samp3', cat:'sampling', title:'標本誤差の性質（正誤問題対策）',
+  { id:'samp3', cat:'sampling', title:'標本誤差の性質（正誤問題対策）', errTags:['omission'],
     trigger:'「全数調査には標本誤差は含まれない」等の正誤を判定する問題。',
     answer:'○ 全数調査には標本誤差は含まれない\n○ サンプルサイズを増やすと標本誤差は一般に小さくなる\n✕ 測定値に修正係数を掛けて標本誤差を小さくする方法はない',
     exp:'標本誤差はサンプリングの偶然性そのものに由来するため、後から数式で補正することはできない。' },
 
-  { id:'err1', cat:'error', title:'系統誤差 vs 偶然誤差',
+  { id:'err1', cat:'error', title:'系統誤差 vs 偶然誤差', errTags:['swap'],
     trigger:'「原因が明らか/不明」「測定回数を増やすと減るか」「一定方向に偏るか」を問う正誤問題。',
     answer:'系統誤差＝原因が明らかなことが多い／測定回数を増やしても<b>小さくならない</b>／真値に対し<b>一定方向</b>に偏って生じる\n偶然誤差＝理想的な状況でも偶発的に生じる／代表例は測定誤差',
     exp:'グラフで「理論分布」に対して「測定値の分布」が横にズレて描かれていたら系統誤差（例：体重計の目盛りが最初からずれている）。',
     essay:'系統誤差は測定機器の不備や測定者の癖など原因が明らかであることが多く、真値に対して一定の方向に偏って生じるため、測定回数を増やしても小さくならない。一方、偶然誤差は理想的な観測状況でも偶発的に生じる誤差であり、測定誤差が代表例である。' },
+  { id:'err1b', cat:'error', title:'正確さ（accuracy）と精度（precision）の対応', errTags:['swap'],
+    trigger:'「正確さ」「精度」という言葉が問題文に出てきたとき、それぞれどの誤差と結びつくか。',
+    answer:'正確さ（accuracy）＝測定値が<b>真の値にどれだけ近いか</b>。<b>系統誤差（機械誤差・校正誤差）</b>と関係する。\n精度（precision）＝測定値の<b>ぶれの少なさ</b>。<b>偶然誤差・読み取り誤差</b>と関係する。',
+    exp:'体重計の例：目盛りが最初からズレている→正確さが悪い（系統誤差）。乗るたびに値がバラつく→精度が悪い（偶然誤差）。的当て（ダーツ）の的の中心＝真値、弾痕のまとまり方＝精度、中心からのズレ＝正確さ、とイメージすると区別しやすい。',
+    essay:'正確さとは測定値が真の値にどれだけ近いかを表す基準であり、機械誤差・校正誤差といった系統誤差と関係する。精度とは測定値のぶれの少なさを表す基準であり、偶然誤差や読み取り誤差と関係する。測定器の精度を維持するには定期的な校正（キャリブレーション）が欠かせない。' },
   { id:'err2', cat:'error', title:'誤差・相対誤差の式',
     trigger:'「相対誤差を求めよ」という計算問題。',
     answer:'誤差 ＝ 測定値 － 真値\n相対誤差 ＝ 誤差 ÷ 真値',
@@ -1213,7 +1371,7 @@ const CONCEPTS = [
     answer:'推定値 ± 2×標準誤差 ≒ 95%信頼区間の近似（正確には1.96倍）',
     exp:'問題文が「2倍ずつの幅」と明示していたら、1.96ではなく指示通り2倍で計算する。' },
 
-  { id:'est1', cat:'estimator', title:'不偏性・一致性・有効性',
+  { id:'est1', cat:'estimator', title:'不偏性・一致性・有効性', errTags:['swap'],
     trigger:'「推定量を平均すると真の母数に対して過大にも過小にもなっていない」→<b>不偏性</b>／「サンプルサイズを大きくすると真の母数に近づく」→<b>一致性</b>',
     answer:'不偏性＝推定量の期待値が真の母数と一致する（nに依らない性質）\n一致性＝n→∞のとき推定値が真の母数に収束する性質\n有効性＝（同じ不偏推定量の中で）分散が小さい＝効率が良い',
     exp:'不偏性は「1回の計算方法」の性質、一致性は「nを増やした時の挙動」の性質、と切り分けて覚える。',
@@ -1222,7 +1380,7 @@ const CONCEPTS = [
     trigger:'「ピンポイントで推定」→点推定／「幅を持たせて推定」→区間推定',
     answer:'点推定＝標本データから母数の値を1点で推定する方法\n区間推定＝確率を用いて母数が存在する範囲を幅（信頼区間）で示す方法',
     exp:'母平均の点推定は、記述統計で平均値を求める作業と手順は同じ（標本平均をそのまま使う）。' },
-  { id:'est3', cat:'estimator', title:'標本平均・分散の計算式の見分け',
+  { id:'est3', cat:'estimator', title:'標本平均・分散の計算式の見分け', errTags:['swap'],
     trigger:'Σを使った4つの式（1/nΣxi、1/(n-1)Σxi、1/nΣ(xi-x̄)²、1/(n-1)Σ(xi-x̄)²）が並ぶ選択問題。',
     answer:'標本平均　　　＝(1/n)Σxi\n標本分散(記述統計)＝(1/n)Σ(xi-x̄)²\n不偏分散　　　＝(1/(n-1))Σ(xi-x̄)²',
     exp:'母分散の<b>点推定・区間推定には必ず不偏分散（n-1で割る方）</b>を使う。ここを(1/n)の式と取り違える誤答が多い。' },
@@ -1269,11 +1427,11 @@ const CONCEPTS = [
     answer:'正しい解釈：同じ方法で標本抽出と区間推定を多数回（例：100回）繰り返すと、作られる区間のうち約95%が母数を含む、という頻度論的な意味。',
     exp:'「今得られたこの区間に95%の確率で母数が入る」という表現は、一見自然だが誤答として扱われる。',
     essay:'「95%信頼区間」とは、同じ方法で標本抽出と区間推定を多数回繰り返した場合に、作られる区間のうち約95%が母数を含むという意味である。今回得られた1つの区間そのものに母数が95%の確率で含まれる、という意味ではない。' },
-  { id:'ci2', cat:'ci', title:'信頼度と区間幅の関係',
+  { id:'ci2', cat:'ci', title:'信頼度と区間幅の関係', errTags:['reverse'],
     trigger:'「信頼度を95%→99%に上げると区間幅は？」',
     answer:'広くなる（z値・t値が大きくなるため：95%なら1.96、99%なら2.58程度）',
     exp:'より確実に母数を捉えようとすると、その分「幅の狭さ（精度）」は犠牲になる。' },
-  { id:'ci3', cat:'ci', title:'サンプルサイズと区間幅・標準誤差の関係',
+  { id:'ci3', cat:'ci', title:'サンプルサイズと区間幅・標準誤差の関係', errTags:['reverse','subject'],
     trigger:'「サンプルサイズを増やすと区間幅は？」',
     answer:'狭くなる（標準誤差 SE = σ/√n がnの平方根に反比例して小さくなるため）',
     exp:'標準偏差(SD)自体はnを増やしても小さくならない点と対比させて覚える。SEとSDを混同する誤答が多い。',
@@ -1288,7 +1446,7 @@ const CONCEPTS = [
     answer:'母数の値・範囲そのものを知りたい→推定（点推定・区間推定）\n仮説が成り立つかを判定したい→検定（本科目のシラバス上は次科目の範囲）',
     exp:'この科目のカルテでは「検定」という言葉が出ても、実質は信頼区間の重なりで判断させる設問が多い。' },
 
-  { id:'eb1', cat:'errorbar', title:'エラーバー3種の見分け方と判断基準',
+  { id:'eb1', cat:'errorbar', title:'エラーバー3種の見分け方と判断基準', errTags:['subject'],
     trigger:'グラフのキャプションに「標準誤差のエラーバー」「信頼区間のエラーバー」「標準偏差のエラーバー」とある。',
     answer:'差があるかどうかの判断に使えるのは<b>信頼区間（または2×標準誤差）</b>のエラーバー。\n標準偏差のエラーバーは<b>データそのもののばらつき</b>を示すだけで、差の判断根拠には使えない。',
     exp:'「区間が重なっていたら差があるとは言えない、離れていれば差があると判断してよい」という現場ルールとセットで覚える。標準誤差2倍でも95%信頼区間の近似として扱ってよい。',
@@ -1326,10 +1484,69 @@ const CONCEPTS = [
     trigger:'「信頼区間の幅を◯%以下に抑えるには何人必要か」という逆算問題。',
     answer:'事前情報がない比率は p=0.5 を使う（最も厳しい＝必要なサンプルサイズが最大になる設定）\n信頼度を上げる → 必要なnは増える\n区間の幅を狭める → 必要なnは増える',
     exp:'pow((2×z×√(p(1-p)))/幅, 2) の形の式に、stats.norm.interval(confidence, loc=0, scale=1) で得たz値（high側）を代入する。' },
+
+  { id:'pv1', cat:'pvalue', title:'p値は「差の大きさ」や「重要度」を示さない', errTags:['swap'],
+    trigger:'「p値が小さいほど効果が大きい／差が大きい」という言い回しの正誤問題。',
+    answer:'誤り。p値は「帰無仮説のもとでこのデータ（以上に極端な結果）が得られる確率」であり、<b>効果量（差の大きさ）とは別物</b>。p値が小さくても実質的な差はごくわずかなことがある。',
+    exp:'p値が小さい＝「偶然とは考えにくい」ことを示すだけで、「差が実務的に意味を持つほど大きい」ことは示さない。差の大きさを議論したいときは信頼区間や効果量を別途確認する。' },
+  { id:'pv2', cat:'pvalue', title:'サンプルサイズを大きくすると些細な差でも有意になる',
+    trigger:'「nを増やすと必ずp値は小さくなる／有意になりやすい」という言い回し。',
+    answer:'正しい傾向。標準誤差はnが大きいほど小さくなるため、母平均・母比率にごくわずかな差しかなくても、nを十分大きくすれば統計的に有意（p<0.05）と判定されやすくなる。',
+    exp:'「統計的に有意」と「実務的に意味がある」は別軸。大規模データほど、些細な差を有意と誤解しないよう注意が必要。' },
+  { id:'pv3', cat:'pvalue', title:'有意水準αは分析者が事前に決める基準',
+    trigger:'「有意水準は必ず5%でなければならない」という言い回しの正誤問題。',
+    answer:'誤り。有意水準（α＝危険率）は分析者が分野や目的に応じて事前に設定する基準であり、5%や1%がよく使われるが「絶対的な正解」ではない。',
+    exp:'p値そのものと、判定基準である有意水準を混同しないこと。「p<α なら棄却」という判定の仕組みを正しく説明できるようにしておく。' },
+  { id:'pv4', cat:'pvalue', title:'p値は「帰無仮説が正しい確率」ではない', errTags:['swap'],
+    trigger:'「p値0.03は、帰無仮説が正しい確率が3%ということだ」という言い回しの正誤問題。',
+    answer:'誤り。p値は「帰無仮説が正しいと<b>仮定した上で</b>、実際に観測された（またはそれ以上に極端な）データが得られる確率」であり、「帰無仮説自体が正しい確率」ではない。',
+    exp:'この混同は統計学で最も多い誤解の一つ。p値はあくまで観測データ側の確率であり、仮説の真偽そのものの確率ではない点を区別する。' },
 ];
 
 let conceptSearchQuery = '';
 let conceptActiveCat = null;
+
+// ─ 誤答パターンDB：選択式問題で誤答がどう作られるかの「型」。
+//   正解を思い出せなくても、この型に当てはまる選択肢を消去法で切れるようにする。
+const ERROR_PATTERNS = [
+  { id: 'swap', title: '① 説明の入れ替え型',
+    desc: '対になる2つの用語A・Bの説明文をそっくり入れ替えて、片方だけを誤りにする。',
+    example: '例：「根元事象＝結果の集合、事象＝1回の観測結果」（→根元事象と事象の説明が逆）\n例：「余事象とは同時に起こりえない2つの事象の関係である」（→それは排反の説明）',
+    tip: '見分け方：説明文だけを読んで「これはA/Bどちらの話か」を先に自分の言葉で言い直してから照合する。' },
+  { id: 'reverse', title: '② 方向反転型',
+    desc: '「広くなる／狭くなる」「増える／減る」「大きくなる／小さくなる」のように、変化の方向だけを逆にする。',
+    example: '例：「サンプルサイズを増やすと信頼区間の幅は広くなる」（→正しくは狭くなる）\n例：「信頼度を99%に上げると区間幅は狭くなる」（→正しくは広くなる）',
+    tip: '見分け方：何が分子・分母にあるか（nは分母＝増えると縮む、zは分子＝増えると広がる）を式で確認してから判定する。' },
+  { id: 'subject', title: '③ 主語すり替え型',
+    desc: 'SD（標準偏差）の性質をSE（標準誤差）の話であるかのように書く、またはその逆。似た略語・記号を持つ2つの概念を取り違えさせる。',
+    example: '例：「サンプルサイズを増やすと標準偏差(SD)は小さくなる」（→小さくなるのは標準誤差SEであり、SD自体はnを増やしても縮まない）',
+    tip: '見分け方：主語がSDかSEか、母数か統計量かを文中で丸で囲むつもりで確認する。' },
+  { id: 'omission', title: '④ 条件抜け型（断定語）',
+    desc: '「常に」「必ず」「いかなる場合も」のような断定語を使って、本来は条件付きの主張を無条件の主張にすり替える。',
+    example: '例：「サンプルサイズを増やせば標準誤差は必ず母標準偏差より小さくなる」のように例外を無視した言い切り方。',
+    tip: '見分け方：選択肢に断定語が出たら、反例が1つでも作れないかをまず疑う。統計の性質は「一般には／傾向として」で語られることが多い。' },
+];
+
+function scrollToErrorPattern(id) {
+  const el = document.getElementById('errpat-' + id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1200);
+}
+
+function renderErrorPatterns() {
+  const grid = document.getElementById('errorPatternsGrid');
+  if (!grid) return;
+  grid.innerHTML = ERROR_PATTERNS.map(p => `
+    <div class="errpat-card" id="errpat-${p.id}">
+      <div class="errpat-title">${p.title}</div>
+      <div class="errpat-desc">${p.desc}</div>
+      <div class="errpat-example">${p.example.replace(/\n/g, '<br>')}</div>
+      <div class="errpat-tip">💡 ${p.tip}</div>
+    </div>
+  `).join('');
+}
 
 const CONFUSION_PAIRS = [
   { left:{ title:'不偏性', ans:'期待値が真の母数と一致する性質。<b>nに依らない</b>。' },
@@ -1394,7 +1611,7 @@ function conceptMatches(c, tokens) {
     c.title + ' ' + c.trigger + ' ' + c.answer + ' ' + (c.exp || '') +
     (c.table ? c.table.rows.flat().join(' ') : '')
   );
-  return tokens.every(t => hay.includes(conceptNormalize(t)));
+  return tokens.every(t => tokenVariants(t).some(v => hay.includes(v)));
 }
 
 function renderConceptCatRow() {
@@ -1448,6 +1665,12 @@ function renderConceptList() {
   }
   list.innerHTML = filtered.map(c => {
     const catLabel = (CONCEPT_CATEGORIES.find(x => x.id === c.cat) || {}).label || '';
+    const errTagsHtml = (c.errTags && c.errTags.length)
+      ? `<div class="concept-errtag-row">${c.errTags.map(tid => {
+          const ep = ERROR_PATTERNS.find(e => e.id === tid);
+          return ep ? `<span class="concept-errtag" onclick="scrollToErrorPattern('${tid}')">🚩 ${ep.title}</span>` : '';
+        }).join('')}</div>`
+      : '';
     return `
       <div class="concept-card">
         <div class="concept-cat-tag">${catLabel}</div>
@@ -1460,6 +1683,7 @@ function renderConceptList() {
         </div>
         ${c.exp ? `<div class="concept-exp">💡 ${c.exp.replace(/\n/g, '<br>')}</div>` : ''}
         ${c.essay ? `<div class="concept-essay"><div class="concept-essay-label">✍️ 論述で聞かれたら（そのまま書ける型）</div>${c.essay.replace(/\n/g, '<br>')}</div>` : ''}
+        ${errTagsHtml}
       </div>
     `;
   }).join('');
@@ -1467,6 +1691,7 @@ function renderConceptList() {
 
 function initConceptTab() {
   renderConfusionPairs();
+  renderErrorPatterns();
   renderConceptCatRow();
   renderConceptList();
 }
@@ -1653,6 +1878,7 @@ const CATEGORIES = [
   { id: 'group1',   emoji: '📐', title: '1つの値を推定・検定する',   desc: '例：「平均はいくつか」「比率は◯%と言えるか」を1つの集団から判断したい' },
   { id: 'group2',   emoji: '⚖️', title: '2つを比べる（ABテスト・前後比較）', desc: '例：「A案とB案で差はあるか」「導入前後で変化したか」を2群で比較したい' },
   { id: 'relation', emoji: '🔗', title: '関係性・予測を調べる',         desc: '例：「xとyに関係はあるか」「xからyを予測したい」（相関・回帰）' },
+  { id: 'probdist', emoji: '🎲', title: '確率分布の計算をする',       desc: '例：「ちょうど◯回起こる確率は？」「期待値・分散は？」（ベルヌーイ分布・二項分布）' },
   { id: 'design',   emoji: '📏', title: 'サンプルサイズを設計する（逆算）', desc: '例：「何人調べれば誤差±◯%に収まるか」「差を検出するには何人必要か」' },
 ];
 
@@ -2210,6 +2436,196 @@ print(f"標準誤差: {se:.4f}")`
     }
   },
 
+  // ── 確率分布の計算 ──
+  {
+    id: 'bernoulli_calc', flowCat: 'probdist',
+    title: 'ベルヌーイ分布の確率・期待値・分散',
+    dist: 'ベルヌーイ分布 Bernoulli(p)',
+    keywords: ['成功/失敗・0/1の1回だけの試行', '「1回の試行で成功する確率p」が与えられている', 'コイン1回・くじ1回など単発の試行'],
+    formula: '<div class="f-title">公式</div>P(X=1)=p, P(X=0)=1-p<br>期待値 E[X]=p<br>分散 V[X]=p(1-p)',
+    fields: [
+      { id: 'p', label: '成功確率 p は？', type: 'number', default: 0.3, step: 0.01 },
+    ],
+    calc(v) {
+      const p = v.p;
+      if (p < 0 || p > 1) throw new Error('確率pは0〜1の範囲で入力してください');
+      const q = 1 - p;
+      const mean = p;
+      const variance = p * q;
+      const sd = Math.sqrt(variance);
+      return {
+        vals: [
+          { label: 'P(X=1)（成功）', val: p.toFixed(4) },
+          { label: 'P(X=0)（失敗）', val: q.toFixed(4) },
+          { label: '期待値 E[X]', val: mean.toFixed(4) },
+          { label: '分散 V[X]', val: variance.toFixed(4) },
+          { label: '標準偏差', val: sd.toFixed(4) },
+        ],
+        interpret: `ベルヌーイ分布 Bernoulli(p=${p})：\n P(X=1)=${p.toFixed(3)}, P(X=0)=${q.toFixed(3)}\n 期待値 E[X]=p=${mean.toFixed(3)}、分散 V[X]=p(1-p)=${variance.toFixed(3)}。`,
+        code: `import numpy as np
+from scipy import stats
+
+p = ${p}
+
+# 確率質量関数（PMF）
+p_x1 = stats.bernoulli.pmf(1, p)  # P(X=1)
+p_x0 = stats.bernoulli.pmf(0, p)  # P(X=0)
+
+# 期待値・分散
+mean = stats.bernoulli.mean(p)
+var  = stats.bernoulli.var(p)
+
+print(f"P(X=1): {p_x1:.4f}")
+print(f"P(X=0): {p_x0:.4f}")
+print(f"期待値 E[X]: {mean:.4f}")
+print(f"分散 V[X]: {var:.4f}")`
+      };
+    }
+  },
+  {
+    id: 'binomial_calc', flowCat: 'probdist',
+    title: '二項分布の確率・期待値・分散',
+    dist: '二項分布 B(n,p)',
+    keywords: ['同じ試行をn回繰り返して成功回数を数える', '「n回中k回成功する確率」を求めたい', 'ベルヌーイ試行の繰り返し'],
+    formula: '<div class="f-title">公式</div>P(X=k) = nCk × p^k × (1-p)^(n-k)<br>期待値 E[X]=np<br>分散 V[X]=np(1-p)',
+    fields: [
+      { id: 'n', label: '試行回数 n は？', type: 'number', default: 10 },
+      { id: 'p', label: '成功確率 p は？', type: 'number', default: 0.3, step: 0.01 },
+      { id: 'k', label: '成功回数 k は？（P(X=k)を計算）', type: 'number', default: 3 },
+    ],
+    calc(v) {
+      const n = Math.round(v.n), p = v.p, k = Math.round(v.k);
+      if (p < 0 || p > 1) throw new Error('確率pは0〜1の範囲で入力してください');
+      if (n < 1) throw new Error('試行回数nは1以上を入力してください');
+      if (k < 0 || k > n) throw new Error('成功回数kは0以上n以下で入力してください');
+      const pmf = comb(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k);
+      // 累積確率 P(X<=k)
+      let cdf = 0;
+      for (let i = 0; i <= k; i++) {
+        cdf += comb(n, i) * Math.pow(p, i) * Math.pow(1 - p, n - i);
+      }
+      const mean = n * p;
+      const variance = n * p * (1 - p);
+      const sd = Math.sqrt(variance);
+      return {
+        vals: [
+          { label: `P(X=${k})`, val: pmf.toFixed(6) },
+          { label: `P(X≤${k})（累積）`, val: cdf.toFixed(6) },
+          { label: '期待値 E[X]', val: mean.toFixed(4) },
+          { label: '分散 V[X]', val: variance.toFixed(4) },
+          { label: '標準偏差', val: sd.toFixed(4) },
+        ],
+        interpret: `二項分布 B(n=${n}, p=${p})：\n P(X=${k})=${pmf.toFixed(4)}、P(X≤${k})=${cdf.toFixed(4)}\n 期待値 E[X]=np=${mean.toFixed(3)}、分散 V[X]=np(1-p)=${variance.toFixed(3)}。`,
+        code: `import numpy as np
+from scipy import stats
+
+n = ${n}
+p = ${p}
+k = ${k}
+
+# 確率質量関数（PMF）と累積分布関数（CDF）
+pmf = stats.binom.pmf(k, n, p)   # P(X=k)
+cdf = stats.binom.cdf(k, n, p)   # P(X<=k)
+
+# 期待値・分散
+mean = stats.binom.mean(n, p)
+var  = stats.binom.var(n, p)
+
+print(f"P(X={k}): {pmf:.6f}")
+print(f"P(X<={k}): {cdf:.6f}")
+print(f"期待値 E[X]: {mean:.4f}")
+print(f"分散 V[X]: {var:.4f}")`
+      };
+    }
+  },
+  {
+    id: 'discrete_ev_calc', flowCat: 'probdist',
+    title: '確率分布表からの期待値・分散（一般の離散確率変数）',
+    dist: '離散確率分布（サイコロ・くじなど）',
+    keywords: ['「確率変数Xの期待値を求めよ」', 'x とその確率 P(X=x) の対応表が与えられている', 'サイコロ・くじなど値と確率の一覧がある'],
+    formula: '<div class="f-title">公式</div>E(X) = Σ xi・P(X=xi)<br>V(X) = Σ (xi−E(X))²・P(X=xi)',
+    fields: [
+      { id: 'xs', label: '取り得る値 x（カンマ区切り）', type: 'text', default: '1, 2, 3, 4, 5, 6', hint: '例：サイコロの目 1,2,3,4,5,6' },
+      { id: 'ps', label: 'それぞれの確率 P(X=x)（カンマ区切り・合計1になるように）', type: 'text', default: '1/6, 1/6, 1/6, 1/6, 1/6, 1/6', hint: '分数（1/6）も小数（0.1667）も可' },
+    ],
+    calc(v) {
+      const parseNum = (s) => {
+        s = s.trim();
+        if (s.includes('/')) {
+          const [a, b] = s.split('/').map(Number);
+          return a / b;
+        }
+        return parseFloat(s);
+      };
+      const xs = v.xs.split(',').map(s => parseFloat(s.trim())).filter(x => !isNaN(x));
+      const ps = v.ps.split(',').map(s => parseNum(s)).filter(x => !isNaN(x));
+      if (xs.length < 2) throw new Error('xの値は2個以上入力してください');
+      if (xs.length !== ps.length) throw new Error('xと確率P(X=x)の個数を一致させてください');
+      const psum = ps.reduce((a,b)=>a+b,0);
+      if (Math.abs(psum - 1) > 0.01) throw new Error(`確率の合計が1になっていません（現在の合計: ${psum.toFixed(4)}）`);
+      const mean = xs.reduce((a,x,i)=>a+x*ps[i], 0);
+      const variance = xs.reduce((a,x,i)=>a+ps[i]*(x-mean)**2, 0);
+      const sd = Math.sqrt(variance);
+      return {
+        vals: [
+          { label: '確率の合計 ΣP(x)', val: psum.toFixed(4) },
+          { label: '期待値 E(X)', val: mean.toFixed(4) },
+          { label: '分散 V(X)', val: variance.toFixed(4) },
+          { label: '標準偏差', val: sd.toFixed(4) },
+        ],
+        interpret: `確率分布表から、期待値 E(X)=${mean.toFixed(3)}、分散 V(X)=${variance.toFixed(3)}、標準偏差=${sd.toFixed(3)} と求まります。`,
+        code: `import numpy as np
+
+x = np.array([${xs}])
+p = np.array([${ps.map(p=>p.toFixed(6))}])
+
+assert abs(p.sum() - 1) < 1e-6, "確率の合計が1になっていません"
+
+mean = np.sum(x * p)              # 期待値 E(X)
+var  = np.sum(p * (x - mean)**2)  # 分散 V(X)
+sd   = np.sqrt(var)
+
+print(f"期待値 E(X): {mean:.4f}")
+print(f"分散 V(X): {var:.4f}")
+print(f"標準偏差: {sd:.4f}")`
+      };
+    }
+  },
+  {
+    id: 'atleast_once_calc', flowCat: 'probdist',
+    title: '反復試行で「少なくとも1回」成功する確率（余事象）',
+    dist: '独立反復試行・余事象',
+    keywords: ['「n回のうち少なくとも1回は成功する確率」を求めたい', '「1度も起こらない確率」の余事象として考える', '独立試行を繰り返す場面'],
+    formula: '<div class="f-title">公式</div>P(少なくとも1回成功) = 1 − (1−p)ⁿ<br><span style="color:#94a3b8">「1回も成功しない」事象の余事象として求める</span>',
+    fields: [
+      { id: 'p', label: '1回の試行での成功確率 p は？', type: 'number', default: 0.1, step: 0.0001, hint: '例：1/256の場合は 0.0039 のように小数で入力' },
+      { id: 'n', label: '試行回数 n は？', type: 'number', default: 20 },
+    ],
+    calc(v) {
+      const p = v.p, n = Math.round(v.n);
+      if (p < 0 || p > 1) throw new Error('確率pは0〜1の範囲で入力してください');
+      if (n < 1) throw new Error('試行回数nは1以上を入力してください');
+      const pNone = Math.pow(1 - p, n);
+      const pAtLeastOne = 1 - pNone;
+      return {
+        vals: [
+          { label: '1回も成功しない確率 (1-p)ⁿ', val: pNone.toFixed(6) },
+          { label: '少なくとも1回成功する確率', val: pAtLeastOne.toFixed(6) },
+          { label: '（％表示）', val: `${(pAtLeastOne*100).toFixed(2)}%` },
+        ],
+        interpret: `1回の成功確率 p=${p} をn=${n}回試行するとき、\n1回も成功しない確率は (1-p)ⁿ = ${pNone.toFixed(4)}。\nその余事象として、少なくとも1回成功する確率は 1-(1-p)ⁿ = ${pAtLeastOne.toFixed(4)}（${(pAtLeastOne*100).toFixed(2)}%）です。`,
+        code: `p = ${p}   # 1回の試行での成功確率
+n = ${n}     # 試行回数
+
+p_none = (1 - p) ** n       # 1回も成功しない確率
+p_at_least_one = 1 - p_none # 少なくとも1回成功する確率（余事象）
+
+print(f"1回も成功しない確率: {p_none:.6f}")
+print(f"少なくとも1回成功する確率: {p_at_least_one:.6f} ({p_at_least_one*100:.2f}%)")`
+      };
+    }
+  },
+
   // ── 2グループを比較する ──
   {
     id: 'ci_prop_diff', flowCat: 'group2',
@@ -2540,6 +2956,57 @@ print(f"帰無仮説(pA=pB)を{'棄却' if p_val < alpha else '採択'}: p={'<' 
   },
 
   // ── 関係性を調べる ──
+  {
+    id: 'covariance_calc', flowCat: 'relation',
+    title: '共分散の計算（2変数データから）',
+    dist: '記述統計（標本共分散）',
+    keywords: ['「共分散を求めよ」', 'x, y の対応するデータ列が与えられている', '相関係数を求める前段階の計算'],
+    formula: '<div class="f-title">公式</div>Sxy = Σ(xi−x̄)(yi−ȳ) / (n−1)<br><span style="color:#94a3b8">相関係数 r = Sxy / (Sx・Sy)</span>',
+    fields: [
+      { id: 'xs', label: 'x のデータ（カンマ区切り）', type: 'text', default: '160, 165, 170, 175, 180' },
+      { id: 'ys', label: 'y のデータ（カンマ区切り・xと同じ順序で対応）', type: 'text', default: '24, 25, 26, 27, 28' },
+    ],
+    calc(v) {
+      const xs = v.xs.split(',').map(s => parseFloat(s.trim())).filter(x => !isNaN(x));
+      const ys = v.ys.split(',').map(s => parseFloat(s.trim())).filter(x => !isNaN(x));
+      if (xs.length < 2 || ys.length < 2) throw new Error('データは2個以上入力してください');
+      if (xs.length !== ys.length) throw new Error('xとyの個数を一致させてください');
+      const n = xs.length;
+      const xbar = xs.reduce((a,b)=>a+b,0)/n;
+      const ybar = ys.reduce((a,b)=>a+b,0)/n;
+      const sxy = xs.reduce((a,x,i)=>a+(x-xbar)*(ys[i]-ybar), 0) / (n-1);
+      const sx2 = xs.reduce((a,x)=>a+(x-xbar)**2, 0) / (n-1);
+      const sy2 = ys.reduce((a,y)=>a+(y-ybar)**2, 0) / (n-1);
+      const sx = Math.sqrt(sx2), sy = Math.sqrt(sy2);
+      const r = sxy / (sx * sy);
+      return {
+        vals: [
+          { label: 'n', val: n },
+          { label: 'x̄', val: xbar.toFixed(4) },
+          { label: 'ȳ', val: ybar.toFixed(4) },
+          { label: '不偏共分散 Sxy', val: sxy.toFixed(4) },
+          { label: 'Sx（xの不偏標準偏差）', val: sx.toFixed(4) },
+          { label: 'Sy（yの不偏標準偏差）', val: sy.toFixed(4) },
+          { label: '相関係数 r（検算）', val: r.toFixed(4) },
+        ],
+        interpret: `x̄=${xbar.toFixed(3)}, ȳ=${ybar.toFixed(3)}。\n不偏共分散 Sxy=${sxy.toFixed(4)}。\n共分散を各変数の標準偏差の積で割ると相関係数 r=${r.toFixed(4)} が得られます。`,
+        code: `import numpy as np
+
+x = np.array([${xs}])
+y = np.array([${ys}])
+
+# 共分散行列（ddof=1で不偏共分散）
+cov_matrix = np.cov(x, y, ddof=1)
+sxy = cov_matrix[0, 1]  # xとyの共分散
+
+# 相関係数（検算）
+r = np.corrcoef(x, y)[0, 1]
+
+print(f"不偏共分散 Sxy: {sxy:.4f}")
+print(f"相関係数 r: {r:.4f}")`
+      };
+    }
+  },
   {
     id: 'ci_corr', flowCat: 'relation',
     title: '相関係数の区間推定（Fisherのz変換）',
@@ -4578,9 +5045,11 @@ function patternMatchScore(p, qTokens) {
   ];
   let score = 0;
   for (const tok of qTokens) {
+    const variants = tokenVariants(tok);
     let tokHit = false;
     for (const h of haystacks) {
-      if (normalize(h.text).includes(tok)) {
+      const htext = normalize(h.text);
+      if (variants.some(v => htext.includes(v))) {
         score += h.weight;
         tokHit = true;
       }
@@ -5514,7 +5983,7 @@ function switchTab(name) {
   document.getElementById(`tab-${name}`).classList.add('active');
 
   // active クラスで表示制御（.screen { display:none } を前提）
-  ['homeScreen', 'ttableScreen', 'monteScreen', 'karteScreen', 'conceptScreen'].forEach(id => {
+  ['homeScreen', 'ttableScreen', 'monteScreen', 'karteScreen', 'conceptScreen', 'calcScreen'].forEach(id => {
     document.getElementById(id).classList.remove('active');
   });
   document.getElementById('wizScreen').classList.remove('active');
@@ -5536,6 +6005,8 @@ function switchTab(name) {
   } else if (name === 'concept') {
     document.getElementById('conceptScreen').classList.add('active');
     if (!window._conceptInit) { initConceptTab(); window._conceptInit = true; }
+  } else if (name === 'calc') {
+    document.getElementById('calcScreen').classList.add('active');
   }
 }
 
@@ -5761,12 +6232,45 @@ document.addEventListener('keydown', (e) => {
 
 // ─── 授業カルテ 演習問題 ────────────────────────────────────────────
 let karteCurrentWeek = 0;
+let karteSearchQuery = '';
 
 function renderKarteWeekNav() {
   const nav = document.getElementById('karteWeekNav');
   nav.innerHTML = KARTE_WEEKS.map((w, i) =>
     `<button class="karte-week-btn" id="karteWeekBtn${i}" onclick="showKarteWeek(${i})">第${w.num}回</button>`
   ).join('');
+}
+
+// 1問分のカードHTMLを組み立てる（週表示・検索結果表示の両方で共用）
+function buildKarteQuestionCard(q, weekIdx, qIdx, opts) {
+  opts = opts || {};
+  const cardId = `karte-${weekIdx}-${qIdx}`;
+  let html = `<div class="karte-q-card">`;
+  if (opts.weekBadge) {
+    html += `<span class="karte-week-badge">${opts.weekBadge}</span>`;
+  }
+  html += `<span class="karte-q-num">第${qIdx + 1}問</span>`;
+  html += `<div class="karte-q-text">${escapeHtml(q.q)}</div>`;
+  if (q.choices) {
+    html += `<ul class="karte-choices">` + q.choices.map(c => `<li>${escapeHtml(c)}</li>`).join('') + `</ul>`;
+  }
+  html += `<div class="karte-btn-row">`;
+  html += `<button class="karte-toggle-btn" onclick="document.getElementById('${cardId}-ans').classList.toggle('open')">✅ 解答を見る</button>`;
+  if (q.variant) {
+    html += `<button class="karte-variant-btn" onclick="showKarteVariant('${cardId}', ${weekIdx}, ${qIdx})">🎲 類題に挑戦</button>`;
+  }
+  if (opts.jumpButton) {
+    html += `<button class="karte-jump-btn" onclick="jumpToKarteWeek(${weekIdx})">📍 第${opts.weekNum}回タブへ移動</button>`;
+  }
+  html += `</div>`;
+  html += `<div class="karte-answer-box" id="${cardId}-ans">`;
+  html += `<div class="karte-answer-label">解答</div>`;
+  html += `<div class="karte-answer-val">${escapeHtml(q.ans)}</div>`;
+  html += `<div class="karte-exp">${escapeHtml(q.exp)}</div>`;
+  html += `</div>`;
+  html += `<div class="karte-variant-box" id="${cardId}-variant" style="display:none;"></div>`;
+  html += `</div>`;
+  return html;
 }
 
 function showKarteWeek(idx) {
@@ -5782,29 +6286,17 @@ function showKarteWeek(idx) {
   html += `<div class="karte-week-sub">${week.date}実施　全${week.qs.length}問</div>`;
 
   week.qs.forEach((q, qi) => {
-    const cardId = `karte-${idx}-${qi}`;
-    html += `<div class="karte-q-card">`;
-    html += `<span class="karte-q-num">第${qi + 1}問</span>`;
-    html += `<div class="karte-q-text">${escapeHtml(q.q)}</div>`;
-    if (q.choices) {
-      html += `<ul class="karte-choices">` + q.choices.map(c => `<li>${escapeHtml(c)}</li>`).join('') + `</ul>`;
-    }
-    html += `<div class="karte-btn-row">`;
-    html += `<button class="karte-toggle-btn" onclick="document.getElementById('${cardId}-ans').classList.toggle('open')">✅ 解答を見る</button>`;
-    if (q.variant) {
-      html += `<button class="karte-variant-btn" onclick="showKarteVariant('${cardId}', ${idx}, ${qi})">🎲 類題に挑戦</button>`;
-    }
-    html += `</div>`;
-    html += `<div class="karte-answer-box" id="${cardId}-ans">`;
-    html += `<div class="karte-answer-label">解答</div>`;
-    html += `<div class="karte-answer-val">${escapeHtml(q.ans)}</div>`;
-    html += `<div class="karte-exp">${escapeHtml(q.exp)}</div>`;
-    html += `</div>`;
-    html += `<div class="karte-variant-box" id="${cardId}-variant" style="display:none;"></div>`;
-    html += `</div>`;
+    html += buildKarteQuestionCard(q, idx, qi);
   });
 
   body.innerHTML = html;
+}
+
+function jumpToKarteWeek(idx) {
+  clearKarteSearch();
+  showKarteWeek(idx);
+  const nav = document.getElementById('karteWeekNav');
+  if (nav) nav.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function escapeHtml(s) {
@@ -5829,6 +6321,157 @@ function showKarteVariant(cardId, weekIdx, qIdx) {
       <div class="karte-exp">${escapeHtml(v.exp)}</div>
     </div>
   `;
+}
+
+// ─ 授業カルテ 全回横断検索 ─
+function karteMatches(q, tokens) {
+  if (!tokens.length) return true;
+  const hay = (
+    q.q + ' ' + (q.choices ? q.choices.join(' ') : '') + ' ' + q.ans + ' ' + q.exp
+  ).toLowerCase();
+  return tokens.every(t => tokenVariants(t).some(v => hay.includes(v)));
+}
+
+function handleKarteSearch(val) {
+  karteSearchQuery = val;
+  document.getElementById('karteSearchClear').style.display = val ? 'inline' : 'none';
+  renderKarteSearchResults();
+}
+
+function clearKarteSearch() {
+  karteSearchQuery = '';
+  document.getElementById('karteSearchBox').value = '';
+  document.getElementById('karteSearchClear').style.display = 'none';
+  renderKarteSearchResults();
+}
+
+function renderKarteSearchResults() {
+  const resultsEl = document.getElementById('karteSearchResults');
+  const infoEl = document.getElementById('karteSearchInfo');
+  const nav = document.getElementById('karteWeekNav');
+  const body = document.getElementById('karteWeekBody');
+  const tokens = karteSearchQuery.trim() ? karteSearchQuery.trim().split(/\s+/).filter(Boolean) : [];
+
+  if (!tokens.length) {
+    // 検索していない時は通常の週別ナビ表示に戻す
+    resultsEl.innerHTML = '';
+    infoEl.style.display = 'none';
+    nav.style.display = '';
+    body.style.display = '';
+    return;
+  }
+
+  nav.style.display = 'none';
+  body.style.display = 'none';
+
+  const matches = [];
+  KARTE_WEEKS.forEach((week, wi) => {
+    week.qs.forEach((q, qi) => {
+      if (karteMatches(q, tokens)) matches.push({ week, wi, q, qi });
+    });
+  });
+
+  infoEl.style.display = '';
+  infoEl.textContent = `${matches.length}件ヒット（全${KARTE_WEEKS.reduce((s, w) => s + w.qs.length, 0)}問中）`;
+
+  if (!matches.length) {
+    resultsEl.innerHTML = `<div class="concept-no-result">該当する問題が見つかりません。キーワードを変えてみてください。</div>`;
+    return;
+  }
+
+  resultsEl.innerHTML = matches.map(m =>
+    buildKarteQuestionCard(m.q, m.wi, m.qi, {
+      weekBadge: `第${m.week.num}回`,
+      weekNum: m.week.num,
+      jumpButton: true,
+    })
+  ).join('');
+}
+
+// ─── シンプル電卓 ─────────────────────────────────────────────
+let calcState = { display: '0', prev: null, operator: null, waitingForOperand: false };
+
+function calcFormat(num) {
+  if (!isFinite(num)) return 'エラー';
+  if (Math.abs(num) < 1e-12) num = 0;
+  // 表示桁数を適度に丸めつつ、末尾の不要な0を除去
+  let s = num.toPrecision(12);
+  if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, '');
+  if (s.includes('e')) s = num.toString();
+  return s;
+}
+
+function calcRender() {
+  document.getElementById('calcDisplay').textContent = calcState.display;
+}
+
+function calcCompute(a, b, op) {
+  switch (op) {
+    case '+': return a + b;
+    case '−': return a - b;
+    case '×': return a * b;
+    case '÷': return b === 0 ? NaN : a / b;
+    case '^': return Math.pow(a, b);
+    default: return b;
+  }
+}
+
+function calcAction(action, value) {
+  const s = calcState;
+  if (action === 'digit') {
+    if (s.waitingForOperand) {
+      s.display = value;
+      s.waitingForOperand = false;
+    } else {
+      s.display = (s.display === '0') ? value : s.display + value;
+    }
+  } else if (action === 'decimal') {
+    if (s.waitingForOperand) {
+      s.display = '0.';
+      s.waitingForOperand = false;
+    } else if (!s.display.includes('.')) {
+      s.display += '.';
+    }
+  } else if (action === 'clear') {
+    s.display = '0'; s.prev = null; s.operator = null; s.waitingForOperand = false;
+  } else if (action === 'back') {
+    if (!s.waitingForOperand) {
+      s.display = s.display.length > 1 ? s.display.slice(0, -1) : '0';
+    }
+  } else if (action === 'sign') {
+    if (s.display !== '0') {
+      s.display = s.display.startsWith('-') ? s.display.slice(1) : '-' + s.display;
+    }
+  } else if (action === 'sqrt') {
+    const v = parseFloat(s.display);
+    s.display = v < 0 ? 'エラー' : calcFormat(Math.sqrt(v));
+    s.waitingForOperand = true;
+  } else if (action === 'square') {
+    const v = parseFloat(s.display);
+    s.display = calcFormat(v * v);
+    s.waitingForOperand = true;
+  } else if (action === 'op') {
+    const inputValue = parseFloat(s.display);
+    if (s.prev === null) {
+      s.prev = inputValue;
+    } else if (!s.waitingForOperand) {
+      const result = calcCompute(s.prev, inputValue, s.operator);
+      s.display = calcFormat(result);
+      s.prev = result;
+    }
+    s.operator = value;
+    s.waitingForOperand = true;
+  } else if (action === 'equals') {
+    const inputValue = parseFloat(s.display);
+    if (s.operator !== null && s.prev !== null) {
+      const result = calcCompute(s.prev, inputValue, s.operator);
+      s.display = calcFormat(result);
+      s.prev = null;
+      s.operator = null;
+      s.waitingForOperand = true;
+    }
+  }
+  calcRender();
 }
 
 </script>
