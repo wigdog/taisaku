@@ -3349,6 +3349,147 @@ print(f"x={x0} での予測値: {y0:.4f}")`,
     }
   },
 
+  // ── 重回帰分析 ──
+  {
+    id: 'multi_regression', flowCat: 'relation',
+    title: '重回帰分析（最小二乗法・決定係数・係数のt検定）',
+    dist: 't分布（自由度 n-k-1）／F分布',
+    keywords: ['重回帰', '複数の説明変数', 'y, x1, x2,...のデータが与えられている', '決定係数・自由度調整済み決定係数が欲しい'],
+    formula: '<div class="f-title">公式</div>ŷ = b0 + b1x1 + b2x2 + ... + bkxk（最小二乗法）<br>調整済みR² = 1 - (1-R²)(n-1)/(n-k-1)',
+    fields: [
+      { id: 'rawMulti', label: 'y, x1, x2, ... のデータを貼り付け（1行1サンプル、先頭列がy）。ヘッダー行があってもOK', type: 'textarea',
+        default: 'y,x1,x2\n10,1,2\n12,2,2\n15,2,4\n14,3,3\n18,4,5\n20,4,6\n17,5,4\n22,6,6' }
+    ],
+    calc(v) {
+      const raw = v.rawMulti;
+      if (!raw || raw.trim() === '') return { error: 'データが入力されていません。' };
+
+      const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '');
+      const tokenized = lines.map(l => {
+        let parts = l.split(/[,\t]+/).map(s => s.trim()).filter(s => s !== '');
+        if (parts.length < 2) parts = l.split(/\s+/).filter(s => s !== '');
+        return parts;
+      });
+
+      // 先頭行がヘッダー（数値でないセルを含む）なら除外し、列名として使う
+      let header = null, dataTokens = tokenized;
+      if (tokenized.length && tokenized[0].some(t => !looksNumericCell(t))) {
+        header = tokenized[0];
+        dataTokens = tokenized.slice(1);
+      }
+
+      const numericRows = dataTokens.filter(p => p.length >= 2 && p.every(t => looksNumericCell(t)));
+      if (!numericRows.length) return { error: '数値データが見つかりませんでした。先頭列をy、残りをx1,x2,...として、カンマ区切りで貼り付けてください。' };
+
+      const counts = {};
+      numericRows.forEach(p => { counts[p.length] = (counts[p.length] || 0) + 1; });
+      const modeLen = parseInt(Object.keys(counts).reduce((a, b) => counts[a] >= counts[b] ? a : b));
+      const usedRows = numericRows.filter(p => p.length === modeLen);
+
+      if (modeLen < 2) return { error: 'y と説明変数x1,x2,...の、合計2列以上のデータが必要です。' };
+
+      const k = modeLen - 1; // 説明変数の数
+      const n = usedRows.length;
+      if (n <= k + 1) return { error: `データ数(${n})が説明変数の数(${k})に対して少なすぎます。n > k+1 となるように増やしてください。` };
+
+      const xNames = header ? header.slice(1, modeLen) : Array.from({ length: k }, (_, i) => `x${i + 1}`);
+      const yData = usedRows.map(p => parseFloat(p[0]));
+      const X = usedRows.map(p => [1, ...p.slice(1).map(parseFloat)]); // n × (k+1)
+
+      // ── 行列演算ヘルパー ──
+      const transpose = A => A[0].map((_, j) => A.map(row => row[j]));
+      const matMul = (A, B) => {
+        const r = A.length, c = B[0].length, inner = B.length;
+        const R = Array.from({ length: r }, () => Array(c).fill(0));
+        for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) { let s = 0; for (let m = 0; m < inner; m++) s += A[i][m] * B[m][j]; R[i][j] = s; }
+        return R;
+      };
+      const matInv = (Ain) => {
+        const n2 = Ain.length;
+        let M = Ain.map((row, i) => [...row, ...Array.from({ length: n2 }, (_, j) => (i === j ? 1 : 0))]);
+        for (let i = 0; i < n2; i++) {
+          if (Math.abs(M[i][i]) < 1e-10) {
+            let sw = -1;
+            for (let r2 = i + 1; r2 < n2; r2++) if (Math.abs(M[r2][i]) > 1e-10) { sw = r2; break; }
+            if (sw === -1) throw new Error('説明変数間に強い多重共線性があり、計算できません。列を見直してください。');
+            [M[i], M[sw]] = [M[sw], M[i]];
+          }
+          const piv = M[i][i];
+          for (let j = 0; j < 2 * n2; j++) M[i][j] /= piv;
+          for (let r2 = 0; r2 < n2; r2++) {
+            if (r2 === i) continue;
+            const f = M[r2][i];
+            for (let j = 0; j < 2 * n2; j++) M[r2][j] -= f * M[i][j];
+          }
+        }
+        return M.map(row => row.slice(n2));
+      };
+
+      let beta, XtX_inv;
+      try {
+        const Xt = transpose(X);
+        const XtX = matMul(Xt, X);
+        XtX_inv = matInv(XtX);
+        const yMat = yData.map(y0 => [y0]);
+        const XtY = matMul(Xt, yMat);
+        beta = matMul(XtX_inv, XtY).map(r0 => r0[0]);
+      } catch (e) {
+        return { error: e.message || '行列が特異なため計算できません。説明変数間の相関が強すぎる可能性があります。' };
+      }
+
+      const yhat = X.map(row => row.reduce((s, xij, j) => s + xij * beta[j], 0));
+      const resid = yData.map((y0, i) => y0 - yhat[i]);
+      const sse = resid.reduce((s, e) => s + e * e, 0);
+      const ybar = yData.reduce((a, b) => a + b, 0) / n;
+      const sst = yData.reduce((s, y0) => s + (y0 - ybar) ** 2, 0);
+      const r2 = 1 - sse / sst;
+      const df = n - k - 1;
+      const adjR2 = 1 - (1 - r2) * (n - 1) / df;
+      const mse = sse / df;
+
+      const se = beta.map((_, j) => Math.sqrt(mse * XtX_inv[j][j]));
+      const tStats = beta.map((b, j) => b / se[j]);
+      const pVals = tStats.map(t => 2 * (1 - jStat.studentt.cdf(Math.abs(t), df)));
+
+      let fStat = null, pF = null;
+      if (sst > sse) {
+        fStat = ((sst - sse) / k) / mse;
+        try { pF = 1 - jStat.centralF.cdf(fStat, k, df); } catch (e) { pF = null; }
+      }
+
+      const coefRows = beta.map((b, j) => {
+        const name = j === 0 ? '切片 b0' : `${xNames[j - 1]} の係数`;
+        return { label: name, val: `${b.toFixed(4)}（t=${tStats[j].toFixed(3)}, p=${pVals[j].toFixed(4)}）` };
+      });
+
+      const eqStr = 'ŷ = ' + beta.map((b, j) => j === 0 ? b.toFixed(3) : `${b >= 0 ? '+ ' : '- '}${Math.abs(b).toFixed(3)}${xNames[j - 1]}`).join(' ');
+
+      return {
+        vals: [
+          { label: 'サンプルサイズ (n)', val: n },
+          { label: '説明変数の数 (k)', val: k },
+          ...coefRows,
+          { label: '決定係数 R²', val: r2.toFixed(4) },
+          { label: '自由度調整済みR²', val: adjR2.toFixed(4) },
+          ...(fStat !== null ? [{ label: '全体のF検定', val: `F=${fStat.toFixed(4)}${pF !== null ? `, p=${pF.toFixed(4)}` : ''}` }] : []),
+        ],
+        interpret: `回帰式: ${eqStr}\n決定係数 R²=${r2.toFixed(3)}、自由度調整済みR²=${adjR2.toFixed(3)}。\n各係数のp値が0.05未満なら、その説明変数はyに対して5%水準で有意な影響があると言えます。\n${fStat !== null && pF !== null ? `モデル全体のF検定: p=${pF.toFixed(4)}（${pF < 0.05 ? 'モデル全体は5%水準で有意です。' : 'モデル全体は5%水準で有意とは言えません。'}）` : ''}`,
+        code: `import numpy as np
+import pandas as pd
+import statsmodels.api as sm
+
+data = ${JSON.stringify(usedRows.map(p => p.map(Number)))}
+cols = ['y', ${xNames.map(x => `'${x}'`).join(', ')}]
+df = pd.DataFrame(data, columns=cols)
+
+X = sm.add_constant(df[cols[1:]])
+y = df['y']
+model = sm.OLS(y, X).fit()
+print(model.summary())`
+      };
+    }
+  },
+
   // ── 設計する ──
   {
     id: 'ci_n', flowCat: 'design',
@@ -3812,7 +3953,7 @@ print(f"必要なn: {n} (約{n/n0:.2f}倍)")`,
     keywords: ['目標とするyから必要なxを逆算したい', '「売上◯万を達成するには広告費いくら？」', '悲観・点推定・楽観の3パターンで試算', 'yからxを逆推定する'],
     formula: '<div class="f-title">公式</div>x = (y_target - b0) / b1<br><span style="color:#94a3b8">b1のCIを使い悲観・点推定・楽観の3ケースで逆算</span>',
     fields: [
-      { id: 'xy_data',  label: 'x,y のデータ（1行=1件 カンマ区切り）', type: 'text', default: '80,320\n100,350\n90,340\n120,380\n150,410\n130,395\n160,430\n140,415\n180,460\n200,480\n175,470\n210,500' },
+      { id: 'xy_data',  label: 'x,y のデータ（1行=1件 カンマ区切り）', type: 'textarea', default: '80,320\n100,350\n90,340\n120,380\n150,410\n130,395\n160,430\n140,415\n180,460\n200,480\n175,470\n210,500' },
       { id: 'y_target', label: '達成したい y の目標値は？', type: 'number', default: 480, step: 0.01 },
       { id: 'conf',     label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
     ],
@@ -3891,50 +4032,143 @@ print(f"  楽観: {(y_target-b0)/b1_hi:.2f}")`,
     }
   },
 
-  // ── 選挙出口調査サンプルサイズ設計 ──
+  // ── 選挙出口調査サンプルサイズ設計（3候補以上にも対応） ──
   {
     id: 'ci_election_n', flowCat: 'design',
-    title: '選挙出口調査のサンプルサイズ設計（2候補の差を検出）',
+    title: '選挙出口調査のサンプルサイズ設計（2〜多候補の当確判定に対応）',
     dist: 'z分布（正規近似）',
-    keywords: ['2候補の差を統計的に断言したい', '「A候補がB候補より有意に多い」と言えるnは？', '2比率の差の信頼区間下限 > 0 を保証するn', '出口調査で当確を打ちたい'],
-    formula: '<div class="f-title">公式</div>n ≥ z² × (pA(1-pA) + pB(1-pB)) / (pA-pB)²<br><span style="color:#94a3b8">差の信頼区間下限 > 0 になる最小サンプルサイズ</span>',
+    keywords: ['複数候補の中で1位を統計的に断言したい', '「A候補が当選確実」と言えるnは？', '2比率の差の信頼区間下限 > 0 を保証するn', '出口調査で当確を打ちたい', '3人以上の多党選挙', '当確ライン'],
+    formula: '<div class="f-title">公式（各対立候補ごとに計算し、最大のnを採用）</div>n ≥ z² × [ p_top + p_i − (p_top−p_i)² ] / (p_top−p_i)²<br><span style="color:#94a3b8">出口調査は「同じ1つの標本」から各候補の得票率を同時に推定する（多項分布）。候補間の得票率は必ず負に相関するため、この共分散項を含めた分散を使う必要がある（p_top(1-p_top)+p_i(1-p_i) だけを使う"独立2標本"の式では分散を過小評価し、必要なnを少なく見積もってしまう）。最多得票の候補と、他の全候補それぞれとのペアで計算し、最も厳しい（最大の）nを「当確」に必要なサンプルサイズとする。</span>',
     fields: [
-      { id: 'pA',   label: 'A候補の想定得票率 pA', type: 'number', default: 0.55, step: 0.01 },
-      { id: 'pB',   label: 'B候補の想定得票率 pB', type: 'number', default: 0.30, step: 0.01 },
+      {
+        id: 'count', label: '候補者は何人ですか？（2人以上）', type: 'number', default: 3, step: 1,
+        // ★ 回答（人数）に応じて、以降に「候補者ごとの名前・得票率」の質問を動的に挿入する
+        expand(wiz) {
+          const fields = wiz.pattern.fields;
+          const countIdx = fields.findIndex(fld => fld.id === 'count');
+          const confIdx = fields.findIndex(fld => fld.id === 'conf');
+          // 前回分（人数を変更して戻ってきた場合など）の動的フィールドを一旦取り除く
+          const removed = fields.splice(countIdx + 1, confIdx - countIdx - 1);
+          removed.forEach(fld => { delete wiz.answers[fld.id]; });
+
+          const n = Math.max(2, Math.round(Number(wiz.answers.count) || 2));
+          wiz.answers.count = n; // 不正値（小数・1人以下など）を補正して記録
+          const newFields = [];
+          for (let i = 1; i <= n; i++) {
+            newFields.push({
+              id: `name_${i}`, type: 'text', optional: true,
+              label: `候補者${i}の名前は？（空欄でも可。その場合は自動的に「${String.fromCharCode(64 + i)}」になります）`,
+            });
+            newFields.push({
+              id: `p_${i}`, type: 'number', step: 0.01,
+              label: `候補者${i}の想定得票率 p は？（0〜1の数値、例: 0.42）`,
+            });
+          }
+          fields.splice(countIdx + 1, 0, ...newFields);
+        },
+      },
       { id: 'conf', label: '信頼水準は？', type: 'select', options: ['0.95:95%', '0.99:99%', '0.90:90%'] },
     ],
     calc(v) {
-      const z = jStat.normal.inv(1-(1-v.conf)/2, 0, 1);
-      const diff = v.pA - v.pB;
-      if (diff <= 0) return { error: 'pA > pB の場合のみ使えます' };
-      const n_raw = z*z * (v.pA*(1-v.pA) + v.pB*(1-v.pB)) / (diff*diff);
-      const n = Math.ceil(n_raw);
-      const se = Math.sqrt((v.pA*(1-v.pA) + v.pB*(1-v.pB)) / n);
-      const lo = diff - z*se;
+      const z = jStat.normal.inv(1 - (1 - v.conf) / 2, 0, 1);
+
+      const count = Math.max(2, Math.round(Number(v.count) || 0));
+      const labels = [];
+      const ps = [];
+      for (let i = 1; i <= count; i++) {
+        const rawName = String(v[`name_${i}`] || '').trim();
+        labels.push(rawName !== '' ? rawName : String.fromCharCode(64 + i)); // 空欄はA,B,C...で自動補完
+        ps.push(Number(v[`p_${i}`]));
+      }
+
+      if (ps.length < 2 || ps.some(p => isNaN(p))) {
+        return { error: '候補者は2人以上、各候補の想定得票率を数値で入力してください（例: 0.42）。' };
+      }
+      if (ps.some(p => p <= 0 || p >= 1)) {
+        return { error: '得票率はすべて 0〜1 の範囲で入力してください。' };
+      }
+
+      // 最多得票（当確を判定したい）候補を特定
+      let topIdx = 0;
+      ps.forEach((p, i) => { if (p > ps[topIdx]) topIdx = i; });
+      const pTop = ps[topIdx];
+
+      // 最多得票候補 vs. 他の全候補、それぞれのペアで必要nを計算し、最も厳しい（最大の）nを採用する
+      // ※ 出口調査は「同一標本」からの多項分布データなので、共分散 Cov(p̂_top, p̂_i) = -p_top・p_i/n を
+      //   考慮した分散 [p_top + p_i - (p_top-p_i)²]/n を使う（独立2標本の式ではない）
+      const pairs = [];
+      for (let i = 0; i < ps.length; i++) {
+        if (i === topIdx) continue;
+        const pOpp = ps[i];
+        const diff = pTop - pOpp;
+        if (diff <= 0) {
+          return { error: `「${labels[topIdx]}」が最多得票の想定ですが、「${labels[i]}」の得票率が同じか上回っています。想定得票率を見直してください。` };
+        }
+        const varNumer = pTop + pOpp - diff * diff; // 多項分布での分散（×n）の分子
+        const nRaw = z * z * varNumer / (diff * diff);
+        pairs.push({ label: labels[i], pOpp, diff, varNumer, n: Math.ceil(nRaw) });
+      }
+
+      pairs.sort((a, b) => b.n - a.n);
+      const n = pairs[0].n; // 全対立候補に対して当確を保証できる、最も厳しい条件でのサンプルサイズ
+
+      const checkRows = pairs.map(pr => {
+        const se = Math.sqrt(pr.varNumer / n);
+        const lo = pr.diff - z * se;
+        return { ...pr, se, lo };
+      });
+
       return {
         vals: [
-          { label: 'pA - pB', val: diff.toFixed(4) },
+          { label: '最多得票想定の候補', val: `${labels[topIdx]}（p=${pTop}）` },
           { label: 'z値', val: z.toFixed(4) },
+          { label: '最も僅差の対立候補', val: `${checkRows[0].label}（差 ${checkRows[0].diff.toFixed(4)}）` },
           { label: '必要サンプルサイズ n', val: n },
-          { label: '差の信頼区間下限（確認）', val: lo.toFixed(4) + (lo > 0 ? ' ✅' : ' ⚠️') },
+          ...checkRows.map(r => ({ label: `対 ${r.label} の信頼区間下限（確認）`, val: r.lo.toFixed(4) + (r.lo > 0 ? ' ✅' : ' ⚠️') })),
         ],
-        interpret: (v.conf*100).toFixed(0) + '%信頼度でA候補の当選を断言するには n = ' + n + ' 以上が必要。\n（差の信頼区間下限 = ' + lo.toFixed(4) + (lo > 0 ? ' > 0 ✅' : ' ≤ 0 ⚠️') + '）',
+        interpret: `候補: ${labels.map((l, i) => `${l}=${ps[i]}`).join(', ')}\n`
+          + `${(v.conf * 100).toFixed(0)}%信頼度で「${labels[topIdx]}が最多得票（当確）」と断言するには n = ${n} 以上が必要。\n`
+          + `（最も僅差になるのは ${checkRows[0].label} との比較で、差=${checkRows[0].diff.toFixed(4)}）\n`
+          + `※ 出口調査は同一標本からの多項分布データのため、候補間の負の共分散を考慮した分散 [p_top+p_i-(p_top-p_i)²]/n を使用（独立2標本の式より必要nは大きめに出る）\n`
+          + checkRows.map(r => `対${r.label}: 差の信頼区間下限 = ${r.lo.toFixed(4)}${r.lo > 0 ? ' > 0 ✅' : ' ≤ 0 ⚠️'}`).join('\n'),
         code: `import numpy as np
 from scipy import stats
 import math
 
-pA, pB, conf = ` + v.pA + `, ` + v.pB + `, ` + v.conf + `
-z = stats.norm.ppf(1-(1-conf)/2)
-diff = pA - pB
-n_raw = z**2 * (pA*(1-pA) + pB*(1-pB)) / diff**2
-n = math.ceil(n_raw)
-se = np.sqrt((pA*(1-pA) + pB*(1-pB)) / n)
-lo = diff - z * se
-print(f"必要サンプルサイズ: n = {n}")
-print(f"差の信頼区間下限: {lo:.4f} ({'OK' if lo > 0 else 'NG'})")`,
+labels = ${JSON.stringify(labels)}
+ps = ${JSON.stringify(ps)}
+conf = ${v.conf}
+
+z = stats.norm.ppf(1 - (1 - conf) / 2)
+top_idx = int(np.argmax(ps))
+p_top = ps[top_idx]
+
+# 出口調査は「同一標本」から各候補の得票率を同時に推定する（多項分布）ため、
+# Cov(p_top_hat, p_i_hat) = -p_top*p_i/n という負の共分散を考慮する必要がある。
+# 独立2標本の式 [p_top(1-p_top)+p_i(1-p_i)]/n ではこの共分散項が欠落し、
+# 分散を過小評価（=必要なnを過小評価）してしまう点に注意。
+results = []
+for i, p_opp in enumerate(ps):
+    if i == top_idx:
+        continue
+    diff = p_top - p_opp
+    var_numer = p_top + p_opp - diff**2   # 多項分布での分散(×n)
+    n_raw = z**2 * var_numer / diff**2
+    results.append((labels[i], p_opp, diff, var_numer, math.ceil(n_raw)))
+
+# 最も厳しい（最大の）nを、当確を出すために必要なサンプルサイズとする
+n_final = max(r[4] for r in results)
+
+print(f"最多得票想定: {labels[top_idx]} (p={p_top})")
+print(f"必要サンプルサイズ: n = {n_final}")
+for lbl, p_opp, diff, var_numer, n in sorted(results, key=lambda r: -r[4]):
+    se = math.sqrt(var_numer / n_final)
+    lo = diff - z * se
+    print(f"対{lbl}: 差={diff:.4f}, 信頼区間下限={lo:.4f} ({'OK' if lo > 0 else 'NG'})")`,
       };
     }
   },
+
 
   // ══════════════════════════════════════════════════════════════════
   // ★ 新規：複数時点・複合指標パターン（演習対応）
@@ -5321,7 +5555,9 @@ let wizard = { pattern: null, index: 0, answers: {} };
 const AUTO_FILL_MAP = { n: 'n', mean: 'mean', s: 'unbStd', s2: 'unbVar' };
 
 function startWizard(p) {
-  wizard = { pattern: p, index: 0, answers: {} };
+  // fields配列を複製してから使う（動的フィールド追加=expandフックがあるパターンで、
+  // グローバルなPATTERNS定義そのものを書き換えてしまわないようにするため）
+  wizard = { pattern: { ...p, fields: [...p.fields] }, index: 0, answers: {} };
   document.getElementById('wizTitle').textContent = p.title;
   document.getElementById('wizDist').textContent = '使用分布: ' + p.dist;
   document.getElementById('wizFormula').innerHTML = p.formula;
@@ -5735,6 +5971,11 @@ function submitField(rawVal) {
     val = parseFloat(rawVal);
   }
   wizard.answers[f.id] = val;
+  // ★ 動的フィールド展開フック：この回答を受けて後続の質問を増減させたいパターン用
+  //   （例：候補者「人数」の回答を受けて、人数分の「名前」「得票率」の質問を挿入する）
+  if (typeof f.expand === 'function') {
+    f.expand(wizard);
+  }
   wizard.index++;
   renderWizardStep();
 }
