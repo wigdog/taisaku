@@ -1884,6 +1884,77 @@ const CATEGORIES = [
 
 // ─── Pattern definitions ────────────────────────────────────────────
 const PATTERNS = [
+
+// ── 生データ（コピペ）からの要約統計量算出 ──
+    {
+      id: 'raw_data_summary',
+      flowCat: 'group1',
+      title: '生データからの要約統計量算出 (csv / CSV / Excelコピペ対応)',
+      dist: 'データ前処理',
+      keywords: ['csv', 'CSV', 'excel', 'Excel', 'エクセル', '生データ', '平均', '標準偏差', '不偏分散', 'コピペ'],
+      formula: '<div class="f-title">使い方</div>Excelやcsvから数値データの列をコピーし、下の枠に貼り付けてください。<br>※改行、カンマ、スペース区切りに自動対応しています。',
+      fields: [
+        { id: 'rawData', label: 'データを貼り付け', type: 'textarea', default: '10, 12, 15, 14, 11' }
+      ],
+      calc(v) {
+        const text = v.rawData;
+        if (!text || text.trim() === '') return { error: 'データが入力されていません。' };
+
+        // 改行、カンマ、タブ、スペースで分割し、数値に変換できるものだけを抽出
+        const rawArray = text.split(/[\n,\t\s]+/);
+        const data = [];
+        for (let str of rawArray) {
+          const num = parseFloat(str);
+          if (!isNaN(num)) {
+            data.push(num);
+          }
+        }
+
+        const n = data.length;
+        if (n < 2) return { error: '分散を計算するため、データは2つ以上入力してください。' };
+
+        // 平均の計算
+        const sum = data.reduce((a, b) => a + b, 0);
+        const mean = sum / n;
+
+        // 不偏分散と不偏標準偏差の計算 (n-1で割る)
+        const sumSq = data.reduce((a, b) => a + Math.pow(b - mean, 2), 0);
+        const unbVar = sumSq / (n - 1);
+        const unbStd = Math.sqrt(unbVar);
+
+        // ── 他の推定・検定ツールへ自動連携するため、グローバルに保存 ──
+        // （再計算はしない。以降どのパターンを開いても、対応するフィールドに自動で入る）
+        window.pastedDataset = { n, mean, unbVar, unbStd };
+
+        return {
+          vals: [
+            { label: 'サンプルサイズ (n)', val: n },
+            { label: '標本平均 (x̄)', val: mean.toFixed(4) },
+            { label: '不偏分散 (s²)', val: unbVar.toFixed(4) },
+            { label: '不偏標準偏差 (s)', val: unbStd.toFixed(4) }
+          ],
+          interpret: `入力された ${n} 個のデータから要約統計量を算出しました。\nこれらの数値を、区間推定や仮説検定のツールに入力して使用してください。`,
+          code: `import numpy as np
+import pandas as pd
+
+# データの読み込み（リスト形式）
+data = [${data.slice(0, 10).join(', ')}${n > 10 ? ', ...' : ''}]
+s = pd.Series(data)
+
+n = s.count()
+mean = s.mean()
+unb_var = s.var(ddof=1)
+unb_std = s.std(ddof=1)
+
+print(f"サンプルサイズ (n): {n}")
+print(f"標本平均 (x̄): {mean:.4f}")
+print(f"不偏分散 (s²): {unb_var:.4f}")
+print(f"不偏標準偏差 (s): {unb_std:.4f}")`
+        };
+      }
+    },
+
+
   // ── 1グループを調べる ──
   {
     id: 'ci_mean_z', flowCat: 'group1',
@@ -5227,7 +5298,24 @@ function renderWizardStep() {
   document.getElementById('calcStage').style.display = 'none';
 
   const f = fields[wizard.index];
-  if (f.type === 'select') {
+  if (f.type === 'textarea') {
+    activeQ.innerHTML = `
+      <div class="q-label">Q. ${f.label}</div>
+      ${f.hint ? `<div class="q-hint">💡 ${f.hint}</div>` : ''}
+      <textarea id="activeInput" rows="6" style="width:100%; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); padding:11px 14px; font-size:1rem; outline:none; font-family:var(--mono); resize:vertical;">${f.default ?? ''}</textarea>
+      <div style="margin-top:8px;">
+        <label class="copy-btn" style="cursor:pointer;">
+          📂 CSVファイルを選択
+          <input type="file" accept=".csv,.txt,text/csv,text/plain" style="display:none" onchange="handleCsvFileInput(event)">
+        </label>
+      </div>
+      <button class="next-btn" onclick="submitActiveInput()">次へ →</button>
+    `;
+    const inputEl = document.getElementById('activeInput');
+    inputEl.focus();
+    inputEl.select();
+    inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitActiveInput(); });
+  } else if (f.type === 'select') {
     const btns = f.options.map(o => {
       const [val, label] = o.split(':');
       return `<button class="choice-btn" data-val="${val}">${label}</button>`;
@@ -5242,10 +5330,22 @@ function renderWizardStep() {
     });
   } else {
     const inputType = f.type === 'text' ? 'text' : 'number';
+    // ── CSV/生データから算出済みの統計量があれば、対応するフィールドに自動反映 ──
+    const AUTO_FILL_MAP = { n: 'n', mean: 'mean', s: 'unbStd', s2: 'unbVar' };
+    let defaultVal = f.default;
+    let autoFilled = false;
+    if (window.pastedDataset && AUTO_FILL_MAP[f.id]) {
+      const v = window.pastedDataset[AUTO_FILL_MAP[f.id]];
+      if (v !== undefined && v !== null) {
+        defaultVal = (typeof v === 'number') ? Number(v.toFixed(6)) : v;
+        autoFilled = true;
+      }
+    }
     activeQ.innerHTML = `
       <div class="q-label">Q. ${f.label}</div>
       ${f.hint ? `<div class="q-hint">💡 ${f.hint}</div>` : ''}
-      <input type="${inputType}" id="activeInput" value="${f.default ?? ''}" ${f.step ? `step="${f.step}"` : ''}>
+      ${autoFilled ? `<div class="q-hint" style="color:#7dd3fc;">📥 CSV/生データ入力（n=${window.pastedDataset.n}）から自動入力されました。値は編集できます。</div>` : ''}
+      <input type="${inputType}" id="activeInput" value="${defaultVal ?? ''}" ${f.step ? `step="${f.step}"` : ''}>
       <button class="next-btn" onclick="submitActiveInput()">次へ →</button>
     `;
     const inputEl = document.getElementById('activeInput');
@@ -5253,6 +5353,21 @@ function renderWizardStep() {
     inputEl.select();
     inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitActiveInput(); });
   }
+}
+
+// ─── CSVファイル読み込み（FileReaderのみ・計算コストなし） ──────────────
+function handleCsvFileInput(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const el = document.getElementById('activeInput');
+    if (el) el.value = e.target.result; // 既存のカンマ/改行/タブ分割パーサーがそのまま使える
+  };
+  reader.onerror = () => {
+    alert('ファイルの読み込みに失敗しました。テキスト形式のCSVかご確認ください。');
+  };
+  reader.readAsText(file, 'utf-8');
 }
 
 function submitActiveInput() {
@@ -5264,7 +5379,7 @@ function submitActiveInput() {
 function submitField(rawVal) {
   const f = wizard.pattern.fields[wizard.index];
   let val;
-  if (f.type === 'text') {
+  if (f.type === 'text' || f.type === 'textarea') {
     val = rawVal;
   } else if (f.optional && rawVal.trim() === '') {
     val = '';
