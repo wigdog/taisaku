@@ -922,6 +922,9 @@
         <div class="result-chart" id="resultChart" style="display:none;"></div>
       </div>
 
+      <!-- ★ CSV/生データからの直接ジャンプ（自動入力済み） ★ -->
+      <div id="csvJumpPanel" style="display:none;"></div>
+
       <!-- ★ 派生分析サジェスト ★ -->
       <div id="followUpPanel" style="display:none;">
         <div class="followup-header">
@@ -1885,56 +1888,65 @@ const CATEGORIES = [
 // ─── Pattern definitions ────────────────────────────────────────────
 const PATTERNS = [
 
-// ── 生データ（コピペ）からの要約統計量算出 ──
+// ── 生データ／CSV読み込みの統一入口（1変量・2変量を自動判定） ──
     {
-      id: 'raw_data_summary',
+      id: 'raw_data_hub',
       flowCat: 'group1',
-      title: '生データからの要約統計量算出 (csv / CSV / Excelコピペ対応)',
+      title: '生データ／CSVの読み込み (→要約統計量・共分散/相関・推定/検定へ自動連携)',
       dist: 'データ前処理',
-      keywords: ['csv', 'CSV', 'excel', 'Excel', 'エクセル', '生データ', '平均', '標準偏差', '不偏分散', 'コピペ'],
-      formula: '<div class="f-title">使い方</div>Excelやcsvから数値データの列をコピーし、下の枠に貼り付けてください。<br>※改行、カンマ、スペース区切りに自動対応しています。',
+      keywords: ['csv', 'CSV', 'excel', 'Excel', 'エクセル', '生データ', '平均', '標準偏差', '不偏分散', '相関', '共分散', '回帰', 'コピペ'],
+      formula: '<div class="f-title">使い方</div>①1列の数値データ（平均・分散などの推定・検定用）、または②「x, y」のペア（共分散・相関・回帰用）を貼り付け／CSVから読み込んでください。<br>列が3つ以上あるCSVは、読み込み後に「①要約統計量」か「②共分散・相関」かを選び、使う列をボタンで選べます。',
       fields: [
-        { id: 'rawData', label: 'データを貼り付け', type: 'textarea', default: '10, 12, 15, 14, 11' }
+        { id: 'rawInput', label: 'データを貼り付け、またはCSVファイルを選択', type: 'textarea', default: '10, 12, 15, 14, 11' }
       ],
       calc(v) {
-        const text = v.rawData;
-        if (!text || text.trim() === '') return { error: 'データが入力されていません。' };
+        const raw = v.rawInput;
+        if (!raw || raw.trim() === '') return { error: 'データが入力されていません。' };
 
-        // 改行、カンマ、タブ、スペースで分割し、数値に変換できるものだけを抽出
-        const rawArray = text.split(/[\n,\t\s]+/);
-        const data = [];
-        for (let str of rawArray) {
-          const num = parseFloat(str);
-          if (!isNaN(num)) {
-            data.push(num);
-          }
+        const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '');
+        const tokenized = lines.map(l => {
+          let parts = l.split(/[,\t]+/).map(s => s.trim()).filter(s => s !== '');
+          if (parts.length < 2) parts = l.split(/\s+/).filter(s => s !== '');
+          return parts;
+        });
+
+        // 数値だけで構成される行だけを対象にする（ヘッダー等は自動で除外）
+        const numericRows = tokenized.filter(p => p.length >= 1 && p.every(t => looksNumericCell(t)));
+        if (!numericRows.length) {
+          return { error: '数値データが見つかりませんでした。ヘッダー行を除いて、数値だけの行を貼り付けてください。' };
         }
 
-        const n = data.length;
-        if (n < 2) return { error: '分散を計算するため、データは2つ以上入力してください。' };
+        // 行ごとのトークン数の最頻値を「列数」とみなす（1列 or 2列を自動判定）
+        const counts = {};
+        numericRows.forEach(p => { counts[p.length] = (counts[p.length] || 0) + 1; });
+        const modeLen = parseInt(Object.keys(counts).reduce((a, b) => counts[a] >= counts[b] ? a : b));
+        const usedRows = numericRows.filter(p => p.length === modeLen);
 
-        // 平均の計算
-        const sum = data.reduce((a, b) => a + b, 0);
-        const mean = sum / n;
+        // ── ① 1列 → 単変量の要約統計量 ──
+        if (modeLen === 1) {
+          const data = usedRows.map(p => parseFloat(p[0]));
+          const n = data.length;
+          if (n < 2) return { error: '分散を計算するため、データは2つ以上入力してください。' };
 
-        // 不偏分散と不偏標準偏差の計算 (n-1で割る)
-        const sumSq = data.reduce((a, b) => a + Math.pow(b - mean, 2), 0);
-        const unbVar = sumSq / (n - 1);
-        const unbStd = Math.sqrt(unbVar);
+          const mean = data.reduce((a, b) => a + b, 0) / n;
+          const sumSq = data.reduce((a, b) => a + Math.pow(b - mean, 2), 0);
+          const unbVar = sumSq / (n - 1);
+          const unbStd = Math.sqrt(unbVar);
 
-        // ── 他の推定・検定ツールへ自動連携するため、グローバルに保存 ──
-        // （再計算はしない。以降どのパターンを開いても、対応するフィールドに自動で入る）
-        window.pastedDataset = { n, mean, unbVar, unbStd };
+          // ── 他の推定・検定ツールへ自動連携するため、グローバルに保存 ──
+          window.pastedDataset = { n, mean, unbVar, unbStd };
+          window.pastedDatasetXY = null;
 
-        return {
-          vals: [
-            { label: 'サンプルサイズ (n)', val: n },
-            { label: '標本平均 (x̄)', val: mean.toFixed(4) },
-            { label: '不偏分散 (s²)', val: unbVar.toFixed(4) },
-            { label: '不偏標準偏差 (s)', val: unbStd.toFixed(4) }
-          ],
-          interpret: `入力された ${n} 個のデータから要約統計量を算出しました。\nこれらの数値を、区間推定や仮説検定のツールに入力して使用してください。`,
-          code: `import numpy as np
+          return {
+            mode: 'single',
+            vals: [
+              { label: 'サンプルサイズ (n)', val: n },
+              { label: '標本平均 (x̄)', val: mean.toFixed(4) },
+              { label: '不偏分散 (s²)', val: unbVar.toFixed(4) },
+              { label: '不偏標準偏差 (s)', val: unbStd.toFixed(4) }
+            ],
+            interpret: `入力された ${n} 個のデータ（1変量）から要約統計量を算出しました。\n下のリンクから、区間推定や仮説検定のツールにそのまま連携できます。`,
+            code: `import numpy as np
 import pandas as pd
 
 # データの読み込み（リスト形式）
@@ -1950,7 +1962,79 @@ print(f"サンプルサイズ (n): {n}")
 print(f"標本平均 (x̄): {mean:.4f}")
 print(f"不偏分散 (s²): {unb_var:.4f}")
 print(f"不偏標準偏差 (s): {unb_std:.4f}")`
-        };
+          };
+        }
+
+        // ── ② 2列 → x, y の関係性（共分散・相関・回帰） ──
+        if (modeLen === 2) {
+          const xs = usedRows.map(p => parseFloat(p[0]));
+          const ys = usedRows.map(p => parseFloat(p[1]));
+          const n = xs.length;
+          if (n < 3) return { error: 'x, y の組を3組以上入力してください（ヘッダー行や数値でない行は自動で無視されます）。' };
+
+          const mx = xs.reduce((a, b) => a + b, 0) / n;
+          const my = ys.reduce((a, b) => a + b, 0) / n;
+          let sxx = 0, syy = 0, sxy = 0;
+          for (let i = 0; i < n; i++) {
+            sxx += (xs[i] - mx) ** 2;
+            syy += (ys[i] - my) ** 2;
+            sxy += (xs[i] - mx) * (ys[i] - my);
+          }
+          const unbSxy = sxy / (n - 1);
+          const unbSx = Math.sqrt(sxx / (n - 1));
+          const unbSy = Math.sqrt(syy / (n - 1));
+          const r = sxy / Math.sqrt(sxx * syy);
+          const b1 = sxy / sxx;
+          const b0 = my - b1 * mx;
+          let sse = 0;
+          for (let i = 0; i < n; i++) { const yhat = b0 + b1 * xs[i]; sse += (ys[i] - yhat) ** 2; }
+          const r2 = 1 - sse / syy;
+
+          // ── 他の関係性分析ツール（共分散・回帰・相関の区間推定・無相関検定）へ自動連携するため保存 ──
+          window.pastedDatasetXY = {
+            n, xsText: xs.join(', '), ysText: ys.join(', '),
+            mean_x: mx, mean_y: my, sxy: unbSxy, sx: unbSx, sy: unbSy, r, b0, b1, r2
+          };
+          window.pastedDataset = null;
+
+          return {
+            mode: 'xy',
+            vals: [
+              { label: 'サンプルサイズ (n)', val: n },
+              { label: 'x̄', val: mx.toFixed(4) },
+              { label: 'ȳ', val: my.toFixed(4) },
+              { label: '不偏共分散 Sxy', val: unbSxy.toFixed(4) },
+              { label: '相関係数 r', val: r.toFixed(4) },
+              { label: '回帰式', val: `ŷ = ${b0.toFixed(3)} + ${b1.toFixed(3)}x` },
+              { label: '決定係数 R²', val: r2.toFixed(4) },
+            ],
+            interpret: `x, y ${n}組のデータ（2変量）を読み込みました。\n相関係数 r=${r.toFixed(4)}、回帰式 ŷ=${b0.toFixed(3)}+${b1.toFixed(3)}x が得られています。\n下のリンクから、共分散・相関の区間推定・無相関検定・回帰分析のツールにそのまま連携できます。`,
+            code: `import numpy as np
+import pandas as pd
+
+x = np.array([${xs.slice(0, 10).join(', ')}${n > 10 ? ', ...' : ''}])
+y = np.array([${ys.slice(0, 10).join(', ')}${n > 10 ? ', ...' : ''}])
+
+n = len(x)
+mx, my = x.mean(), y.mean()
+sxy = np.sum((x-mx)*(y-my)) / (n-1)   # 不偏共分散
+r = np.corrcoef(x, y)[0, 1]           # 相関係数
+
+b1 = np.sum((x-mx)*(y-my)) / np.sum((x-mx)**2)
+b0 = my - b1*mx
+yhat = b0 + b1*x
+r2 = 1 - np.sum((y-yhat)**2) / np.sum((y-my)**2)
+
+print(f"n: {n}, x̄: {mx:.4f}, ȳ: {my:.4f}")
+print(f"不偏共分散 Sxy: {sxy:.4f}")
+print(f"相関係数 r: {r:.4f}")
+print(f"回帰式: y_hat = {b0:.4f} + {b1:.4f} x")
+print(f"決定係数 R^2: {r2:.4f}")`
+          };
+        }
+
+        // ── ③ それ以外の列数 → CSVファイルの列選択を使ってもらう ──
+        return { error: `${modeLen}列のデータが検出されました。「📂 CSVファイルを選択」から読み込み、使いたい列（1列、またはx,yの2列）をボタンで選んでください。` };
       }
     },
 
@@ -5233,6 +5317,9 @@ function renderHome() {
 // ─── Wizard state ─────────────────────────────────────────────────────
 let wizard = { pattern: null, index: 0, answers: {} };
 
+// CSV/生データから算出した統計量 → 各パターンのフィールドid への対応表（共通利用）
+const AUTO_FILL_MAP = { n: 'n', mean: 'mean', s: 'unbStd', s2: 'unbVar' };
+
 function startWizard(p) {
   wizard = { pattern: p, index: 0, answers: {} };
   document.getElementById('wizTitle').textContent = p.title;
@@ -5250,6 +5337,117 @@ function startWizard(p) {
   document.getElementById('wizScreen').classList.add('active');
   document.getElementById('resetBtn').style.display = 'block';
   window.scrollTo(0,0);
+  renderWizardStep();
+}
+
+// ── CSV/生データの計算結果から、区間推定・検定パターンへ「自動入力済み」で直接ジャンプ ──
+function startWizardFromCsv(patternId) {
+  const target = PATTERNS.find(p => p.id === patternId);
+  if (!target) return;
+  startWizard(target); // 通常の画面切り替え・初期化はそのまま利用
+
+  if (!window.pastedDataset) return;
+
+  // マッチするフィールドは自動回答済みとして answers に入れる
+  target.fields.forEach(f => {
+    const key = AUTO_FILL_MAP[f.id];
+    if (key && window.pastedDataset[key] !== undefined && window.pastedDataset[key] !== null) {
+      wizard.answers[f.id] = window.pastedDataset[key];
+    }
+  });
+
+  // 先頭から連続して自動回答済みのフィールドをスキップし、
+  // 最初の「未回答（信頼水準・有意水準・対立仮説など）」で止める
+  let idx = 0;
+  while (idx < target.fields.length && Object.prototype.hasOwnProperty.call(wizard.answers, target.fields[idx].id)) {
+    idx++;
+  }
+  wizard.index = idx;
+  renderWizardStep();
+}
+
+// ── CSV/生データ算出結果 → 区間推定・検定への直接リンク ──
+const CSV_JUMP_TARGETS = [
+  { id: 'ci_mean_z', label: '母平均の区間推定（z分布・σ既知）' },
+  { id: 'ci_mean_t', label: '母平均の区間推定（t分布・σ未知）' },
+  { id: 'ci_var',    label: '母分散の区間推定（χ²分布）' },
+  { id: 'test_mean_z', label: '母平均の検定（z検定）' },
+  { id: 'test_mean_t', label: '母平均の検定（t検定）' },
+];
+
+const CSV_XY_JUMP_TARGETS = [
+  { id: 'covariance_calc', label: '共分散・相関係数の計算' },
+  { id: 'regression',      label: '単回帰分析（係数・決定係数・予測）' },
+  { id: 'ci_corr',         label: '相関係数の区間推定（Fisherのz変換）' },
+  { id: 'test_corr',       label: '無相関検定' },
+];
+
+function renderCsvJumpLinks(patternId) {
+  const box = document.getElementById('csvJumpPanel');
+  if (!box) return;
+
+  if (patternId === 'raw_data_hub' && window.pastedDataset) {
+    box.style.display = 'block';
+    box.innerHTML = `
+      <div class="followup-header">
+        <span class="followup-icon">🔗</span>
+        <span class="followup-title">このデータ（n=${window.pastedDataset.n}）でそのまま計算する</span>
+        <span class="followup-sub">n・平均・s・s² を自動入力した状態でジャンプします</span>
+      </div>
+      <div class="pattern-grid">
+        ${CSV_JUMP_TARGETS.map(t => `
+          <div class="pattern-card" onclick="startWizardFromCsv('${t.id}')">
+            <div class="card-title">${t.label}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    return;
+  }
+
+  if (patternId === 'raw_data_hub' && window.pastedDatasetXY) {
+    box.style.display = 'block';
+    box.innerHTML = `
+      <div class="followup-header">
+        <span class="followup-icon">🔗</span>
+        <span class="followup-title">このx,yデータ（n=${window.pastedDatasetXY.n}）でそのまま計算する</span>
+        <span class="followup-sub">x, y のデータ（または算出済みのr・n）を自動入力した状態でジャンプします</span>
+      </div>
+      <div class="pattern-grid">
+        ${CSV_XY_JUMP_TARGETS.map(t => `
+          <div class="pattern-card" onclick="startWizardFromXyCsv('${t.id}')">
+            <div class="card-title">${t.label}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    return;
+  }
+
+  box.style.display = 'none';
+  box.innerHTML = '';
+}
+
+// ── 生データ(x,y)算出結果 → 共分散・相関・回帰への直接ジャンプ ──
+function startWizardFromXyCsv(patternId) {
+  const target = PATTERNS.find(p => p.id === patternId);
+  if (!target || !window.pastedDatasetXY) return;
+  startWizard(target);
+
+  const d = window.pastedDatasetXY;
+  const MAP = { xs: 'xsText', ys: 'ysText', data_x: 'xsText', data_y: 'ysText', n: 'n', r: 'r' };
+  target.fields.forEach(f => {
+    const key = MAP[f.id];
+    if (key && d[key] !== undefined && d[key] !== null) {
+      wizard.answers[f.id] = d[key];
+    }
+  });
+
+  let idx = 0;
+  while (idx < target.fields.length && Object.prototype.hasOwnProperty.call(wizard.answers, target.fields[idx].id)) {
+    idx++;
+  }
+  wizard.index = idx;
   renderWizardStep();
 }
 
@@ -5309,6 +5507,7 @@ function renderWizardStep() {
           <input type="file" accept=".csv,.txt,text/csv,text/plain" style="display:none" onchange="handleCsvFileInput(event)">
         </label>
       </div>
+      <div id="csvColPicker"></div>
       <button class="next-btn" onclick="submitActiveInput()">次へ →</button>
     `;
     const inputEl = document.getElementById('activeInput');
@@ -5331,20 +5530,29 @@ function renderWizardStep() {
   } else {
     const inputType = f.type === 'text' ? 'text' : 'number';
     // ── CSV/生データから算出済みの統計量があれば、対応するフィールドに自動反映 ──
-    const AUTO_FILL_MAP = { n: 'n', mean: 'mean', s: 'unbStd', s2: 'unbVar' };
+    const AUTO_FILL_MAP_XY = { xs: 'xsText', ys: 'ysText', data_x: 'xsText', data_y: 'ysText', n: 'n', r: 'r' };
     let defaultVal = f.default;
     let autoFilled = false;
-    if (window.pastedDataset && AUTO_FILL_MAP[f.id]) {
+    let autoFillN = null;
+    if (p.flowCat === 'relation' && window.pastedDatasetXY && AUTO_FILL_MAP_XY[f.id] !== undefined) {
+      const v = window.pastedDatasetXY[AUTO_FILL_MAP_XY[f.id]];
+      if (v !== undefined && v !== null) {
+        defaultVal = (typeof v === 'number') ? Number(v.toFixed(6)) : v;
+        autoFilled = true;
+        autoFillN = window.pastedDatasetXY.n;
+      }
+    } else if (window.pastedDataset && AUTO_FILL_MAP[f.id]) {
       const v = window.pastedDataset[AUTO_FILL_MAP[f.id]];
       if (v !== undefined && v !== null) {
         defaultVal = (typeof v === 'number') ? Number(v.toFixed(6)) : v;
         autoFilled = true;
+        autoFillN = window.pastedDataset.n;
       }
     }
     activeQ.innerHTML = `
       <div class="q-label">Q. ${f.label}</div>
       ${f.hint ? `<div class="q-hint">💡 ${f.hint}</div>` : ''}
-      ${autoFilled ? `<div class="q-hint" style="color:#7dd3fc;">📥 CSV/生データ入力（n=${window.pastedDataset.n}）から自動入力されました。値は編集できます。</div>` : ''}
+      ${autoFilled ? `<div class="q-hint" style="color:#7dd3fc;">📥 CSV/生データ入力（n=${autoFillN}）から自動入力されました。値は編集できます。</div>` : ''}
       <input type="${inputType}" id="activeInput" value="${defaultVal ?? ''}" ${f.step ? `step="${f.step}"` : ''}>
       <button class="next-btn" onclick="submitActiveInput()">次へ →</button>
     `;
@@ -5355,19 +5563,159 @@ function renderWizardStep() {
   }
 }
 
-// ─── CSVファイル読み込み（FileReaderのみ・計算コストなし） ──────────────
+// ─── CSVファイル読み込み（多列CSV対応：列を選んでもらう） ──────────────
+function parseCsvText(text) {
+  return text.split(/\r?\n/)
+    .filter(l => l.trim() !== '')
+    .map(l => l.split(',').map(c => c.trim().replace(/^"(.*)"$/, '$1')));
+}
+function looksNumericCell(v) {
+  return v !== '' && v !== undefined && !isNaN(parseFloat(v));
+}
+
+let csvPickState = { mode: null, xCol: null };
+
 function handleCsvFileInput(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (e) => {
-    const el = document.getElementById('activeInput');
-    if (el) el.value = e.target.result; // 既存のカンマ/改行/タブ分割パーサーがそのまま使える
+    const text = String(e.target.result).replace(/^\uFEFF/, '');
+    const rows = parseCsvText(text);
+    if (!rows.length) return;
+
+    const maxCols = Math.max(...rows.map(r => r.length));
+    const picker = document.getElementById('csvColPicker');
+
+    // 1列だけのCSVなら、これまで通りそのまま流し込む
+    if (maxCols <= 1) {
+      const el = document.getElementById('activeInput');
+      if (el) el.value = text;
+      if (picker) picker.innerHTML = '';
+      return;
+    }
+
+    // 複数列 → ヘッダー判定（1行目に数値以外のセルがあればヘッダー行とみなす）
+    const hasHeader = rows[0].some(c => !looksNumericCell(c));
+    const header = hasHeader ? rows[0] : rows[0].map((_, i) => `列${i + 1}`);
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+    window._csvTable = { header, dataRows };
+    csvPickState = { mode: null, xCol: null };
+    renderCsvColumnPicker();
   };
   reader.onerror = () => {
     alert('ファイルの読み込みに失敗しました。テキスト形式のCSVかご確認ください。');
   };
   reader.readAsText(file, 'utf-8');
+}
+
+function columnIsNumeric(dataRows, colIdx) {
+  let checked = 0, numeric = 0;
+  for (const r of dataRows) {
+    const v = r[colIdx];
+    if (v === undefined || v === '') continue;
+    checked++;
+    if (looksNumericCell(v)) numeric++;
+    if (checked >= 20) break; // 先頭20件だけ見れば十分
+  }
+  return checked > 0 && numeric / checked >= 0.8; // 8割以上が数値なら数値列と判定
+}
+
+function renderCsvColumnPicker() {
+  const box = document.getElementById('csvColPicker');
+  if (!box || !window._csvTable) return;
+  const { header, dataRows } = window._csvTable;
+  const numericFlags = header.map((_, i) => columnIsNumeric(dataRows, i));
+  const numericCount = numericFlags.filter(Boolean).length;
+
+  const renderBtn = (h, i, onclickFn) => numericFlags[i]
+    ? `<button type="button" class="choice-btn" onclick="${onclickFn}(${i})">${escapeHtml(h)}</button>`
+    : `<button type="button" class="choice-btn" disabled style="opacity:0.35; cursor:not-allowed;" title="文字列列のため選択できません">${escapeHtml(h)}（文字列）</button>`;
+
+  // ── ステップ0：まず何を調べたいかを選んでもらう ──
+  if (!csvPickState.mode) {
+    box.innerHTML = `
+      <div class="q-hint" style="margin-top:10px;">📊 ${dataRows.length}行 × ${header.length}列 を検出しました。何を調べますか？</div>
+      <div class="choice-row" style="margin-top:6px;">
+        <button type="button" class="choice-btn" onclick="setCsvPickMode('single')">① 要約統計量を出す（1列選択）</button>
+        ${numericCount >= 2 ? `<button type="button" class="choice-btn" onclick="setCsvPickMode('xy')">② 共分散・相関を調べる（2列選択）</button>` : ''}
+      </div>
+    `;
+    return;
+  }
+
+  // ── モード①：1列選択 → 要約統計量 ──
+  if (csvPickState.mode === 'single') {
+    box.innerHTML = `
+      <div class="q-hint" style="margin-top:10px;">分析に使う数値列を選んでください（文字列列は選択できません）：</div>
+      <div class="choice-row" style="margin-top:6px;">
+        ${header.map((h, i) => renderBtn(h, i, 'applyCsvSingleColumn')).join('')}
+      </div>
+      <div style="margin-top:10px;"><button type="button" class="choice-btn" style="opacity:0.6;" onclick="resetCsvPickMode()">← 選び直す</button></div>
+    `;
+    return;
+  }
+
+  // ── モード②：2列選択 → 共分散・相関・回帰 ──
+  if (csvPickState.xCol === null) {
+    box.innerHTML = `
+      <div class="q-hint" style="margin-top:10px;">まず x に使う数値列を選んでください（文字列列は選択できません）：</div>
+      <div class="choice-row" style="margin-top:6px;">
+        ${header.map((h, i) => renderBtn(h, i, 'pickCsvXyColumn')).join('')}
+      </div>
+      <div style="margin-top:10px;"><button type="button" class="choice-btn" style="opacity:0.6;" onclick="resetCsvPickMode()">← 選び直す</button></div>
+    `;
+  }
+}
+
+function setCsvPickMode(mode) {
+  csvPickState = { mode, xCol: null };
+  renderCsvColumnPicker();
+}
+
+function resetCsvPickMode() {
+  csvPickState = { mode: null, xCol: null };
+  renderCsvColumnPicker();
+}
+
+function applyCsvSingleColumn(colIdx) {
+  const { header, dataRows } = window._csvTable;
+  const vals = dataRows.map(r => r[colIdx]).filter(v => v !== undefined && v !== '');
+  const el = document.getElementById('activeInput');
+  if (el) el.value = vals.join('\n');
+  const box = document.getElementById('csvColPicker');
+  if (box) box.innerHTML = `<div class="q-hint" style="color:#7dd3fc;">✅「${escapeHtml(header[colIdx])}」列（${vals.length}件）を読み込みました。</div><div style="margin-top:10px;"><button type="button" class="choice-btn" style="opacity:0.6;" onclick="resetCsvPickMode()">← 選び直す</button></div>`;
+}
+
+function pickCsvXyColumn(colIdx) {
+  const { header, dataRows } = window._csvTable;
+  const box = document.getElementById('csvColPicker');
+  if (csvPickState.xCol === null) {
+    csvPickState.xCol = colIdx;
+    const numericFlags = header.map((_, i) => columnIsNumeric(dataRows, i));
+    box.innerHTML = `
+      <div class="q-hint" style="margin-top:10px;">✅ x列：「${escapeHtml(header[colIdx])}」を選択しました。次に y に使う数値列を選んでください：</div>
+      <div class="choice-row" style="margin-top:6px;">
+        ${header.map((h, i) => {
+          if (i === colIdx) return '';
+          return numericFlags[i]
+            ? `<button type="button" class="choice-btn" onclick="pickCsvXyColumn(${i})">${escapeHtml(h)}</button>`
+            : `<button type="button" class="choice-btn" disabled style="opacity:0.35; cursor:not-allowed;" title="文字列列のため選択できません">${escapeHtml(h)}（文字列）</button>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:10px;"><button type="button" class="choice-btn" style="opacity:0.6;" onclick="resetCsvPickMode()">← 選び直す</button></div>
+    `;
+    return;
+  }
+  const xCol = csvPickState.xCol, yCol = colIdx;
+  const lines = dataRows
+    .map(r => [r[xCol], r[yCol]])
+    .filter(p => p[0] !== undefined && p[1] !== undefined && p[0] !== '' && p[1] !== '')
+    .map(p => p.join(','));
+  const el = document.getElementById('activeInput');
+  if (el) el.value = lines.join('\n');
+  box.innerHTML = `<div class="q-hint" style="color:#7dd3fc;">✅ x=「${escapeHtml(header[xCol])}」, y=「${escapeHtml(header[yCol])}」（${lines.length}組）を読み込みました。</div><div style="margin-top:10px;"><button type="button" class="choice-btn" style="opacity:0.6;" onclick="resetCsvPickMode()">← 選び直す</button></div>`;
+  csvPickState = { mode: 'xy', xCol: null };
 }
 
 function submitActiveInput() {
@@ -5837,6 +6185,9 @@ function runCalculate() {
   errEl.style.display = 'none';
   try {
     const result = p.calc(wizard.answers);
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
 
     const rv = document.getElementById('resultValues');
     rv.innerHTML = result.vals.map(r => `
@@ -5865,6 +6216,7 @@ function runCalculate() {
 
     // ★ 派生分析サジェストを表示
     renderFollowUps(wizard.pattern.id);
+    renderCsvJumpLinks(wizard.pattern.id);
 
   } catch (e) {
     errEl.textContent = '⚠ ' + (e.message || '入力値を確認してください');
