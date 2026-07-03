@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>統計検定2級 ドリル</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --base: #0B0E14;
+    --panel: #151924;
+    --panel2: #1C2333;
+    --border: #252D3F;
+    --border-bright: #2E3B55;
+    --green: #14F195;
+    --green-dim: rgba(20,241,149,0.12);
+    --green-glow: 0 0 8px rgba(20,241,149,0.5), 0 0 20px rgba(20,241,149,0.2);
+    --green-glow-strong: 0 0 12px rgba(20,241,149,0.8), 0 0 30px rgba(20,241,149,0.4), 0 0 60px rgba(20,241,149,0.15);
+    --red: #FF3B69;
+    --red-dim: rgba(255,59,105,0.12);
+    --red-glow: 0 0 8px rgba(255,59,105,0.5), 0 0 20px rgba(255,59,105,0.2);
+    --text: #E8ECF4;
+    --text-sub: #7A8499;
+    --text-dim: #4A5468;
+    --mono: 'JetBrains Mono', 'SFMono-Regular', 'Consolas', 'Menlo', monospace;
+
+    /* 読む領域(問題文・選択肢・解説)専用の明るいトーン */
+    --paper: #EEF1F7;
+    --paper2: #E2E7F0;
+    --paper-border: #C7CEDC;
+    --ink: #171A22;
+    --ink-sub: #454C5C;
+    --green-ink: #0C7A4F;
+    --green-ink-bg: rgba(12,122,79,0.1);
+    --red-ink: #C21E4C;
+    --red-ink-bg: rgba(194,30,76,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--base);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  #header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    border: 2px solid var(--green);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--green);
+    box-shadow: var(--green-glow);
+    clip-path: polygon(0 0, 80% 0, 100% 20%, 100% 100%, 20% 100%, 0 80%);
+    background: var(--green-dim);
+  }
+
+  .logo-text {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--text);
+  }
+  .logo-text span { color: var(--green); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    font-size: 11px;
+  }
+
+  .stat-pill .label {
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .stat-pill .val {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  #combo-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 14px;
+    background: var(--green-dim);
+    border: 1px solid rgba(20,241,149,0.3);
+    font-size: 11px;
+    transition: all 0.3s ease;
+  }
+  #combo-display .label { color: var(--text-sub); letter-spacing: 0.1em; }
+  #combo-display .val {
+    color: var(--green);
+    font-weight: 700;
+    font-size: 14px;
+    min-width: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+  #combo-display.hot {
+    box-shadow: var(--green-glow-strong);
+    border-color: var(--green);
+  }
+  #combo-display.hot .val {
+    text-shadow: var(--green-glow);
+  }
+
+  /* Tabs */
+  #tab-bar {
+    display: flex;
+    gap: 0;
+    padding: 0 24px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .tab {
+    padding: 11px 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text-sub); }
+  .tab.active {
+    color: var(--green);
+    border-bottom-color: var(--green);
+    background: var(--green-dim);
+    text-shadow: var(--green-glow);
+  }
+
+  /* Main content */
+  #main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* Category badge */
+  #question-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .cat-badge {
+    padding: 3px 10px;
+    background: var(--green-dim);
+    border: 1px solid rgba(20,241,149,0.3);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--green);
+  }
+
+  .q-counter {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* Question card */
+  #question-card {
+    background: var(--paper);
+    border: 1px solid var(--paper-border);
+    padding: 28px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  #question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--green);
+    box-shadow: var(--green-glow);
+  }
+
+  .q-header {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--ink-sub);
+    margin-bottom: 14px;
+  }
+
+  #question-text {
+    font-size: 16px;
+    line-height: 1.9;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  #question-text .hi {
+    color: var(--green-ink);
+    font-weight: 700;
+  }
+
+  /* Choices */
+  #choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .choice-btn {
+    padding: 15px 18px;
+    background: var(--paper);
+    border: 1px solid var(--paper-border);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .choice-btn:hover:not(:disabled) {
+    background: #fff;
+    border-color: var(--green-ink);
+    color: var(--ink);
+  }
+
+  .choice-btn .choice-key {
+    font-size: 10px;
+    color: var(--ink-sub);
+    min-width: 16px;
+    letter-spacing: 0.1em;
+  }
+
+  .choice-btn.correct {
+    background: var(--green-ink-bg);
+    border-color: var(--green-ink);
+    color: var(--green-ink);
+    font-weight: 700;
+  }
+  .choice-btn.correct .choice-key { color: var(--green-ink); }
+
+  .choice-btn.wrong {
+    background: var(--red-ink-bg);
+    border-color: var(--red-ink);
+    color: var(--red-ink);
+    font-weight: 700;
+  }
+  .choice-btn.wrong .choice-key { color: var(--red-ink); }
+
+  .choice-btn.dimmed {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  .choice-btn:disabled { cursor: default; }
+
+  /* Feedback */
+  #feedback {
+    display: none;
+    background: var(--paper);
+    border: 1px solid var(--paper-border);
+    padding: 22px 28px;
+    margin-bottom: 20px;
+  }
+
+  #feedback.show { display: block; }
+
+  .fb-status {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--paper-border);
+  }
+  .fb-status.ok { color: var(--green-ink); }
+  .fb-status.fail { color: var(--red-ink); }
+
+  .fb-body {
+    font-size: 13px;
+    line-height: 2;
+    color: var(--ink-sub);
+  }
+
+  .fb-body .formula {
+    display: block;
+    margin: 10px 0;
+    padding: 12px 16px;
+    background: var(--paper2);
+    border-left: 3px solid var(--green-ink);
+    color: var(--ink);
+    font-size: 14px;
+  }
+
+  .fb-body .hi { color: var(--green-ink); font-weight: 700; }
+  .fb-body strong { color: var(--ink); font-weight: 700; }
+
+  /* Next button */
+  #next-btn {
+    display: none;
+    padding: 13px 28px;
+    background: transparent;
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: var(--green-glow);
+  }
+  #next-btn:hover {
+    background: var(--green-dim);
+    box-shadow: var(--green-glow-strong);
+  }
+  #next-btn.show { display: inline-flex; align-items: center; gap: 10px; }
+
+  /* Bottom bar */
+  #bottom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    font-size: 11px;
+    color: var(--text-dim);
+    z-index: 50;
+  }
+
+  .sys-info { display: flex; gap: 24px; }
+  .sys-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    margin-right: 6px;
+    box-shadow: var(--green-glow);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Accuracy bar */
+  .acc-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .acc-bar {
+    width: 80px;
+    height: 4px;
+    background: var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .acc-bar-fill {
+    height: 100%;
+    background: var(--green);
+    transition: width 0.5s ease;
+    box-shadow: var(--green-glow);
+  }
+
+  @media (max-width: 600px) {
+    #choices { grid-template-columns: 1fr; }
+    #header { padding: 10px 16px; }
+    #main { padding: 20px 16px; }
+    .logo-text { font-size: 11px; }
+    #combo-display .label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="logo">
+    <div class="logo-icon">∑</div>
+    <div class="logo-text">統計２級<span>ドリル</span></div>
+  </div>
+  <div class="header-right">
+    <div class="stat-pill">
+      <span class="label">総数</span>
+      <span class="val" id="stat-total">0</span>
+    </div>
+    <div class="stat-pill">
+      <span class="label">正答率</span>
+      <span class="val" id="stat-acc">--</span>
+    </div>
+    <div id="combo-display">
+      <span class="label">連続正解</span>
+      <span class="val" id="combo-val">0</span>
+    </div>
+    <button class="stat-pill" id="weak-toggle" style="cursor:pointer;background:var(--panel2)">
+      <span class="label">弱点</span>
+      <span class="val" id="weak-val">オフ</span>
+    </button>
+  </div>
+</div>
+
+<div id="tab-bar">
+  <button class="tab active" data-cat="ALL">全体</button>
+  <button class="tab" data-cat="STD_DEV">標準偏差</button>
+  <button class="tab" data-cat="STD_ERR">標準誤差</button>
+  <button class="tab" data-cat="SAMPLE_SIZE">サンプルサイズ</button>
+  <button class="tab" data-cat="CONF_INT">信頼区間</button>
+  <button class="tab" data-cat="HYPOTHESIS">仮説検定</button>
+  <button class="tab" data-cat="PROB">確率</button>
+</div>
+
+<div id="main">
+  <div id="question-meta">
+    <span class="cat-badge" id="cat-label">読込中...</span>
+    <span class="cat-badge" id="subtag-label" style="background:var(--panel2);color:var(--text-sub);border-color:var(--border)"></span>
+    <span class="q-counter" id="q-counter">第001問</span>
+  </div>
+
+  <div id="weak-panel" style="display:none;background:var(--panel);border:1px solid var(--border);padding:14px 18px;margin-bottom:16px;font-size:11px;color:var(--text-sub);line-height:2"></div>
+
+  <div id="question-card">
+    <div class="q-header">問題</div>
+    <div id="question-text"></div>
+  </div>
+
+  <div id="choices"></div>
+
+  <div id="feedback">
+    <div class="fb-status" id="fb-status"></div>
+    <div class="fb-body" id="fb-body"></div>
+  </div>
+
+  <button id="next-btn">次の問題 &nbsp;→</button>
+</div>
+
+<div id="bottom-bar">
+  <div class="sys-info">
+    <span><span class="sys-dot"></span>稼働中</span>
+    <span id="bottom-cat">分野: 全体</span>
+  </div>
+  <div class="acc-bar-wrap">
+    <span>ACC</span>
+    <div class="acc-bar"><div class="acc-bar-fill" id="acc-bar-fill" style="width:0%"></div></div>
+    <span id="bottom-acc">0%</span>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA & UTILITIES
+// ============================================================
+
+const R = {
+  pick: (arr) => arr[Math.floor(Math.random() * arr.length)],
+  range: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+  float: (min, max, dp = 1) => parseFloat((Math.random() * (max - min) + min).toFixed(dp)),
+  shuffle: (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  },
+  round: (v, dp = 2) => Math.round(v * Math.pow(10, dp)) / Math.pow(10, dp),
+  hl: (v) => `<span class="hi">${v}</span>`,
+  // correct値とcandidates(想定誤答の候補配列)から重複なくneeded個の誤答を作る。
+  // 足りない場合はpadFn()を呼んで補充する（padFnは呼ぶたびに新しい候補を1つ返す関数）。
+  uniqueDistractors: (correct, candidates, needed, padFn) => {
+    const seen = new Set([correct]);
+    const out = [];
+    for (const c of candidates) {
+      if (!seen.has(c)) { seen.add(c); out.push(c); }
+      if (out.length >= needed) return out;
+    }
+    let guard = 0;
+    while (out.length < needed && guard < 50) {
+      guard++;
+      const extra = padFn();
+      if (!seen.has(extra)) { seen.add(extra); out.push(extra); }
+    }
+    return out;
+  },
+};
+
+// Themes for context flavor
+const THEMES = {
+  measure: [
+    { ctx: 'ある工場の製品の重量', unit: 'g', noun: '重量' },
+    { ctx: 'ある地域の成人男性の身長', unit: 'cm', noun: '身長' },
+    { ctx: 'ある農場のリンゴの糖度', unit: 'Brix', noun: '糖度' },
+    { ctx: '血圧測定（収縮期）', unit: 'mmHg', noun: '血圧値' },
+    { ctx: '配送パッケージの重量', unit: 'kg', noun: '重量' },
+    { ctx: 'スマートフォンのバッテリー持続時間', unit: '時間', noun: '持続時間' },
+  ],
+  ratio: [
+    { ctx: 'あるウェブサービスのコンバージョン率', noun: '購入率' },
+    { ctx: 'ワクチン接種後の陽性率', noun: '陽性率' },
+    { ctx: '新製品に対する支持率', noun: '支持率' },
+    { ctx: 'ある施策後の解約率', noun: '解約率' },
+    { ctx: 'アンケートへの同意率', noun: '同意率' },
+  ],
+  hyp: [
+    { scenario: 'あるサプリメントを摂取したグループの平均睡眠時間は、摂取しないグループと比較して長かった。効果があるか検証したい。', h0: 'サプリメントの摂取と睡眠時間の間に差がない', h0_wrong: ['サプリメントに効果がある', '睡眠時間が長くなる', '有意差が存在する'] },
+    { scenario: '機械Aを改良した機械Bは、生産速度が向上したと主張されている。本当に差があるか検証する。', h0: '機械Aと機械Bの生産速度に差がない', h0_wrong: ['機械Bの方が速い', '改良の効果が認められる', '生産速度に差がある'] },
+    { scenario: '新しい教育プログラムを受けた学生と受けていない学生で、テストの平均点に違いがあるか確かめたい。', h0: '教育プログラムの有無によるテスト平均点に差がない', h0_wrong: ['プログラムに学習効果がある', '両群の平均点は異なる', 'プログラムは有効である'] },
+    { scenario: 'あるダイエット法を試みたグループは平均体重が減少した。ダイエット法の効果を検定する。', h0: 'ダイエット法の実施前後で平均体重に差がない', h0_wrong: ['ダイエット法は有効である', '体重が有意に減少する', '介入の効果が存在する'] },
+    { scenario: '新薬を投与した患者グループの回復期間は短縮したとの報告がある。この差を統計的に検証する。', h0: '新薬投与群と非投与群の回復期間に差がない', h0_wrong: ['新薬は有効である', '回復期間が短縮する', '薬効に有意差が出る'] },
+    { scenario: 'プレミアム広告を見たユーザーのクリック率は一般広告より高かった。差があるか検定する。', h0: 'プレミアム広告と一般広告のクリック率に差がない', h0_wrong: ['プレミアム広告は効果的だ', 'クリック率に有意差がある', 'プレミアム広告が優れている'] },
+  ],
+  bagDraw: [
+    { container: '袋', red: 5, white: 3, blue: 2, unit: '個' },
+    { container: '箱', red: 4, white: 4, blue: 2, unit: '個' },
+    { container: '袋', red: 6, white: 2, blue: 2, unit: '個' },
+    { container: '箱', red: 3, white: 5, blue: 2, unit: '個' },
+  ],
+  cardGroup: [
+    { people: 8, seats: 3, ctx: '8人の候補者から役員3名（会長・副会長・書記）を選ぶ' },
+    { people: 10, seats: 2, ctx: '10チームからリーグ代表2チーム（優勝・準優勝）を決める' },
+    { people: 6, seats: 4, ctx: '6色のペンから4色を選んで一列に並べる' },
+  ],
+  cardGroupComb: [
+    { people: 8, seats: 3, ctx: '8人の候補者から3名の委員（役職なし）を選ぶ' },
+    { people: 10, seats: 4, ctx: '10種類の商品から4種類を福袋に詰め合わせる（順不同）' },
+    { people: 7, seats: 2, ctx: '7つの部署から2部署を合同プロジェクトに選ぶ（順不同）' },
+  ],
+  atLeastOnce: [
+    { trials: 3, p: 1/6, ctx: 'サイコロを3回振る', event: '少なくとも1回「1の目」が出る' },
+    { trials: 4, p: 0.1, ctx: 'ある機械が1回の稼働で10%の確率で不良品を出す。4回稼働させる', event: '少なくとも1回不良品が出る' },
+    { trials: 5, p: 0.2, ctx: 'あるくじの当選確率は20%である。5回引く', event: '少なくとも1回当選する' },
+    { trials: 3, p: 0.5, ctx: 'コインを3回投げる', event: '少なくとも1回表が出る' },
+  ]
+};
+
+// ============================================================
+// PROB DRILL HELPERS（急所：復元/非復元・順列組合せ・余事象）
+// ============================================================
+
+function factorial(x) { let f = 1; for (let i = 2; i <= x; i++) f *= i; return f; }
+
+function genProbReplacement() {
+  const bag = R.pick(THEMES.bagDraw);
+  const total = bag.red + bag.white + bag.blue;
+  const withReplacement = Math.random() < 0.5;
+  const target = bag.red;
+
+  const correct = withReplacement
+    ? R.round((target / total) * (target / total), 4)
+    : R.round((target / total) * ((target - 1) / (total - 1)), 4);
+  const swapped = withReplacement
+    ? R.round((target / total) * ((target - 1) / (total - 1)), 4)
+    : R.round((target / total) * (target / total), 4);
+  const addedInstead = R.round((target / total) + (target / total), 4);
+  const singleOnly = R.round(target / total, 4);
+
+  const distractors = [swapped, addedInstead, singleOnly].filter(d => d !== correct);
+  const choices = R.shuffle([correct, ...distractors.slice(0, 3)]);
+
+  const methodText = withReplacement
+    ? '1回引いたら色を確認してから<strong>袋に戻し</strong>、再度引く'
+    : '1回引いたら色を確認して<strong>袋に戻さず</strong>、続けて引く';
+
+  return {
+    category: 'PROB',
+    subTag: 'PROB_REPLACEMENT',
+    text: `${bag.container}の中に赤玉${bag.red}${bag.unit}、白玉${bag.white}${bag.unit}、青玉${bag.blue}${bag.unit}が入っている。${methodText}。<br>2回とも<strong>赤玉</strong>を引く確率はいくらか。`,
+    choices: choices.map(c => String(c)),
+    answerIdx: choices.indexOf(correct),
+    explanation: `
+      <strong>判定:</strong> ${withReplacement ? '「戻してから引く」ので各回は独立（復元抽出）。2回とも同じ確率をそのまま掛け合わせる。' : '「戻さずに引く」ので2回目は条件付き（非復元抽出）。1回目で赤玉が1個減った状態で2回目を計算する。'}
+      <span class="formula">P = ${target}/${total} × ${withReplacement ? `${target}/${total}` : `${target - 1}/${total - 1}`} = <span class="hi">${correct}</span></span>
+      復元抽出か非復元抽出かは「戻すか戻さないか」の一言で決まります。戻さない場合は2回目の分母・分子が両方1減ることを忘れないこと。
+    `
+  };
+}
+
+function genProbPermComb() {
+  const isPerm = Math.random() < 0.5;
+  const s = isPerm ? R.pick(THEMES.cardGroup) : R.pick(THEMES.cardGroupComb);
+  const n = s.people, r = s.seats;
+  const nPr = factorial(n) / factorial(n - r);
+  const nCr = nPr / factorial(r);
+  const correct = isPerm ? nPr : nCr;
+  const other = isPerm ? nCr : nPr;
+  const candidates = [other, factorial(r), n * r];
+  const distractors = R.uniqueDistractors(correct, candidates, 3, () => Math.max(1, correct + R.range(-10, 10) * R.range(1, 3)));
+  const choices = R.shuffle([correct, ...distractors]);
+
+  return {
+    category: 'PROB',
+    subTag: 'PROB_PERM_COMB',
+    text: `${s.ctx}。<br>選び方は何通りあるか。`,
+    choices: choices.map(c => `${c}通り`),
+    answerIdx: choices.indexOf(correct),
+    explanation: isPerm ? `
+      <strong>判定:</strong> 役職・順序に意味がある（誰がどのポジションかで結果が変わる）ので<strong>順列</strong>を使う。
+      <span class="formula">nPr = ${n}P${r} = ${n}! / (${n}-${r})! = <span class="hi">${nPr}</span>通り</span>
+      「組合せ(nCr)」との違いは、選んだ後に<strong>並び・役割の違いを区別するかどうか</strong>。区別するなら順列、区別しないなら組合せ。
+    ` : `
+      <strong>判定:</strong> 選ばれる側に順序・役職の違いがない（同じメンバーなら並び替えても同じ扱い）ので<strong>組合せ</strong>を使う。
+      <span class="formula">nCr = ${n}C${r} = ${n}! / (${r}! × (${n}-${r})!) = <span class="hi">${nCr}</span>通り</span>
+      「順列(nPr)」との違いは、選んだ後に<strong>並び・役割の違いを区別するかどうか</strong>。区別しないなら組合せ、区別するなら順列。
+    `
+  };
+}
+
+function genProbComplement() {
+  const s = R.pick(THEMES.atLeastOnce);
+  const pNot = R.round(1 - s.p, 4);
+  const forgot = R.round(Math.pow(1 - s.p, s.trials), 4);
+  const correct = R.round(1 - Math.pow(1 - s.p, s.trials), 4);
+  const naiveAdd = R.round(Math.min(s.p * s.trials, 1), 4);
+  const wrongMultiply = R.round(Math.pow(s.p, s.trials), 4);
+
+  const candidates = [naiveAdd, forgot, wrongMultiply];
+  const distractors = R.uniqueDistractors(correct, candidates, 3, () => R.round(Math.random(), 3));
+  const choices = R.shuffle([correct, ...distractors]);
+
+  return {
+    category: 'PROB',
+    subTag: 'PROB_COMPLEMENT',
+    text: `${s.ctx}。<br>「${s.event}」確率はいくらか。`,
+    choices: choices.map(c => String(c)),
+    answerIdx: choices.indexOf(correct),
+    explanation: `
+      <strong>判定:</strong>「少なくとも1回」は直接数えると場合分けが大変なので、<strong>余事象（1回も起きない）</strong>から引くのが定石。
+      <span class="formula">P(少なくとも1回) = 1 − P(1回も起きない) = 1 − (${pNot})^${s.trials} = 1 − ${forgot} = <span class="hi">${correct}</span></span>
+      「少なくとも1回」「1回以上」という言葉を見たら、まず余事象に変換できないか疑うこと。
+    `
+  };
+}
+
+// ============================================================
+// QUESTION GENERATORS
+// ============================================================
+
+const generators = {
+
+  STD_DEV: () => {
+    const theme = R.pick(THEMES.measure);
+    // Generate a variance with nice sqrt
+    const niceVariances = [4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 225];
+    const variance = R.pick(niceVariances);
+    const sd = Math.sqrt(variance);
+    const answer = sd;
+
+    // 3 distractors
+    const candidates = [
+      R.round(variance / 2, 2),
+      R.round(variance * 2, 2),
+      R.round(sd + R.range(1, 4), 2),
+    ];
+    const distractors = R.uniqueDistractors(answer, candidates, 3, () => R.round(Math.abs(sd + R.range(-8, 8)) + 0.5, 2));
+
+    const choices = R.shuffle([answer, ...distractors]);
+
+    return {
+      category: 'STD_DEV',
+      subTag: 'STD_DEV_CALC',
+      text: `${R.hl(theme.ctx)}のデータを収集したところ、分散が ${R.hl(variance)} (${theme.unit}²) であった。<br>この標本の <strong>標準偏差</strong> (${theme.unit}) として正しい値はどれか。`,
+      choices: choices.map(c => `${c} ${theme.unit}`),
+      answerIdx: choices.indexOf(answer),
+      explanation: `
+        <strong>公式:</strong>
+        <span class="formula">標準偏差 σ = √分散 = √${variance}</span>
+        <strong>計算:</strong>
+        <span class="formula">σ = √${variance} = <span class="hi">${answer}</span> ${theme.unit}</span>
+        分散は「偏差の2乗の平均」であり、単位が元のデータの2乗になっています。<br>
+        標準偏差はその<strong>平方根</strong>をとることで元の単位に戻した散らばりの指標です。
+      `
+    };
+  },
+
+  STD_ERR: () => {
+    const type = Math.random() < 0.5 ? 'measure' : 'ratio';
+
+    if (type === 'measure') {
+      const theme = R.pick(THEMES.measure);
+      const sigma = R.range(4, 30);
+      const n = R.pick([25, 36, 49, 64, 100, 144, 196, 225, 400]);
+      const sqrtN = Math.sqrt(n);
+      const se = R.round(sigma / sqrtN, 3);
+
+      const distractors = R.shuffle([
+        R.round(sigma / n, 3),
+        R.round(sigma * sqrtN, 3),
+        R.round(sigma / Math.sqrt(n / 2), 3),
+        R.round(sigma + sqrtN, 3),
+      ]).filter(d => d !== se).slice(0, 3);
+
+      const choices = R.shuffle([se, ...distractors]);
+
+      return {
+        category: 'STD_ERR',
+        subTag: 'STD_ERR_MEASURE',
+        text: `${R.hl(theme.ctx)}の母標準偏差 σ = ${R.hl(sigma)} (${theme.unit})、サンプルサイズ n = ${R.hl(n)} として無作為抽出した。<br><strong>標準誤差</strong>（計量データ）として正しい値はどれか。`,
+        choices: choices.map(c => String(c)),
+        answerIdx: choices.indexOf(se),
+        explanation: `
+          <strong>公式（計量データの標準誤差）:</strong>
+          <span class="formula">SE = σ / √n</span>
+          <strong>計算:</strong>
+          <span class="formula">SE = ${sigma} / √${n} = ${sigma} / ${sqrtN} = <span class="hi">${se}</span></span>
+          標準誤差は標本平均のバラツキを示します。n が大きいほど SE は小さくなり、推定精度が上がります。
+        `
+      };
+    } else {
+      const theme = R.pick(THEMES.ratio);
+      const p = R.round(R.float(0.1, 0.7, 2), 2);
+      const n = R.pick([100, 200, 400, 500, 625, 1000]);
+      const se = R.round(Math.sqrt(p * (1 - p) / n), 4);
+
+      const distractors = [
+        R.round(Math.sqrt(p / n), 4),
+        R.round(p * (1 - p) / n, 4),
+        R.round(Math.sqrt(p * (1 - p) * n), 4),
+      ].filter(d => d !== se).slice(0, 3);
+
+      const choices = R.shuffle([se, ...distractors]);
+
+      return {
+        category: 'STD_ERR',
+        subTag: 'STD_ERR_RATIO',
+        text: `${R.hl(theme.ctx)}を調査したところ、標本比率 p̂ = ${R.hl(p)}、サンプルサイズ n = ${R.hl(n)} であった。<br><strong>標準誤差</strong>（比率データ）として正しい値はどれか。`,
+        choices: choices.map(c => String(c)),
+        answerIdx: choices.indexOf(se),
+        explanation: `
+          <strong>公式（比率データの標準誤差）:</strong>
+          <span class="formula">SE = √[ p(1-p) / n ]</span>
+          <strong>計算:</strong>
+          <span class="formula">SE = √[ ${p} × ${R.round(1 - p, 2)} / ${n} ]<br>   = √[ ${R.round(p * (1 - p), 4)} / ${n} ]<br>   = √${R.round(p * (1 - p) / n, 6)}<br>   = <span class="hi">${se}</span></span>
+          比率の標本分布における標準偏差です。p = 0.5 のとき最大となります。
+        `
+      };
+    }
+  },
+
+  SAMPLE_SIZE: () => {
+    const theme = R.pick(THEMES.measure);
+    // z for confidence level
+    const configs = [
+      { cl: '95%', z: 1.96 },
+      { cl: '99%', z: 2.576 },
+    ];
+    const cfg = R.pick(configs);
+    const sigma = R.range(5, 50);
+    // Choose E so n comes out to a clean-ish number
+    const targetN = R.pick([100, 200, 400, 625, 1000]);
+    const E = R.round(cfg.z * sigma / Math.sqrt(targetN), 2);
+    const n_exact = Math.pow(cfg.z * sigma / E, 2);
+    const n_answer = Math.ceil(n_exact);
+
+    const distractors = [
+      Math.ceil(n_exact / 2),
+      Math.ceil(n_exact * 2),
+      Math.ceil(n_exact) - 1,
+      Math.ceil(n_exact) + 1,
+    ].filter(d => d !== n_answer).slice(0, 3);
+
+    const choices = R.shuffle([n_answer, ...distractors]);
+
+    return {
+      category: 'SAMPLE_SIZE',
+      subTag: 'SAMPLE_SIZE_CALC',
+      text: `${R.hl(theme.ctx)}を調査したい。母標準偏差 σ = ${R.hl(sigma)}、信頼度 ${R.hl(cfg.cl)}（z = ${R.hl(cfg.z)}）で、許容誤差 E = ${R.hl(E)} 以内に推定するために必要な最小サンプルサイズ n はいくつか。`,
+      choices: choices.map(c => `n = ${c}`),
+      answerIdx: choices.indexOf(n_answer),
+      explanation: `
+        <strong>公式:</strong>
+        <span class="formula">n ≥ (z × σ / E)²</span>
+        <strong>計算:</strong>
+        <span class="formula">n ≥ (${cfg.z} × ${sigma} / ${E})²<br>   = (${R.round(cfg.z * sigma, 3)} / ${E})²<br>   = ${R.round(cfg.z * sigma / E, 4)}²<br>   = ${R.round(n_exact, 2)}</span>
+        サンプルサイズは小数が出たら<strong>切り上げ</strong>（ceil）します。<br>
+        よって n = <span class="hi">${n_answer}</span> が最小必要サンプルサイズです。
+      `
+    };
+  },
+
+  CONF_INT: () => {
+    const theme = R.pick(THEMES.measure);
+    const configs = [
+      { cl: '95%', z: 1.96 },
+      { cl: '99%', z: 2.576 },
+    ];
+    const cfg = R.pick(configs);
+    const n = R.pick([36, 49, 64, 100, 144, 196, 225, 400]);
+    const sigma = R.range(3, 25);
+    const xbar = R.range(50, 200);
+    const se = R.round(sigma / Math.sqrt(n), 3);
+    const margin = R.round(cfg.z * se, 3);
+    const lower = R.round(xbar - margin, 3);
+    const upper = R.round(xbar + margin, 3);
+    const answer = `[${lower}, ${upper}]`;
+
+    const distractors = [
+      `[${R.round(xbar - margin * 0.5, 3)}, ${R.round(xbar + margin * 0.5, 3)}]`,
+      `[${R.round(xbar - margin * 2, 3)}, ${R.round(xbar + margin * 2, 3)}]`,
+      `[${R.round(xbar - se, 3)}, ${R.round(xbar + se, 3)}]`,
+    ].filter(d => d !== answer);
+
+    const choices = R.shuffle([answer, ...distractors.slice(0, 3)]);
+
+    return {
+      category: 'CONF_INT',
+      subTag: 'CONF_INT_CALC',
+      text: `${R.hl(theme.ctx)}を n = ${R.hl(n)} で無作為抽出した結果、標本平均 x̄ = ${R.hl(xbar)} (${theme.unit})、母標準偏差 σ = ${R.hl(sigma)} (${theme.unit}) が既知である。<br>信頼度 ${R.hl(cfg.cl)} の <strong>信頼区間</strong> [下限, 上限] として正しいものはどれか。`,
+      choices,
+      answerIdx: choices.indexOf(answer),
+      explanation: `
+        <strong>公式:</strong>
+        <span class="formula">[ x̄ − z × σ/√n,  x̄ + z × σ/√n ]</span>
+        <strong>ステップ①:</strong> 標準誤差の計算
+        <span class="formula">SE = σ/√n = ${sigma}/√${n} = ${sigma}/${Math.sqrt(n)} ≈ ${se}</span>
+        <strong>ステップ②:</strong> 誤差幅の計算
+        <span class="formula">E = z × SE = ${cfg.z} × ${se} ≈ ${margin}</span>
+        <strong>ステップ③:</strong> 信頼区間の構成
+        <span class="formula">[ ${xbar} − ${margin}, ${xbar} + ${margin} ] = <span class="hi">[${lower}, ${upper}]</span></span>
+        この区間が${cfg.cl}の確率で真の母平均を含みます。
+      `
+    };
+  },
+
+  HYPOTHESIS: () => {
+    const theme = R.pick(THEMES.hyp);
+    const allOptions = [theme.h0, ...theme.h0_wrong];
+    const choices = R.shuffle(allOptions);
+
+    return {
+      category: 'HYPOTHESIS',
+      subTag: 'HYPOTHESIS_H0_SETUP',
+      text: `【シナリオ】<br>${theme.scenario}<br><br>この検定において設定すべき <strong>帰無仮説 H₀</strong> として最も適切なものはどれか。`,
+      choices,
+      answerIdx: choices.indexOf(theme.h0),
+      explanation: `
+        <strong>帰無仮説（H₀）の原則:</strong>
+        <span class="formula">「差がない」「効果がない」「変化がない」という<br> 否定したい中立命題を設定する</span>
+        <strong>正解:</strong> <span class="hi">${theme.h0}</span><br><br>
+        帰無仮説はデータによって<strong>棄却（否定）することを目的</strong>とする仮説です。<br>
+        「効果がある」や「差がある」は対立仮説 H₁ に該当します。<br>
+        p値が有意水準（例: 0.05）を下回ったとき、初めて H₀ を棄却し H₁ を採択します。
+      `
+    };
+  },
+
+  PROB: () => R.pick([genProbReplacement, genProbPermComb, genProbComplement])()
+};
+
+const CAT_KEYS = Object.keys(generators);
+
+// ============================================================
+// STATE
+// ============================================================
+
+const state = {
+  currentCat: 'ALL',
+  qCount: 0,
+  correct: 0,
+  combo: 0,
+  answered: false,
+  current: null,
+  weakMode: false,
+};
+
+// ============================================================
+// UI FUNCTIONS
+// ============================================================
+
+function generateQuestion() {
+  if (state.weakMode) return pickWeakQuestion();
+  const cat = state.currentCat === 'ALL'
+    ? R.pick(CAT_KEYS)
+    : state.currentCat;
+  return generators[cat]();
+}
+
+// 弱点フィルタ：正答率60%未満(3問以上実施済み)のsubTagを優先的に出す。
+// データが十分でないsubTagも探索のため対象に含める。
+function pickWeakQuestion(maxTries = 15) {
+  let fallback = null;
+  for (let i = 0; i < maxTries; i++) {
+    const cat = state.currentCat === 'ALL' ? R.pick(CAT_KEYS) : state.currentCat;
+    const q = generators[cat]();
+    if (!fallback) fallback = q;
+    const acc = getSubTagAccuracy(q.subTag);
+    if (acc === null || acc < 60) return q;
+  }
+  return fallback;
+}
+
+const CAT_LABELS = {
+  ALL: '全体',
+  STD_DEV: '標準偏差',
+  STD_ERR: '標準誤差',
+  SAMPLE_SIZE: 'サンプルサイズ',
+  CONF_INT: '信頼区間',
+  HYPOTHESIS: '帰無仮説',
+  PROB: '確率の型分類',
+};
+
+const SUBTAG_LABELS = {
+  STD_DEV_CALC: '急所: 分散→標準偏差の変換',
+  STD_ERR_MEASURE: '急所: SE(計量データ)',
+  STD_ERR_RATIO: '急所: SE(比率データ)',
+  SAMPLE_SIZE_CALC: '急所: サンプルサイズ設計',
+  CONF_INT_CALC: '急所: 信頼区間の構成',
+  HYPOTHESIS_H0_SETUP: '急所: 帰無仮説の設定',
+  PROB_REPLACEMENT: '急所: 復元/非復元の判定',
+  PROB_PERM_COMB: '急所: 順列/組合せの判定',
+  PROB_COMPLEMENT: '急所: 余事象への変換',
+};
+
+// subTag別の正答率トラッキング（セッション内メモリのみ・再読込で消える）
+const subTagStats = {};
+
+function recordSubTag(subTag, isCorrect) {
+  if (!subTag) return;
+  if (!subTagStats[subTag]) subTagStats[subTag] = { correct: 0, total: 0 };
+  subTagStats[subTag].total++;
+  if (isCorrect) subTagStats[subTag].correct++;
+}
+
+function getSubTagAccuracy(subTag) {
+  const s = subTagStats[subTag];
+  if (!s || s.total < 3) return null; // データ不足はnull扱い（探索のため出題対象に含める）
+  return Math.round((s.correct / s.total) * 100);
+}
+
+function renderWeakPanel() {
+  const panel = document.getElementById('weak-panel');
+  const keys = Object.keys(subTagStats);
+  if (keys.length === 0) {
+    panel.innerHTML = '&gt; まだデータがありません。数問解くと急所別の正答率がここに表示されます。';
+    return;
+  }
+  const rows = keys.map(k => {
+    const s = subTagStats[k];
+    const acc = Math.round((s.correct / s.total) * 100);
+    const weak = s.total >= 3 && acc < 60;
+    const color = weak ? 'var(--red)' : 'var(--green)';
+    return `<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:4px 0">
+      <span>${SUBTAG_LABELS[k] || k}</span>
+      <span style="color:${color};font-weight:700">${acc}% (${s.correct}/${s.total})</span>
+    </div>`;
+  }).join('');
+  panel.innerHTML = `<div style="margin-bottom:8px;color:var(--text-dim)">急所別 正答率（3問未満は表示対象外）</div>${rows}`;
+}
+
+function loadQuestion() {
+  state.answered = false;
+  state.current = generateQuestion();
+  const q = state.current;
+  state.qCount++;
+
+  document.getElementById('cat-label').textContent = CAT_LABELS[q.category] || q.category;
+  document.getElementById('subtag-label').textContent = SUBTAG_LABELS[q.subTag] || '';
+  document.getElementById('q-counter').textContent = `第${String(state.qCount).padStart(3, '0')}問`;
+  document.getElementById('question-text').innerHTML = q.text;
+
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+  const keys = ['A', 'B', 'C', 'D'];
+  q.choices.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `<span class="choice-key">[${keys[i]}]</span>${c}`;
+    btn.addEventListener('click', () => handleAnswer(i));
+    choicesEl.appendChild(btn);
+  });
+
+  document.getElementById('feedback').classList.remove('show');
+  document.getElementById('next-btn').classList.remove('show');
+}
+
+function handleAnswer(idx) {
+  if (state.answered) return;
+  state.answered = true;
+
+  const q = state.current;
+  const isCorrect = idx === q.answerIdx;
+  const buttons = document.querySelectorAll('.choice-btn');
+
+  buttons.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.answerIdx) {
+      btn.classList.add('correct');
+    } else if (i === idx && !isCorrect) {
+      btn.classList.add('wrong');
+    } else {
+      btn.classList.add('dimmed');
+    }
+  });
+
+  // Update stats
+  if (isCorrect) {
+    state.correct++;
+    state.combo++;
+  } else {
+    state.combo = 0;
+  }
+
+  recordSubTag(q.subTag, isCorrect);
+  if (document.getElementById('weak-panel').style.display !== 'none') {
+    renderWeakPanel();
+  }
+
+  updateStats();
+  showFeedback(isCorrect, q.explanation);
+
+  document.getElementById('next-btn').classList.add('show');
+}
+
+function showFeedback(isCorrect, explanation) {
+  const fb = document.getElementById('feedback');
+  const statusEl = document.getElementById('fb-status');
+  const bodyEl = document.getElementById('fb-body');
+
+  statusEl.textContent = isCorrect
+    ? '正解'
+    : '不正解 — 解説を確認しよう';
+  statusEl.className = 'fb-status ' + (isCorrect ? 'ok' : 'fail');
+
+  bodyEl.innerHTML = explanation;
+  fb.classList.add('show');
+}
+
+function updateStats() {
+  const total = state.qCount;
+  const acc = total > 0 ? Math.round((state.correct / total) * 100) : 0;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-acc').textContent = acc + '%';
+  document.getElementById('bottom-acc').textContent = acc + '%';
+  document.getElementById('acc-bar-fill').style.width = acc + '%';
+
+  const comboEl = document.getElementById('combo-val');
+  const comboWrap = document.getElementById('combo-display');
+  comboEl.textContent = state.combo;
+
+  if (state.combo >= 3) {
+    comboWrap.classList.add('hot');
+  } else {
+    comboWrap.classList.remove('hot');
+  }
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    state.currentCat = tab.dataset.cat;
+    document.getElementById('bottom-cat').textContent = `分野: ${CAT_LABELS[state.currentCat] || state.currentCat}`;
+    loadQuestion();
+  });
+});
+
+document.getElementById('next-btn').addEventListener('click', loadQuestion);
+
+document.getElementById('weak-toggle').addEventListener('click', () => {
+  state.weakMode = !state.weakMode;
+  const btn = document.getElementById('weak-toggle');
+  const val = document.getElementById('weak-val');
+  const panel = document.getElementById('weak-panel');
+  val.textContent = state.weakMode ? 'オン' : 'オフ';
+  btn.style.background = state.weakMode ? 'var(--red)' : 'var(--panel2)';
+  btn.style.borderColor = state.weakMode ? 'var(--red)' : 'var(--border)';
+  panel.style.display = state.weakMode ? 'block' : 'none';
+  if (state.weakMode) renderWeakPanel();
+  loadQuestion();
+});
+
+// ============================================================
+// INIT
+// ============================================================
+loadQuestion();
+</script>
+</body>
+</html>
