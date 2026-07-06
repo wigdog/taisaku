@@ -581,6 +581,21 @@ const THEMES = {
     { ctx: 'あるレストランの来客は「予約あり」と「予約なし（飛び込み）」に分かれる', groupA: '予約ありの客の場合', groupB: '予約なしの客の場合', yName: '1組あたりの滞在時間', unit: '分' },
     { ctx: 'ある保険会社の契約者は「喫煙者」と「非喫煙者」に分かれる', groupA: '喫煙者の場合', groupB: '非喫煙者の場合', yName: '年間の保険金請求額', unit: '万円' },
     { ctx: 'ある道路の交通は「平日」と「休日」に分かれる', groupA: '平日の場合', groupB: '休日の場合', yName: '1時間あたりの通行台数', unit: '台' },
+  ],
+  memoryless: [
+    { n: 10, itemCtx: '当たりを引く確率が10分の1のくじがある。引いたくじは元に戻す', action: 'くじを引く', hitEvent: '当たりが出る' },
+    { n: 6, itemCtx: 'サイコロを繰り返し振る', action: 'サイコロを振る', hitEvent: '6の目が出る' },
+    { n: 5, itemCtx: 'ある営業担当が訪問先で契約を取れる確率は5分の1である。訪問結果は互いに独立とする', action: '訪問する', hitEvent: '契約が取れる' },
+    { n: 8, itemCtx: 'あるガチャの当たり（レアアイテム）が出る確率は8分の1である', action: 'ガチャを引く', hitEvent: '当たりが出る' },
+    { n: 4, itemCtx: 'ある部品の検査で不良品が見つかる確率は4分の1である。検査結果は互いに独立とする', action: '検査する', hitEvent: '不良品が見つかる' },
+    { n: 12, itemCtx: 'あるルーレットで特定の色が出る確率は12分の1である', action: 'ルーレットを回す', hitEvent: '特定の色が出る' },
+  ],
+  diceBag: [
+    { redA: 2, whiteA: 3, redB: 1, whiteB: 4 },
+    { redA: 3, whiteA: 2, redB: 2, whiteB: 3 },
+    { redA: 1, whiteA: 4, redB: 3, whiteB: 2 },
+    { redA: 4, whiteA: 2, redB: 1, whiteB: 3 },
+    { redA: 2, whiteA: 4, redB: 3, whiteB: 3 },
   ]
 };
 
@@ -589,6 +604,15 @@ const THEMES = {
 // ============================================================
 
 function factorial(x) { let f = 1; for (let i = 2; i <= x; i++) f *= i; return f; }
+
+// 既約分数演算（サイコロ×袋の期待値を厳密な分数で扱うため）
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a || 1; }
+function fracReduce(n, d) { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d) || 1; return { n: n / g, d: d / g }; }
+function fracMul(f1, f2) { return fracReduce(f1.n * f2.n, f1.d * f2.d); }
+function fracAdd(f1, f2) { return fracReduce(f1.n * f2.d + f2.n * f1.d, f1.d * f2.d); }
+function fracStr(f) { return f.d === 1 ? `${f.n}` : `${f.n}/${f.d}`; }
+function fracEq(f1, f2) { return f1.n === f2.n && f1.d === f2.d; }
+function fracToDecimal(f) { return Math.round((f.n / f.d) * 1000) / 1000; }
 
 function genProbReplacement() {
   const bag = R.pick(THEMES.bagDraw);
@@ -719,6 +743,102 @@ function genProbCondExp() {
       <strong>計算:</strong>
       <span class="formula">E[Y] = ${pA} × ${meanA} + ${pB} × ${meanB}<br>   = ${R.round(pA * meanA, 3)} + ${R.round(pB * meanB, 3)}<br>   = <span class="hi">${correct}</span> ${s.unit}</span>
       「Aの場合はこう、Bの場合はこう」と条件で場合分けされた期待値が与えられたら、必ず各条件の確率で重み付けして足し合わせる（全期待値の法則）。
+    `
+  };
+}
+
+function genProbMemoryless() {
+  const s = R.pick(THEMES.memoryless);
+  const n = s.n; // 成功確率 = 1/n
+  const failCount = R.range(2, 9); // すでに外れ続けた回数
+
+  const correct = n; // 無記憶性により、残りの期待回数は最初からの期待値と同じ 1/p = n
+
+  // よくある誤答パターン
+  const naiveSubtract = Math.max(1, n - failCount); // 「もう外れた分は差し引ける」という誤解
+  const naiveAdd = n + failCount;                    // 「外れた回数を足す必要がある」という誤解
+  const justFailCount = failCount;                    // 質問文の数字をそのまま答えてしまう
+
+  const candidates = [naiveSubtract, naiveAdd, justFailCount].filter(d => d !== correct);
+  const distractors = R.uniqueDistractors(correct, candidates, 3, () => Math.max(1, correct + R.range(-4, 4)));
+  const choices = R.shuffle([correct, ...distractors]);
+
+  return {
+    category: 'PROB',
+    subTag: 'PROB_MEMORYLESS',
+    text: `${R.hl(s.itemCtx)}。「${s.hitEvent}」まで${s.action}続ける。<br>
+      ${R.hl(`${failCount}回`)}続けて外れた（＝まだ${s.hitEvent.replace('が出る', 'が出て').replace('が見つかる', 'が見つかって').replace('が取れる', 'が取れて')}いない）。<br>
+      <strong>今からさらに何回引けば当たるかの期待値</strong>はいくつか。`,
+    choices: choices.map(c => `${c}回`),
+    answerIdx: choices.indexOf(correct),
+    explanation: `
+      <strong>ポイント：幾何分布の無記憶性</strong>
+      <span class="formula">成功確率 p = 1/${n} のとき、初めて成功するまでの試行回数の期待値 = 1/p = ${n}回</span>
+      各試行は独立で、外れても確率は<strong>1/${n}のままリセット</strong>される（前の結果を"覚えていない"）。<br>
+      そのため「すでに${failCount}回外れた」という情報は、<strong>今後の期待回数に一切影響しない</strong>。
+      <strong>計算:</strong>
+      <span class="formula">E[今後の試行回数] = 1/p = 1/(1/${n}) = <span class="hi">${correct}</span>回</span>
+      「もう${failCount}回外れたから、そろそろ当たるはず」という感覚（ギャンブラーの誤謬）は誤り。<br>
+      毎回の試行は独立なので、過去の結果に関わらず今後の期待回数は常に 1/p = ${n}回 です。
+    `
+  };
+}
+
+function genProbDiceBagExpect() {
+  const set = R.pick(THEMES.diceBag);
+  const totA = set.redA + set.whiteA;
+  const totB = set.redB + set.whiteB;
+  const k = R.pick([1, 2, 3, 4, 5]); // 1〜kの目なら袋A、k+1〜6の目なら袋B
+  const draws = Math.min(R.pick([1, 2]), totA, totB); // 取り出す個数(袋の個数以下に制限)
+
+  const pA = fracReduce(k, 6);
+  const pB = fracReduce(6 - k, 6);
+  const eA = fracReduce(draws * set.redA, totA); // E[X|A]
+  const eB = fracReduce(draws * set.redB, totB); // E[X|B]
+  const correct = fracAdd(fracMul(pA, eA), fracMul(pB, eB));
+
+  // よくある誤答パターン（すべて分数として計算）
+  const swappedWeight = fracAdd(fracMul(pB, eA), fracMul(pA, eB)); // 確率の対応を取り違え
+  const simpleAvg = fracMul(fracReduce(1, 2), fracAdd(eA, eB));     // 単純平均（重みを無視）
+  const forgotDraws = fracAdd(fracMul(pA, fracReduce(set.redA, totA)), fracMul(pB, fracReduce(set.redB, totB))); // 取り出す個数の掛け算を忘れる
+
+  const candidatePool = [swappedWeight, simpleAvg, forgotDraws].filter(f => !fracEq(f, correct));
+  const seen = new Set([fracStr(correct)]);
+  const distractors = [];
+  for (const f of candidatePool) {
+    const key = fracStr(f);
+    if (!seen.has(key)) { seen.add(key); distractors.push(f); }
+    if (distractors.length >= 3) break;
+  }
+  let guard = 0;
+  while (distractors.length < 3 && guard < 20) {
+    guard++;
+    const pert = fracAdd(correct, fracReduce(R.pick([-2, -1, 1, 2]), correct.d));
+    const key = fracStr(pert);
+    if (!seen.has(key)) { seen.add(key); distractors.push(pert); }
+  }
+
+  const choices = R.shuffle([correct, ...distractors]);
+
+  return {
+    category: 'PROB',
+    subTag: 'PROB_DICE_BAG_EXPECT',
+    text: `袋Aには赤玉${R.hl(set.redA)}個、白玉${R.hl(set.whiteA)}個。袋Bには赤玉${R.hl(set.redB)}個、白玉${R.hl(set.whiteB)}個が入っている。<br>
+      サイコロを1回投げて、${R.hl(`${k}以下`)}の目が出たら袋Aから${R.hl(draws)}個、${R.hl(`${k + 1}以上`)}の目が出たら袋Bから${R.hl(draws)}個を同時に取り出す（そのたびに袋に戻す）。<br>
+      取り出した${draws}個のうち<strong>赤玉の個数をXとする</strong>とき、Xの期待値 E[X] はいくらか。`,
+    choices: choices.map(f => fracStr(f)),
+    answerIdx: choices.indexOf(correct),
+    explanation: `
+      <strong>判定:</strong> サイコロの目によって「どちらの袋から取り出すか」という条件が変わるので、<strong>全期待値の法則</strong> E[X] = P(A)×E[X|A] + P(B)×E[X|B] を使う。
+      <strong>ステップ①: 袋が選ばれる確率</strong>
+      <span class="formula">P(A) = ${k}/6 = ${fracStr(pA)}　　P(B) = ${6 - k}/6 = ${fracStr(pB)}</span>
+      <strong>ステップ②: 各袋での条件付き期待値</strong>
+      <span class="formula">E[X|A] = ${draws} × ${set.redA}/${totA} = <span class="hi">${fracStr(eA)}</span>
+E[X|B] = ${draws} × ${set.redB}/${totB} = <span class="hi">${fracStr(eB)}</span></span>
+      （${draws}個取り出すときの赤玉の期待本数は、1個あたりの赤玉の割合 × 取り出す個数で求まる）
+      <strong>ステップ③: 全体の期待値</strong>
+      <span class="formula">E[X] = ${fracStr(pA)} × ${fracStr(eA)} + ${fracStr(pB)} × ${fracStr(eB)}<br>   = <span class="hi">${fracStr(correct)}</span>（≈ ${fracToDecimal(correct)}個）</span>
+      袋ごとの期待値を、サイコロでその袋が選ばれる確率で重み付けして足し合わせるのがポイント。単純平均にしたり、確率の対応を取り違えたりしないよう注意。
     `
   };
 }
@@ -935,7 +1055,7 @@ const generators = {
     };
   },
 
-  PROB: () => R.pick([genProbReplacement, genProbPermComb, genProbComplement, genProbCondExp])()
+  PROB: () => R.pick([genProbReplacement, genProbPermComb, genProbComplement, genProbCondExp, genProbMemoryless, genProbDiceBagExpect])()
 };
 
 const CAT_KEYS = Object.keys(generators);
@@ -1001,6 +1121,8 @@ const SUBTAG_LABELS = {
   PROB_PERM_COMB: '急所: 順列/組合せの判定',
   PROB_COMPLEMENT: '急所: 余事象への変換',
   PROB_COND_EXP: '急所: 条件付き期待値（全期待値の法則）',
+  PROB_MEMORYLESS: '急所: 幾何分布の無記憶性',
+  PROB_DICE_BAG_EXPECT: '急所: 条件付き期待値（サイコロ×袋）',
 };
 
 // subTag別の正答率トラッキング（セッション内メモリのみ・再読込で消える）
