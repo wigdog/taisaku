@@ -574,6 +574,13 @@ const THEMES = {
     { trials: 4, p: 0.1, ctx: 'ある機械が1回の稼働で10%の確率で不良品を出す。4回稼働させる', event: '少なくとも1回不良品が出る' },
     { trials: 5, p: 0.2, ctx: 'あるくじの当選確率は20%である。5回引く', event: '少なくとも1回当選する' },
     { trials: 3, p: 0.5, ctx: 'コインを3回投げる', event: '少なくとも1回表が出る' },
+  ],
+  condExp: [
+    { ctx: 'ある工場では機械Aまたは機械Bのどちらかで製品を1個生産する', groupA: '機械Aで生産した場合', groupB: '機械Bで生産した場合', yName: '1個あたりの不良個数', unit: '個' },
+    { ctx: 'あるECサイトの会員は「プレミアム会員」と「一般会員」に分かれている', groupA: 'プレミアム会員の場合', groupB: '一般会員の場合', yName: '1回あたりの購入金額', unit: '円' },
+    { ctx: 'あるレストランの来客は「予約あり」と「予約なし（飛び込み）」に分かれる', groupA: '予約ありの客の場合', groupB: '予約なしの客の場合', yName: '1組あたりの滞在時間', unit: '分' },
+    { ctx: 'ある保険会社の契約者は「喫煙者」と「非喫煙者」に分かれる', groupA: '喫煙者の場合', groupB: '非喫煙者の場合', yName: '年間の保険金請求額', unit: '万円' },
+    { ctx: 'ある道路の交通は「平日」と「休日」に分かれる', groupA: '平日の場合', groupB: '休日の場合', yName: '1時間あたりの通行台数', unit: '台' },
   ]
 };
 
@@ -671,6 +678,47 @@ function genProbComplement() {
       <strong>判定:</strong>「少なくとも1回」は直接数えると場合分けが大変なので、<strong>余事象（1回も起きない）</strong>から引くのが定石。
       <span class="formula">P(少なくとも1回) = 1 − P(1回も起きない) = 1 − (${pNot})^${s.trials} = 1 − ${forgot} = <span class="hi">${correct}</span></span>
       「少なくとも1回」「1回以上」という言葉を見たら、まず余事象に変換できないか疑うこと。
+    `
+  };
+}
+
+function genProbCondExp() {
+  const s = R.pick(THEMES.condExp);
+  // グループAに属する確率（きりのいい値）
+  const p = R.pick([0.2, 0.25, 0.3, 0.4, 0.6, 0.7, 0.75, 0.8]);
+  const pA = p, pB = R.round(1 - p, 2);
+
+  // 条件付き期待値（グループごとの平均値）
+  const meanA = R.range(2, 20);
+  let meanB = R.range(2, 20);
+  while (meanB === meanA) meanB = R.range(2, 20); // 区別のため同値は避ける
+
+  const correct = R.round(pA * meanA + pB * meanB, 3);
+
+  // よくある誤答パターン
+  const simpleAverage = R.round((meanA + meanB) / 2, 3);      // 重みを無視した単純平均
+  const swappedWeight = R.round(pB * meanA + pA * meanB, 3);  // 重みの対応を取り違え
+  const summed = R.round(meanA + meanB, 3);                    // 期待値をそのまま足す
+
+  const candidates = [simpleAverage, swappedWeight, summed];
+  const distractors = R.uniqueDistractors(correct, candidates, 3, () => R.round(correct + R.range(-5, 5) * 0.5, 3));
+  const choices = R.shuffle([correct, ...distractors]);
+
+  return {
+    category: 'PROB',
+    subTag: 'PROB_COND_EXP',
+    text: `${R.hl(s.ctx)}。全体のうち ${R.hl(s.groupA)} の割合は ${R.hl(pA)}、${R.hl(s.groupB)} の割合は ${R.hl(pB)} である。<br>
+      ${s.groupA}の${s.yName}の期待値は ${R.hl(meanA)} ${s.unit}、${s.groupB}の${s.yName}の期待値は ${R.hl(meanB)} ${s.unit} であることが分かっている。<br>
+      このとき、区別せず全体から1件取り出したときの<strong>${s.yName}の期待値（全体の期待値）</strong>はいくらか。`,
+    choices: choices.map(c => `${c} ${s.unit}`),
+    answerIdx: choices.indexOf(correct),
+    explanation: `
+      <strong>公式（全期待値の法則）:</strong>
+      <span class="formula">E[Y] = P(A)×E[Y|A] + P(B)×E[Y|B]</span>
+      <strong>判定:</strong> 条件（グループ）ごとの期待値 E[Y|A], E[Y|B] が分かっているとき、全体の期待値はそれぞれの<strong>起こりやすさ（確率）で重み付けした平均</strong>になる。単純平均や合計にしないこと。
+      <strong>計算:</strong>
+      <span class="formula">E[Y] = ${pA} × ${meanA} + ${pB} × ${meanB}<br>   = ${R.round(pA * meanA, 3)} + ${R.round(pB * meanB, 3)}<br>   = <span class="hi">${correct}</span> ${s.unit}</span>
+      「Aの場合はこう、Bの場合はこう」と条件で場合分けされた期待値が与えられたら、必ず各条件の確率で重み付けして足し合わせる（全期待値の法則）。
     `
   };
 }
@@ -887,7 +935,7 @@ const generators = {
     };
   },
 
-  PROB: () => R.pick([genProbReplacement, genProbPermComb, genProbComplement])()
+  PROB: () => R.pick([genProbReplacement, genProbPermComb, genProbComplement, genProbCondExp])()
 };
 
 const CAT_KEYS = Object.keys(generators);
@@ -952,6 +1000,7 @@ const SUBTAG_LABELS = {
   PROB_REPLACEMENT: '急所: 復元/非復元の判定',
   PROB_PERM_COMB: '急所: 順列/組合せの判定',
   PROB_COMPLEMENT: '急所: 余事象への変換',
+  PROB_COND_EXP: '急所: 条件付き期待値（全期待値の法則）',
 };
 
 // subTag別の正答率トラッキング（セッション内メモリのみ・再読込で消える）
